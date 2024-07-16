@@ -5,12 +5,13 @@
 bool
 parser::load_rf_data_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims)
 {
+    
     bool success = false;
     mxArray* mx_array = nullptr;
 
     *data_array = nullptr;
 
-    MATFile* file = matOpen_800(file_path.c_str(), "r");
+    MATFile* file = matOpen(file_path.c_str(), "r");
  
     // Get RF Data
     mx_array = matGetVariable(file, defs::rf_data_name.c_str());
@@ -29,7 +30,7 @@ parser::load_rf_data_array(std::string file_path, std::vector<float>** data_arra
 
         float* data_array_ptr = mxGetSingles(mx_array);
 
-        *data_array = new std::vector<float>(element_count, *data_array_ptr);
+        *data_array = new std::vector<float>(data_array_ptr, &(data_array_ptr[element_count]));
 
         success = true;
     }
@@ -45,31 +46,29 @@ parser::load_rf_data_array(std::string file_path, std::vector<float>** data_arra
     return success;
 }
 
-
-
 bool
-parser::save_float_array(float* ptr, size_t dims[3], std::string file_path, std::string variable_name)
+parser::save_complex_data(std::complex<float>* ptr, size_t dims[3], std::string file_path, std::string variable_name)
 {
 
-    mxArray* volume_array = mxCreateNumericArray(3, dims, mxSINGLE_CLASS, mxREAL);
-    mxSetSingles(volume_array, (mxSingle*)ptr);
+    mxArray* volume_array = mxCreateNumericArray(3, dims, mxSINGLE_CLASS, mxCOMPLEX);
+    mxSetComplexSingles(volume_array, (mxComplexSingle*)ptr);
 
     MATFile* file_p = matOpen(file_path.c_str(), "w");
     if (!file_p)
     {
         std::cerr << "Failed to open file for volume: " << file_path << std::endl;
         mxDestroyArray(volume_array);
-        return 1;
+        return false;
     }
 
     int error = matPutVariable(file_p, variable_name.c_str(), volume_array);
     if (error)
     {
         std::cerr << "Failed to save array to file." << std::endl;
-        return error;
+        return false;
     }
 
     matClose(file_p);
 
-    return 0;
+    return true;
 }

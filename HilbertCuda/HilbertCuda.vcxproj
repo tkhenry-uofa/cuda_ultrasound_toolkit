@@ -88,7 +88,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="cuda_fft.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -96,7 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="defs.h" />
-    <ClInclude Include="kernel.cuh" />
+    <ClInclude Include="cuda_fft.cuh" />
     <ClInclude Include="mat_parser.h" />
   </ItemGroup>
   <ItemGroup>
