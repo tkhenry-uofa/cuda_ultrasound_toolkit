@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <chrono>
 
 #include "defs.h"
 #include "mat_parser.h"
@@ -18,6 +19,7 @@ int main()
 	parser::load_rf_data_array(input_file_path, &data_array, &dims);
 
 	std::vector<std::complex<float>>* output;
+
 	bool success = cuda_fft(*data_array, &output, dims);
 
 	size_t output_dims[3] = { dims.sample_count, dims.element_count, dims.tx_count };
