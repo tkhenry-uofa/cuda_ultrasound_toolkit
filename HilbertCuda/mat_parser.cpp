@@ -47,7 +47,7 @@ parser::load_rf_data_array(std::string file_path, std::vector<float>** data_arra
 }
 
 bool
-parser::save_complex_data(std::complex<float>* ptr, size_t dims[3], std::string file_path, std::string variable_name)
+parser::save_complex_data(defs::ComplexF* ptr, size_t dims[3], std::string file_path, std::string variable_name)
 {
 
     mxArray* volume_array = mxCreateNumericArray(3, dims, mxSINGLE_CLASS, mxCOMPLEX);

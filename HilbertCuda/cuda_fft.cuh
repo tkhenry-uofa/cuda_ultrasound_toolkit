@@ -1,5 +1,5 @@
 #ifndef KERNEL_CUH
-#define KERNEL_CU
+#define KERNEL_CUH
 
 #include <vector>
 #include <complex>
@@ -10,7 +10,7 @@
 #include "defs.h"
 
 
-bool cuda_fft(const std::vector<float>& real_data, std::vector<std::complex<float>>** im_out, defs::RfDataDims dims);
+bool cuda_fft(const float* input, defs::ComplexF** output, defs::RfDataDims dims);
 
 
 #endif // !KERNEL_CUH

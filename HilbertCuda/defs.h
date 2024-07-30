@@ -27,6 +27,11 @@ namespace defs
 {
 	static const std::string rf_data_name = "rx_scans";
 
+	struct ComplexF {
+		float re = 0.0f;
+		float im = 0.0f;
+	};
+
 	struct RfDataDims {
 		size_t element_count;
 		size_t sample_count;

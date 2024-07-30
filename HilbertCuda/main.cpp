@@ -18,14 +18,14 @@ int main()
 
 	parser::load_rf_data_array(input_file_path, &data_array, &dims);
 
-	std::vector<std::complex<float>>* output;
+	defs::ComplexF* output;
 
-	bool success = cuda_fft(*data_array, &output, dims);
+	bool success = cuda_fft(data_array->data(), &output, dims);
 
 	size_t output_dims[3] = { dims.sample_count, dims.element_count, dims.tx_count };
-	success = parser::save_complex_data(output->data(), output_dims, output_file_path, "complex_data");
+	success = parser::save_complex_data(output, output_dims, output_file_path, "complex_data");
 
 	delete data_array;
-	delete output;
+	delete[] output;
 	return !success;
 }
