@@ -148,6 +148,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="hadamard.cu" />
     <CudaCompile Include="hilbert_transform.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -156,6 +157,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_toolkit.h" />
+    <ClInclude Include="hadamard.cuh" />
     <ClInclude Include="hilbert_transform.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>

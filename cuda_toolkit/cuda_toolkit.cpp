@@ -1,5 +1,6 @@
 #include "defs.h"
 #include "hilbert_transform.cuh"
+#include "hadamard.cuh"
 
 #include "cuda_toolkit.h"
 
@@ -12,7 +13,7 @@ result_t batch_hilbert_transform(int sample_count, int channel_count, const floa
 
 result_t hadamard_decode()
 {
-	bool success = hadamard_decode_cuda(0, 0, 0, nullptr, nullptr);
+	bool success = hadamard::hadamard_decode_cuda(0, 0, 0, nullptr, nullptr, nullptr);
 
 	return success ? SUCCESS : FAILURE;
 }

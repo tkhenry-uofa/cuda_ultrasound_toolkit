@@ -30,8 +30,10 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="hilbert_transform.cuh" />
+    <ClInclude Include="hadamard.cuh" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="hilbert_transform.cu" />
+    <CudaCompile Include="hadamard.cu" />
   </ItemGroup>
 </Project>
