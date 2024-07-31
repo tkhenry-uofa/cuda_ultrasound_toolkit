@@ -88,21 +88,23 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="cuda_fft.cu" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mat_parser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cuda_toolkit.h" />
     <ClInclude Include="defs.h" />
-    <ClInclude Include="cuda_fft.cuh" />
     <ClInclude Include="mat_parser.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="MatlabPath.props">
       <FileType>Document</FileType>
     </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\cuda_toolkit\cuda_toolkit.vcxproj">
+      <Project>{bdd780b4-c9fd-4d7f-b63d-06a49965263c}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
