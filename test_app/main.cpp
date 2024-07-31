@@ -9,9 +9,9 @@
 
 //#include "cuda_fft.cuh"
 
-int main()
-{
 
+bool test_hilbert()
+{
 	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\mixes\data\oct_real.mat)";
 	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\mixes\data\fft_output.mat)";
 
@@ -36,5 +36,18 @@ int main()
 
 	delete data_array;
 	delete[] output;
-	return !success;
+	return success;
+}
+
+int main()
+{
+
+	bool result;
+
+	//result = test_hilbert();
+
+	result = hadamard_decode();
+
+
+	return !result;
 }

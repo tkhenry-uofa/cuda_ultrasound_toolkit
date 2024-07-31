@@ -12,7 +12,7 @@
 #define MAX_ERROR_LENGTH 256
 static char Error_buffer[MAX_ERROR_LENGTH];
 
-#define RETURN_IF_ERROR(STATUS, MESSAGE)			\
+#define FFT_RETURN_IF_ERROR(STATUS, MESSAGE)			\
 {													\
 	strcpy(Error_buffer, MESSAGE);					\
 	strcat(Error_buffer, " Error code: %d.\n");		\
@@ -38,6 +38,12 @@ namespace defs
 		size_t tx_count;
 	};
 
+	enum Quadrent {
+		TOP_LEFT = 0,
+		TOP_RIGHT = 1,
+		BOT_LEFT = 2,
+		BOT_RIGHT = 3
+	};
 }
 
 
