@@ -42,12 +42,12 @@ bool test_hilbert()
 int main()
 {
 
-	bool result;
+	int result;
 
 	//result = test_hilbert();
 
 	result = hadamard_decode();
 
 
-	return !result;
+	return result;
 }
