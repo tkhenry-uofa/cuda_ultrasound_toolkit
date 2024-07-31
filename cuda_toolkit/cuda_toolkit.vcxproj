@@ -24,6 +24,7 @@
     <ProjectGuid>{bdd780b4-c9fd-4d7f-b63d-06a49965263c}</ProjectGuid>
     <RootNamespace>cudatoolkit</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>cuda_toolkit_lib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
