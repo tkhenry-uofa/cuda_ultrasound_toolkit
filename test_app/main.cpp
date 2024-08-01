@@ -10,35 +10,6 @@
 //#include "cuda_fft.cuh"
 
 
-bool test_hilbert()
-{
-	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\mixes\data\oct_real.mat)";
-	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\mixes\data\fft_output.mat)";
-
-	defs::RfDataDims dims;
-	std::vector<float>* data_array = nullptr;
-
-	parser::load_float_array(input_file_path, &data_array, &dims);
-
-	complex_f* output;
-
-	//bool success = cuda_fft(data_array->data(), &output, dims);
-
-	result_t hilbert_result = batch_hilbert_transform(dims.sample_count, dims.channel_count * dims.tx_count, data_array->data(), &output);
-
-	if (hilbert_result != SUCCESS || output == NULL)
-	{
-		printf("ERROR\n");
-	}
-
-	size_t output_dims[3] = { dims.sample_count, dims.channel_count, dims.tx_count };
-	bool success = parser::save_float_array(output, output_dims, output_file_path, "complex_data", true);
-
-	delete data_array;
-	delete[] output;
-	return success;
-}
-
 bool test_decoding()
 {
 	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\uforces_32_raw.mat)";
@@ -59,7 +30,8 @@ bool test_decoding()
 
 	//bool success = parser::save_float_array(output, output_dims2, output_file_path, "decoded", false);
 
-	delete output;
+	free(output);
+
 	delete data_array;
 	
 	return SUCCESS;
@@ -70,7 +42,6 @@ int main()
 
 	int result;
 
-	//result = test_hilbert();
 
 	result = test_decoding();
 

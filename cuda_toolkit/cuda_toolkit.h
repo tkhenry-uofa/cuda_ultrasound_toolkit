@@ -23,20 +23,6 @@
 			float im;
 		} complex_f;
 
-		/**
-		* Calculates a batch of un-normalizeed hilbert transform. 
-		* cuFFT limits all dimensions to i32 for single GPUs 
-		* 
-		* sample_count - Number of samples per channel
-		* channel_count - Number of channels
-		* input - Input NxM float array, M channels of N samples each
-		* output - Complex output, same dimensions as the input or NULL if failure
-		*		   Caller is responsible for cleanup
-		*/
-		EXPORT_FN result_t batch_hilbert_transform(int sample_count, int channel_count, const float* input, complex_f** output);
-
-		EXPORT_FN result_t hadamard_decode(int sample_count, int channel_count, int transmission_count, const float* input, float** output);
-
 		EXPORT_FN result_t convert_and_decode(const int16_t* input, unsigned int input_dims[2], unsigned int decoded_dims[3], bool rx_rows, float** output);
 
 #ifdef __cplusplus
