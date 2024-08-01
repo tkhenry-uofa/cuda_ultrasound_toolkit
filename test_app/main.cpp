@@ -32,11 +32,34 @@ bool test_hilbert()
 	}
 
 	size_t output_dims[3] = { dims.sample_count, dims.element_count, dims.tx_count };
-	bool success = parser::save_complex_data(reinterpret_cast<defs::ComplexF*>(output), output_dims, output_file_path, "complex_data");
+	bool success = parser::save_float_data(output, output_dims, output_file_path, "complex_data", true);
 
 	delete data_array;
 	delete[] output;
 	return success;
+}
+
+bool test_hadamard()
+{
+	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\uforces_32_float.mat)";
+	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\decoded.mat)";
+
+	defs::RfDataDims dims;
+	std::vector<float>* data_array = nullptr;
+
+	parser::load_rf_data_array(input_file_path, &data_array, &dims);
+
+	float* output = nullptr;
+
+	result_t result = hadamard_decode(dims.sample_count, dims.element_count, dims.tx_count, data_array->data(), &output);
+
+	size_t output_dims[3] = { dims.sample_count, dims.element_count, dims.tx_count };
+	bool success = parser::save_float_data(output, output_dims, output_file_path, "decoded", false);
+
+	delete data_array;
+	free(output);
+
+	return SUCCESS;
 }
 
 int main()
@@ -46,7 +69,7 @@ int main()
 
 	//result = test_hilbert();
 
-	result = hadamard_decode();
+	result = test_hadamard();
 
 
 	return result;

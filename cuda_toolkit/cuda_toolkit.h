@@ -35,7 +35,7 @@
 		*/
 		EXPORT_FN result_t batch_hilbert_transform(int sample_count, int channel_count, const float* input, complex_f** output);
 
-		EXPORT_FN result_t hadamard_decode();
+		EXPORT_FN result_t hadamard_decode(int sample_count, int channel_count, int transmission_count, const float* input, float** output);
 
 #ifdef __cplusplus
 	}

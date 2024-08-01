@@ -36,7 +36,7 @@ parser::load_rf_data_array(std::string file_path, std::vector<float>** data_arra
     }
     else
     {
-        std::cerr << "Data is not complex" << std::endl;
+        std::cerr << "Data is complex" << std::endl;
         return false;
     }
 
@@ -47,11 +47,20 @@ parser::load_rf_data_array(std::string file_path, std::vector<float>** data_arra
 }
 
 bool
-parser::save_complex_data(defs::ComplexF* ptr, size_t dims[3], std::string file_path, std::string variable_name)
+parser::save_float_data(void* ptr, size_t dims[3], std::string file_path, std::string variable_name, bool complex)
 {
-
-    mxArray* volume_array = mxCreateNumericArray(3, dims, mxSINGLE_CLASS, mxCOMPLEX);
-    mxSetComplexSingles(volume_array, (mxComplexSingle*)ptr);
+    mxArray* volume_array = NULL;
+    if (complex)
+    {
+        volume_array = mxCreateNumericArray(3, dims, mxSINGLE_CLASS, mxCOMPLEX);
+        mxSetComplexSingles(volume_array, (mxComplexSingle*)ptr);
+    }
+    else
+    {
+        volume_array = mxCreateNumericArray(3, dims, mxSINGLE_CLASS, mxREAL);
+        mxSetSingles(volume_array, (mxSingle*)ptr);
+    }
+    
 
     MATFile* file_p = matOpen(file_path.c_str(), "w");
     if (!file_p)

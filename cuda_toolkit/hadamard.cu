@@ -7,7 +7,7 @@
 #include "hadamard.cuh"
 
 __global__ void
-hadamard::kernels::generate_hadamard_kernel(float* hadamard, int prev_size, int final_size)
+hadamard::_kernels::generate_hadamard_kernel(float* hadamard, int prev_size, int final_size)
 {
 	int row = threadIdx.x + blockDim.x * blockIdx.x;
 	int col = threadIdx.y + blockDim.y * blockIdx.y;
@@ -32,7 +32,7 @@ hadamard::kernels::generate_hadamard_kernel(float* hadamard, int prev_size, int 
 }
 
 __host__
-void hadamard::host::print_array(float* out_array, uint size)
+void hadamard::_host::print_array(float* out_array, uint size)
 {
 	std::cout << "Output" << std::endl;
 	for (uint i = 0; i < size; i++)
@@ -49,7 +49,7 @@ void hadamard::host::print_array(float* out_array, uint size)
 }
 
 __global__ void
-hadamard::kernels::init_hadamard_matrix(float* matrix, int size)
+hadamard::_kernels::init_hadamard_matrix(float* matrix, int size)
 {
 	int row = threadIdx.x * blockIdx.x;
 	int col = threadIdx.y * blockIdx.y;
@@ -65,7 +65,7 @@ hadamard::kernels::init_hadamard_matrix(float* matrix, int size)
 }
 
 __host__ cudaError_t
-hadamard::host::generate_hadamard(uint size, float** dev_ptr)
+hadamard::_host::generate_hadamard(uint size, float** dev_ptr)
 {
 	assert(ISPOWEROF2(size));
 
@@ -94,7 +94,7 @@ hadamard::host::generate_hadamard(uint size, float** dev_ptr)
 
 	grid_dim = { grid_length, grid_length, 1 };
 
-	kernels::init_hadamard_matrix << <grid_dim, block_dim >> > (*dev_ptr, size);
+	_kernels::init_hadamard_matrix << <grid_dim, block_dim >> > (*dev_ptr, size);
 
 
 	THROW_IF_ERROR(cudaGetLastError());
@@ -115,7 +115,7 @@ hadamard::host::generate_hadamard(uint size, float** dev_ptr)
 			grid_dim = { grid_length, grid_length, 1 };
 		}
 
-		kernels::generate_hadamard_kernel << <grid_dim, block_dim >> > (*dev_ptr, i / 2, size);
+		_kernels::generate_hadamard_kernel << <grid_dim, block_dim >> > (*dev_ptr, i / 2, size);
 
 		THROW_IF_ERROR(cudaGetLastError());
 		THROW_IF_ERROR(cudaDeviceSynchronize());
@@ -124,35 +124,63 @@ hadamard::host::generate_hadamard(uint size, float** dev_ptr)
 	return cudaSuccess;
 }
 
-__host__
-bool hadamard::hadamard_decode_cuda(int sample_count, int channel_count, int tx_count, const int* input, const float* hadamard, float** output)
+__host__ bool 
+hadamard::hadamard_decode(int sample_count, int channel_count, int tx_count, const float* input, const float* hadamard, float** output)
 {
 
-	uint size = 64;
-	size_t array_size = size * size * sizeof(float);
+	uint hadamard_size = (uint)tx_count;
+	float* d_hadamard = nullptr;
 
-	float* cpu_array = (float*)malloc(array_size);
-	float* device_array = nullptr;
+	size_t tx_size = sample_count * channel_count;
+
+	cudaError_t status = _host::generate_hadamard(hadamard_size, &d_hadamard);
+
+	size_t input_size = sample_count * channel_count * tx_count;
+	float* d_input = nullptr;
+	cudaMalloc((void**)&d_input, input_size * sizeof(float));
+
+	*output = (float*)malloc(input_size * sizeof(float));
+	float* d_output = nullptr;
+	cudaMalloc((void**)&d_output, input_size * sizeof(float));
 
 
-	cudaError_t status = host::generate_hadamard(size, &device_array);
+	cudaMemcpy(d_input, input, input_size * sizeof(float), cudaMemcpyHostToDevice);
 
+	cublasHandle_t handle;
+	cublasCreate(&handle);
+	float alpha = 1.0f;
+	float beta = 0.0f;
+	int runs = 10;
+	auto start = std::chrono::high_resolution_clock::now();
+	auto end = start;
+	std::chrono::duration<double> elapsed;
 
-	status = cudaMemcpy(cpu_array, device_array, array_size, cudaMemcpyDeviceToHost);
-
-	if (status == cudaSuccess)
+	for (int i = 0; i < runs; i++)
 	{
-		host::print_array(cpu_array, size);
-	}
-	else
-	{
-		std::cout << "Failed out copy out data" << std::endl;
+		start = std::chrono::high_resolution_clock::now();
+		CUBLAS_CHECK(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, tx_count, tx_count, &alpha, input, tx_size, d_hadamard, tx_count, &beta, *output, tx_size));
+		end = std::chrono::high_resolution_clock::now();
+		elapsed = end - start;
+		std::cout << "Multiply duration: " << elapsed.count() << " seconds" << std::endl;
 	}
 
-	cudaFree(device_array);
-	free(cpu_array);
+	
+	cudaMemcpy(*output, d_output, input_size * sizeof(float), cudaMemcpyDeviceToHost);
+
+	cudaFree(d_input);
+	cudaFree(d_output);
+	cudaFree(d_hadamard);
 
 	return status == cudaSuccess;
+}
+
+__host__ cublasStatus_t
+hadamard::_host::decode(const float* data, const float* hadamard, float* output, int3 data_dims)
+{
+
+
+
+	return CUBLAS_STATUS_SUCCESS;
 }
 
 

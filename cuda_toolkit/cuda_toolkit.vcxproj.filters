@@ -31,9 +31,11 @@
     </ClInclude>
     <ClInclude Include="hilbert_transform.cuh" />
     <ClInclude Include="hadamard.cuh" />
+    <ClInclude Include="dataloader_win32.cuh" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="hilbert_transform.cu" />
     <CudaCompile Include="hadamard.cu" />
+    <CudaCompile Include="dataloader_win32.cu" />
   </ItemGroup>
 </Project>

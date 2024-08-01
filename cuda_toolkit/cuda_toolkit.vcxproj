@@ -121,7 +121,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib</AdditionalDependencies>
     </Link>
     <CudaLink>
       <AdditionalDependencies>cufft.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -148,6 +148,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="dataloader_win32.cu" />
     <CudaCompile Include="hadamard.cu" />
     <CudaCompile Include="hilbert_transform.cu" />
   </ItemGroup>
@@ -157,6 +158,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_toolkit.h" />
+    <ClInclude Include="dataloader_win32.cuh" />
     <ClInclude Include="hadamard.cuh" />
     <ClInclude Include="hilbert_transform.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>

@@ -4,21 +4,24 @@
 #include <stdio.h>
 #include <string>
 #include <string.h>
+
 #include <cufft.h>
 #include <cublas_v2.h>
+
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <Windows.h>
+#endif
 
 #define MAX_THREADS_PER_BLOCK 1024
 #define MAX_2D_BLOCK_DIM 32
 
-#define SAMPLE_F = 50000000 // 50 MHz
-
-#define MAX_ERROR_LENGTH 256
-static char Error_buffer[MAX_ERROR_LENGTH];
-
-
 typedef unsigned int uint;
 
 #define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
+
+#define MAX_ERROR_LENGTH 256
+static char Error_buffer[MAX_ERROR_LENGTH];
 
 #define FFT_RETURN_IF_ERROR(STATUS, MESSAGE)		\
 {													\
@@ -30,13 +33,13 @@ typedef unsigned int uint;
 }													\
 
 // CUDA API error checking
-#define THROW_IF_ERROR(err)                                                                            \
+#define THROW_IF_ERROR(err)                                                                        \
     do {                                                                                           \
         cudaError_t err_ = (err);                                                                  \
         if (err_ != cudaSuccess) {                                                                 \
             std::printf("CUDA error %s (%d) '%s'\n At %s:%d\n",                                    \
                 cudaGetErrorName(err_), err_, cudaGetErrorString(err_), __FILE__, __LINE__);       \
-            throw std::runtime_error("cuda error");                                                                          \
+            throw std::runtime_error("cuda error");                                                \
         }                                                                                          \
     } while (0)
 
@@ -61,9 +64,6 @@ namespace defs
 		size_t sample_count;
 		size_t tx_count;
 	};
-
-
-
 }
 
 

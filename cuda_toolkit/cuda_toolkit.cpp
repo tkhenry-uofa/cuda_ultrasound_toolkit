@@ -11,9 +11,9 @@ result_t batch_hilbert_transform(int sample_count, int channel_count, const floa
 	return success ? SUCCESS : FAILURE;
 }
 
-result_t hadamard_decode()
+result_t hadamard_decode(int sample_count, int channel_count, int transmission_count, const float* input, float** output)
 {
-	bool success = hadamard::hadamard_decode_cuda(0, 0, 0, nullptr, nullptr, nullptr);
+	bool success = hadamard::hadamard_decode(sample_count, channel_count, transmission_count, input, nullptr, output);
 
 	return success ? SUCCESS : FAILURE;
 }
