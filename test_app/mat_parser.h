@@ -15,9 +15,11 @@ extern "C" {
 
 namespace parser
 {
-	bool load_rf_data_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims);
+	bool load_int16_array(std::string file_path, std::vector<i16>** data_array, defs::RfDataDims* dims);
 
-	bool save_float_data(void* ptr, size_t dims[3], std::string file_path, std::string variable_name, bool complex);
+	bool load_float_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims);
+
+	bool save_float_array(void* ptr, size_t dims[3], std::string file_path, std::string variable_name, bool complex);
 }
 
 #endif // !MAT_PARSER_H

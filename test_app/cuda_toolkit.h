@@ -37,6 +37,8 @@ extern "C" {
 
 	EXPORT_FN result_t hadamard_decode(int sample_count, int channel_count, int transmission_count, const float* input, float** output);
 
+	EXPORT_FN result_t convert_and_decode(const int16_t* input, unsigned int input_dims[2], unsigned int decoded_dims[3], bool rx_rows, float** output);
+
 #ifdef __cplusplus
 }
 #endif

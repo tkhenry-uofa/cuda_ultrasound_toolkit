@@ -3,7 +3,51 @@
 #include "mat_parser.h"
 
 bool
-parser::load_rf_data_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims)
+parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, defs::RfDataDims* dims)
+{
+    bool success = false;
+    mxArray* mx_array = nullptr;
+
+    *data_array = nullptr;
+
+    MATFile* file = matOpen(file_path.c_str(), "r");
+
+    // Get RF Data
+    mx_array = matGetVariable(file, defs::rf_data_name.c_str());
+    if (mx_array == NULL) {
+        std::cerr << "Error reading rf data array." << std::endl;
+        return success;
+    }
+
+    if (!mxIsComplex(mx_array))
+    {
+        size_t element_count = mxGetNumberOfElements(mx_array);
+        const mwSize* rf_size = mxGetDimensions(mx_array);
+        dims->sample_count = rf_size[0];
+        dims->channel_count = rf_size[1];
+        dims->tx_count = rf_size[2];
+
+        mxInt16* data_array_ptr = mxGetInt16s(mx_array);
+
+        *data_array = new std::vector<i16>(data_array_ptr, &(data_array_ptr[element_count]));
+
+        success = true;
+    }
+    else
+    {
+        std::cerr << "Data is complex" << std::endl;
+        return false;
+    }
+
+    mxDestroyArray(mx_array);
+    matClose(file);
+
+    return success;
+}
+
+
+bool
+parser::load_float_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims)
 {
     
     bool success = false;
@@ -25,7 +69,7 @@ parser::load_rf_data_array(std::string file_path, std::vector<float>** data_arra
         size_t element_count = mxGetNumberOfElements(mx_array);
         const mwSize* rf_size = mxGetDimensions(mx_array);
         dims->sample_count = rf_size[0];
-        dims->element_count = rf_size[1];
+        dims->channel_count = rf_size[1];
         dims->tx_count = rf_size[2];
 
         float* data_array_ptr = mxGetSingles(mx_array);
@@ -47,7 +91,7 @@ parser::load_rf_data_array(std::string file_path, std::vector<float>** data_arra
 }
 
 bool
-parser::save_float_data(void* ptr, size_t dims[3], std::string file_path, std::string variable_name, bool complex)
+parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::string variable_name, bool complex)
 {
     mxArray* volume_array = NULL;
     if (complex)

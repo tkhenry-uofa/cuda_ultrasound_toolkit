@@ -29,13 +29,15 @@
     <ClInclude Include="defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hilbert_transform.cuh" />
-    <ClInclude Include="hadamard.cuh" />
-    <ClInclude Include="dataloader_win32.cuh" />
+    <ClInclude Include="hilbert\hilbert_transform.cuh" />
+    <ClInclude Include="hadamard\hadamard.cuh" />
+    <ClInclude Include="data_conversion\dataloader_win32.cuh" />
+    <ClInclude Include="data_conversion\int16_to_float.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="hilbert_transform.cu" />
-    <CudaCompile Include="hadamard.cu" />
-    <CudaCompile Include="dataloader_win32.cu" />
+    <CudaCompile Include="hilbert\hilbert_transform.cu" />
+    <CudaCompile Include="hadamard\hadamard.cu" />
+    <CudaCompile Include="data_conversion\dataloader_win32.cu" />
+    <CudaCompile Include="data_conversion\int16_to_float.cu" />
   </ItemGroup>
 </Project>

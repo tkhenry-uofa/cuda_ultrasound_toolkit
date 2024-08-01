@@ -18,47 +18,50 @@ bool test_hilbert()
 	defs::RfDataDims dims;
 	std::vector<float>* data_array = nullptr;
 
-	parser::load_rf_data_array(input_file_path, &data_array, &dims);
+	parser::load_float_array(input_file_path, &data_array, &dims);
 
 	complex_f* output;
 
 	//bool success = cuda_fft(data_array->data(), &output, dims);
 
-	result_t hilbert_result = batch_hilbert_transform(dims.sample_count, dims.element_count * dims.tx_count, data_array->data(), &output);
+	result_t hilbert_result = batch_hilbert_transform(dims.sample_count, dims.channel_count * dims.tx_count, data_array->data(), &output);
 
 	if (hilbert_result != SUCCESS || output == NULL)
 	{
 		printf("ERROR\n");
 	}
 
-	size_t output_dims[3] = { dims.sample_count, dims.element_count, dims.tx_count };
-	bool success = parser::save_float_data(output, output_dims, output_file_path, "complex_data", true);
+	size_t output_dims[3] = { dims.sample_count, dims.channel_count, dims.tx_count };
+	bool success = parser::save_float_array(output, output_dims, output_file_path, "complex_data", true);
 
 	delete data_array;
 	delete[] output;
 	return success;
 }
 
-bool test_hadamard()
+bool test_decoding()
 {
-	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\uforces_32_float.mat)";
+	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\uforces_32_raw.mat)";
 	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\decoded.mat)";
 
 	defs::RfDataDims dims;
-	std::vector<float>* data_array = nullptr;
+	std::vector<i16>* data_array = nullptr;
 
-	parser::load_rf_data_array(input_file_path, &data_array, &dims);
+	parser::load_int16_array(input_file_path, &data_array, &dims);
+
+	uint input_dims[2] = { dims.sample_count, dims.channel_count };
+	uint output_dims[3] = { 4352 , 128, 32 };
+	size_t output_dims2[3] = { 4352 , 128, 32 };
 
 	float* output = nullptr;
 
-	result_t result = hadamard_decode(dims.sample_count, dims.element_count, dims.tx_count, data_array->data(), &output);
+	result_t result = convert_and_decode(data_array->data(), input_dims, output_dims, true, &output);
 
-	size_t output_dims[3] = { dims.sample_count, dims.element_count, dims.tx_count };
-	bool success = parser::save_float_data(output, output_dims, output_file_path, "decoded", false);
+	//bool success = parser::save_float_array(output, output_dims2, output_file_path, "decoded", false);
 
+	delete output;
 	delete data_array;
-	free(output);
-
+	
 	return SUCCESS;
 }
 
@@ -69,7 +72,7 @@ int main()
 
 	//result = test_hilbert();
 
-	result = test_hadamard();
+	result = test_decoding();
 
 
 	return result;

@@ -22,6 +22,7 @@ static char Error_buffer[MAX_ERROR_LENGTH];
 }													\
 
 typedef unsigned int uint;
+typedef int16_t i16;
 
 namespace defs
 {
@@ -33,9 +34,9 @@ namespace defs
 	};
 
 	struct RfDataDims {
-		size_t sample_count;
-		size_t element_count;
-		size_t tx_count;
+		uint sample_count;
+		uint channel_count;
+		uint tx_count;
 	};
 
 	enum Quadrent {

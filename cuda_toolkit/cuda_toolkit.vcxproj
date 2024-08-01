@@ -148,9 +148,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="dataloader_win32.cu" />
-    <CudaCompile Include="hadamard.cu" />
-    <CudaCompile Include="hilbert_transform.cu" />
+    <CudaCompile Include="data_conversion\dataloader_win32.cu" />
+    <CudaCompile Include="data_conversion\int16_to_float.cu" />
+    <CudaCompile Include="hadamard\hadamard.cu" />
+    <CudaCompile Include="hilbert\hilbert_transform.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cuda_toolkit.cpp" />
@@ -158,9 +159,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_toolkit.h" />
-    <ClInclude Include="dataloader_win32.cuh" />
-    <ClInclude Include="hadamard.cuh" />
-    <ClInclude Include="hilbert_transform.cuh">
+    <ClInclude Include="data_conversion\dataloader_win32.cuh" />
+    <ClInclude Include="data_conversion\int16_to_float.cuh" />
+    <ClInclude Include="hadamard\hadamard.cuh" />
+    <ClInclude Include="hilbert\hilbert_transform.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="defs.h" />
