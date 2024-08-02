@@ -26,7 +26,11 @@ bool test_decoding()
 
 	float* output = nullptr;
 
-	result_t result = convert_and_decode(data_array->data(), input_dims, output_dims, true, &output);
+	bool startup_result = startup();
+
+	result_t result = test_convert_and_decode(data_array->data(), input_dims, output_dims, true, &output);
+
+	cleanup();
 
 	//bool success = parser::save_float_array(output, output_dims2, output_file_path, "decoded", false);
 

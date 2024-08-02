@@ -121,7 +121,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib</AdditionalDependencies>
+      <AdditionalDependencies>glew64.lib;%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaToolkitLibDir);C:\Users\tkhen\source\repos\cuda-samples\Common\lib\x64</AdditionalLibraryDirectories>
     </Link>
     <CudaLink>
       <AdditionalDependencies>cufft.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -148,7 +149,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="data_conversion\dataloader_win32.cu" />
     <CudaCompile Include="data_conversion\int16_to_float.cu" />
     <CudaCompile Include="hadamard\hadamard.cu" />
     <CudaCompile Include="hilbert\hilbert_transform.cu" />
@@ -159,7 +159,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_toolkit.h" />
-    <ClInclude Include="data_conversion\dataloader_win32.cuh" />
     <ClInclude Include="data_conversion\int16_to_float.cuh" />
     <ClInclude Include="hadamard\hadamard.cuh" />
     <ClInclude Include="hilbert\hilbert_transform.cuh">

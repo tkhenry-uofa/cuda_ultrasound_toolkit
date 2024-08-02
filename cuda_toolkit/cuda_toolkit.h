@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #ifdef _WIN32
-	#define EXPORT_FN _declspec(dllexport)
+	#define EXPORT_FN __declspec(dllexport)
 #else
 	#define EXPORT_FN
 #endif
@@ -23,7 +23,23 @@
 			float im;
 		} complex_f;
 
-		EXPORT_FN result_t convert_and_decode(const int16_t* input, unsigned int input_dims[2], unsigned int decoded_dims[3], bool rx_rows, float** output);
+		EXPORT_FN bool startup();
+		EXPORT_FN bool cleanup();
+
+		EXPORT_FN bool raw_data_to_cuda(const int16_t* input, uint32_t* input_dims, uint32_t* decoded_dims);
+
+		/**
+		* Converts input to floats, hadamard decodes, and hilbert transforms via fft
+		* 
+		* Padding at the end of each channel is skipped, along with the transmitting channels
+		* 
+		* input_dims - [raw_sample_count (sample_count * tx_count + padding), total_channel_count]	
+		* decoded_dims - [sample_count, rx_channel_count, tx_count]
+		* rx_rows - TRUE|FALSE: The first|second half of the input channels are read
+		*/
+		EXPORT_FN result_t test_convert_and_decode(const int16_t* input, uint32_t* input_dims, uint32_t* decoded_dims, bool rx_rows, float** output);
+
+		EXPORT_FN result_t decode_and_hilbert(bool rx_rows, uint32_t output_buffer);
 
 #ifdef __cplusplus
 	}

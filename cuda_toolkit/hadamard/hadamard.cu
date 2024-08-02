@@ -129,16 +129,14 @@ hadamard::hadamard_decode(defs::RfDataDims dims, const float* d_input, const flo
 {
 
 	uint tx_size = dims.sample_count * dims.channel_count;
-
-	cublasHandle_t handle;
-	cublasCreate(&handle);
 	float alpha = 1.0f;
 	float beta = 0.0f;
 
-	CUBLAS_CHECK(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, dims.tx_count, dims.tx_count, &alpha, d_input, tx_size, d_hadamard, dims.tx_count, &beta, d_output, tx_size));
+	CUBLAS_CHECK(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, dims.tx_count, dims.tx_count, &alpha, d_input, tx_size, d_hadamard, dims.tx_count, &beta, d_output, tx_size));
 
 	return cudaSuccess;
 }
+
 
 
 

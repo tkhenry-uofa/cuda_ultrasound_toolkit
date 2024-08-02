@@ -12,12 +12,11 @@
 
 namespace hilbert
 {
-
 	__host__ bool
-	plan_hilbert(int sample_count, int channel_count, cufftHandle* fwd_handle, cufftHandle* inv_handle);
+	plan_hilbert(int sample_count, int channel_count);
 
 	__host__
-	bool hilbert_transform(cufftHandle fwd_handle, cufftHandle inv_handle, float* d_input, cufftComplex* d_output);
+	bool hilbert_transform(float* d_input, cufftComplex* d_output);
 }
 
 

@@ -1,6 +1,13 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
+
+#include<cuda_gl_interop.h>
+
 
 #include <stdexcept>
 #include <stdio.h>
@@ -11,30 +18,35 @@
 #include <cufft.h>
 #include <cublas_v2.h>
 
-#ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #include <Windows.h>
-#endif
+
 
 #define MAX_THREADS_PER_BLOCK 1024
 #define MAX_2D_BLOCK_DIM 32
+#define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
 
 typedef unsigned int uint;
 typedef int16_t i16;
 
-#define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
+typedef struct
+{
+    uint2 input_dims;
+    uint3 decoded_dims;
 
-#define MAX_ERROR_LENGTH 256
-static char Error_buffer[MAX_ERROR_LENGTH];
+    cublasHandle_t cublas_handle;
+    cufftHandle forward_plan;
+    cufftHandle inverse_plan;
 
-#define FFT_RETURN_IF_ERROR(STATUS, MESSAGE)		\
-{													\
-	strcpy(Error_buffer, MESSAGE);					\
-	strcat(Error_buffer, " Error code: %d.\n");		\
-	if (STATUS != CUFFT_SUCCESS) {					\
-		fprintf(stderr,Error_buffer,(int)STATUS);	\
-		return false; }								\
-}													\
+    int16_t* d_input;
+    float* d_converted;
+    float* d_decoded;
+    cufftComplex* d_complex;
+    float* d_hadamard;
+
+    bool init;
+
+} CudaSession;
+
+extern CudaSession Session;
 
 // CUDA API error checking
 #define CUDA_THROW_IF_ERROR(err)                                                                        \
@@ -70,6 +82,20 @@ namespace defs
 	};
 }
 
+
+// TODO: remove
+
+
+#define MAX_ERROR_LENGTH 256
+static char Error_buffer[MAX_ERROR_LENGTH];
+#define FFT_RETURN_IF_ERROR(STATUS, MESSAGE)		\
+{													\
+	strcpy(Error_buffer, MESSAGE);					\
+	strcat(Error_buffer, " Error code: %d.\n");		\
+	if (STATUS != CUFFT_SUCCESS) {					\
+		fprintf(stderr,Error_buffer,(int)STATUS);	\
+		return false; }								\
+}	
 
 #endif // !DEFS_H
 

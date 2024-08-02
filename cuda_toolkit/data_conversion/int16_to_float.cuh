@@ -8,13 +8,13 @@
 
 namespace i16_to_f
 {
-	__host__ cudaError_t
+	__host__ bool
 	convert_data(const i16* input, float* output, uint2 input_dims, defs::RfDataDims output_dims, bool rx_rows);
 
 	namespace _kernels
 	{
 		__global__ void
-		short_convert(const i16* input, float* output, uint2 input_dims, defs::RfDataDims output_dims, bool rx_rows);
+		short_to_float(const i16* input, float* output, uint2 input_dims, defs::RfDataDims output_dims, bool rx_rows);
 	}
 }
 

@@ -5,22 +5,6 @@
 #include <string.h>
 #include <cufft.h>
 
-#define THREADS_PER_BLOCK 512
-
-#define SAMPLE_F = 50000000 // 50 MHz
-
-#define MAX_ERROR_LENGTH 256
-static char Error_buffer[MAX_ERROR_LENGTH];
-
-#define FFT_RETURN_IF_ERROR(STATUS, MESSAGE)			\
-{													\
-	strcpy(Error_buffer, MESSAGE);					\
-	strcat(Error_buffer, " Error code: %d.\n");		\
-	if (STATUS != CUFFT_SUCCESS) {					\
-		fprintf(stderr,Error_buffer,(int)STATUS);	\
-		return false; }								\
-}													\
-
 typedef unsigned int uint;
 typedef int16_t i16;
 
@@ -37,13 +21,6 @@ namespace defs
 		uint sample_count;
 		uint channel_count;
 		uint tx_count;
-	};
-
-	enum Quadrent {
-		TOP_LEFT = 0,
-		TOP_RIGHT = 1,
-		BOT_LEFT = 2,
-		BOT_RIGHT = 3
 	};
 }
 
