@@ -8,15 +8,17 @@
 
 #include<cuda_gl_interop.h>
 
-
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
 #include <string.h>
 #include <chrono>
+#include <vector>
 
 #include <cufft.h>
 #include <cublas_v2.h>
+
+#include <assert.h>
 
 
 
@@ -26,6 +28,12 @@
 
 typedef unsigned int uint;
 typedef int16_t i16;
+
+typedef struct
+{
+    cudaGraphicsResource_t cuda_resource;
+    uint gl_buffer_id;
+} buffer_mapping;
 
 typedef struct
 {
@@ -42,31 +50,54 @@ typedef struct
     cufftComplex* d_complex;
     float* d_hadamard;
 
+    buffer_mapping* buffers;
+    uint buffer_count;
+
     bool init;
 
 } CudaSession;
 
 extern CudaSession Session;
 
+#define TIME_FUNCTION(CALL, MESSAGE)                                                        \
+{                                                                                           \
+    auto start = std::chrono::high_resolution_clock::now();                                 \
+    CALL;                                                                                   \
+    auto elapsed = std::chrono::high_resolution_clock::now() - start;                       \
+    std::cout << MESSAGE << " " <<                                                          \
+      std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() <<         \
+        " seconds." << std::endl;                                                           \
+}                                                                                                   
+
 // CUDA API error checking
-#define CUDA_THROW_IF_ERROR(err)                                                                        \
-    do {                                                                                           \
-        cudaError_t err_ = (err);                                                                  \
-        if (err_ != cudaSuccess) {                                                                 \
-            std::printf("CUDA error %s (%d) '%s'\n At %s:%d\n",                                    \
-                cudaGetErrorName(err_), err_, cudaGetErrorString(err_), __FILE__, __LINE__);       \
-            throw std::runtime_error("cuda error");                                                \
-        }                                                                                          \
+#define CUDA_THROW_IF_ERROR(err)                                                             \
+    do {                                                                                    \
+        cudaError_t err_ = (err);                                                           \
+        if (err_ != cudaSuccess) {                                                          \
+            std::printf("CUDA error %s (%d) '%s'\n At %s:%d\n",                             \
+                cudaGetErrorName(err_), err_, cudaGetErrorString(err_), __FILE__, __LINE__);\
+            assert(false);                                                                   \
+        }                                                                                   \
     } while (0)
 
 // cublas API error checking
-#define CUBLAS_CHECK(err)                                                                          \
-    do {                                                                                           \
-        cublasStatus_t err_ = (err);                                                               \
-        if (err_ != CUBLAS_STATUS_SUCCESS) {                                                       \
-            std::printf("cublas error %d at %s:%d\n", err_, __FILE__, __LINE__);                   \
-            throw std::runtime_error("cublas error");                                              \
-        }                                                                                          \
+#define CUBLAS_THROW_IF_ERR(err)                                                           \
+    do {                                                                                    \
+        cublasStatus_t err_ = (err);                                                        \
+        if (err_ != CUBLAS_STATUS_SUCCESS) {                                                \
+            std::printf("cublas error %d at %s:%d\n", err_, __FILE__, __LINE__);            \
+            assert(false);                                                                   \
+        }                                                                                   \
+    } while (0)
+
+// cufft API error checking
+#define CUFFT_THROW_IF_ERR(err)                                                            \
+    do {                                                                                    \
+        cufftResult_t err_ = (err);                                                         \
+        if (err_ != CUFFT_SUCCESS) {                                                        \
+            std::printf("cufft error %d at %s:%d\n", err_, __FILE__, __LINE__);             \
+            assert(false);                                                                   \
+        }                                                                                   \
     } while (0)
 
 
@@ -75,27 +106,21 @@ namespace defs
 {
 	static const std::string rf_data_name = "rx_scans";
 
-	struct RfDataDims {
-        uint sample_count;
-		uint channel_count;
-		uint tx_count;
-	};
+    // Annotating Dim order
+    typedef union
+    {
+        struct
+        {
+            uint sample_count;
+            uint channel_count;
+            uint tx_count;
+        };
+        struct uint3;
+
+    } RfDataDims;
+    
 }
 
-
-// TODO: remove
-
-
-#define MAX_ERROR_LENGTH 256
-static char Error_buffer[MAX_ERROR_LENGTH];
-#define FFT_RETURN_IF_ERROR(STATUS, MESSAGE)		\
-{													\
-	strcpy(Error_buffer, MESSAGE);					\
-	strcat(Error_buffer, " Error code: %d.\n");		\
-	if (STATUS != CUFFT_SUCCESS) {					\
-		fprintf(stderr,Error_buffer,(int)STATUS);	\
-		return false; }								\
-}	
 
 #endif // !DEFS_H
 

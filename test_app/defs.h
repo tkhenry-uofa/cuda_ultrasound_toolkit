@@ -17,11 +17,18 @@ namespace defs
 		float im = 0.0f;
 	};
 
-	struct RfDataDims {
-		uint sample_count;
-		uint channel_count;
-		uint tx_count;
-	};
+    // Annotating Dim order
+    typedef union
+    {
+        struct
+        {
+            uint sample_count;
+            uint channel_count;
+            uint tx_count;
+        };
+        struct uint3;
+
+    } RfDataDims;
 }
 
 

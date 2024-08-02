@@ -7,7 +7,7 @@
 
 #include "cuda_toolkit.h"
 
-CudaSession Session = { {0, 0}, {0, 0, 0}, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, false };
+CudaSession Session = { {0, 0}, {0, 0, 0}, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, false};
 
 bool init_session(uint2 input_dims, uint3 decoded_dims)
 {
@@ -46,7 +46,9 @@ bool init_session(uint2 input_dims, uint3 decoded_dims)
 		CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_complex), output_size * 2));
 
 		float* d_hadamard = nullptr;
-		CUDA_THROW_IF_ERROR(hadamard::generate_hadamard(decoded_dims.z, &(Session.d_hadamard)));
+		bool success = hadamard::generate_hadamard(decoded_dims.z, &(Session.d_hadamard));
+
+		assert(success);
 
 		uint fft_channel_count = decoded_dims.y * decoded_dims.z;
 		uint sample_count = decoded_dims.x;
@@ -62,19 +64,23 @@ bool init_session(uint2 input_dims, uint3 decoded_dims)
 
 bool startup()
 {
-
 	return true;
 }
 
 bool cleanup()
 {
+	cudaFree(Session.d_complex);
+	cudaFree(Session.d_hadamard);
+	cudaFree(Session.d_converted);
+	cudaFree(Session.d_decoded);
+	cudaFree(Session.d_input);
 	cublasDestroy(Session.cublas_handle);
 	cufftDestroy(Session.forward_plan);
 	cufftDestroy(Session.inverse_plan);
 	return true;
 }
 
-bool raw_data_to_cuda(const int16_t* input, uint32_t* input_dims, uint32_t* decoded_dims )
+bool raw_data_to_cuda(const int16_t* input, uint* input_dims, uint* decoded_dims )
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
@@ -85,91 +91,97 @@ bool raw_data_to_cuda(const int16_t* input, uint32_t* input_dims, uint32_t* deco
 	
 	size_t data_size = input_struct.x * input_struct.y * sizeof(int16_t);
 
-	std::cout << "Data size: " << data_size << std::endl;
 	CUDA_THROW_IF_ERROR(cudaMemcpy(Session.d_input, input, data_size, cudaMemcpyHostToDevice));
 
 	return true;
 }
 
-result_t decode_and_hilbert(bool rx_rows, uint32_t output_buffer)
+bool decode_and_hilbert(bool rx_rows, uint buffer_idx)
 {
-
+	//auto start = std::chrono::high_resolution_clock::now();
 	if (!Session.init)
 	{
-		return FAILURE;
+		return false;
 	}
 
-	bool success;
+	cudaGraphicsResource_t output_resource = Session.buffers[buffer_idx].cuda_resource;
 
-	cudaGraphicsResource_t output_resource;
-	std::cout << "Output buffer: " << output_buffer << std::endl;
-	CUDA_THROW_IF_ERROR(cudaGraphicsGLRegisterBuffer(&output_resource, output_buffer, cudaGraphicsMapFlagsNone));
+
 	CUDA_THROW_IF_ERROR(cudaGraphicsMapResources(1, &output_resource, 0));
-
 	size_t num_bytes;
-	cufftComplex* d_output = nullptr;
+	cufftComplex * d_output = nullptr;
+
+
 	CUDA_THROW_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
 
 
 	defs::RfDataDims data_dims = { Session.decoded_dims.x, Session.decoded_dims.y, Session.decoded_dims.z };
-	success = i16_to_f::convert_data(Session.d_input, Session.d_converted, Session.input_dims, data_dims, rx_rows);
-	success = hadamard::hadamard_decode(data_dims, Session.d_converted, Session.d_hadamard, Session.d_decoded);
-	success = hilbert::hilbert_transform(Session.d_decoded, d_output);
 
+	i16_to_f::convert_data(Session.d_input, Session.d_converted, Session.input_dims, data_dims, true);
+	hadamard::hadamard_decode(data_dims, Session.d_converted, Session.d_hadamard, Session.d_decoded);
+
+	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
 	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource, 0));
-	CUDA_THROW_IF_ERROR(cudaGraphicsUnregisterResource(output_resource));
 
-	return SUCCESS;
+	/*auto elapsed = std::chrono::high_resolution_clock::now() - start;
+	std::cout << "Decode and hilbert duration: " << std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() << " seconds." << std::endl;*/
+	return true;
+}
+
+bool register_cuda_buffers(uint* rf_data_ssbos, uint buffer_count)
+{
+	uint old_buffer_count = Session.buffer_count;
+
+	if (old_buffer_count != 0)
+	{
+		for (uint i = 0; i < old_buffer_count; i++)
+		{
+			CUDA_THROW_IF_ERROR(cudaGraphicsUnregisterResource(Session.buffers[i].cuda_resource));
+		}
+		
+		free(Session.buffers);
+	}
+
+	Session.buffers = (buffer_mapping*)malloc(buffer_count * sizeof(buffer_mapping));
+	for (uint i = 0; i < buffer_count; i++)
+	{
+		std::cout << "Registering buffer : " << i << ", " << rf_data_ssbos[i] << std::endl;
+		Session.buffers[i] = { NULL, rf_data_ssbos[i] };
+		CUDA_THROW_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.buffers[i].cuda_resource), Session.buffers[i].gl_buffer_id, cudaGraphicsRegisterFlagsNone));
+	}
+	Session.buffer_count = buffer_count;
+
+	return true;
 }
 
 
-result_t test_convert_and_decode(const int16_t* input, uint32_t *input_dims, uint32_t *decoded_dims, bool rx_rows, float** output)
+bool test_convert_and_decode(const int16_t* input, uint*input_dims, uint*decoded_dims, bool rx_rows, float** output)
 {
 	uint2 input_dims_struct = { input_dims[0], input_dims[1] };
 	defs::RfDataDims output_dims_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 
 	size_t input_size = input_dims[0] * input_dims[1] * sizeof(i16);
 	size_t output_size = decoded_dims[0] * decoded_dims[1] * decoded_dims[2] * sizeof(float);
-	*output = (float*)malloc(output_size*2);
 
-	CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_input), input_size));
-	CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_converted), output_size));
-	CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_decoded), output_size));
-	CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_complex), output_size * 2));
+	init_session(input_dims_struct, *(uint3*)decoded_dims);
 
-	float* d_hadamard = nullptr;
-	CUDA_THROW_IF_ERROR(hadamard::generate_hadamard(output_dims_struct.tx_count, &d_hadamard));
-
-	uint fft_channel_count = decoded_dims[1] * decoded_dims[2];
-	uint sample_count = decoded_dims[0];
-
-	hilbert::plan_hilbert(sample_count, fft_channel_count);
-
-	auto start = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed;
-
+	raw_data_to_cuda(input, input_dims, decoded_dims);
+	
 	int runs = 10;
-	bool success;
 	for (int i = 0; i < runs; i++)
 	{
-		start = std::chrono::high_resolution_clock::now();
-		CUDA_THROW_IF_ERROR(cudaMemcpy(Session.d_input, input, input_size, cudaMemcpyHostToDevice));
-		elapsed = std::chrono::high_resolution_clock::now() - start;
-		std::cout << "Transfer duration: " << elapsed.count() << " Seconds." << std::endl;
+		TIME_FUNCTION(CUDA_THROW_IF_ERROR(cudaMemcpy(Session.d_input, input, input_size, cudaMemcpyHostToDevice)), "Transfer duration:");
 
-		start = std::chrono::high_resolution_clock::now();
-		success = i16_to_f::convert_data(Session.d_input, Session.d_converted, input_dims_struct, output_dims_struct, rx_rows);
-		success = hadamard::hadamard_decode(output_dims_struct, Session.d_converted, d_hadamard, Session.d_decoded);
-		elapsed = std::chrono::high_resolution_clock::now() - start;
-		std::cout << "Decoding duration: " << elapsed.count() << " Seconds." << std::endl;
+		TIME_FUNCTION(
+			i16_to_f::convert_data(Session.d_input, Session.d_converted, input_dims_struct, output_dims_struct, true);
+			hadamard::hadamard_decode(output_dims_struct, Session.d_converted, Session.d_hadamard, Session.d_decoded), 
+			"Decoding duration:");
 
-		start = std::chrono::high_resolution_clock::now();
-		success = hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
-		elapsed = std::chrono::high_resolution_clock::now() - start;
-		std::cout << "Hilbert duration: " << elapsed.count() << " Seconds.\n" << std::endl;
+		TIME_FUNCTION(hilbert::hilbert_transform(Session.d_decoded, Session.d_complex), "Hilbert transform duration:");
+
+		std::cout << std::endl;
+
 	}
 
-	CUDA_THROW_IF_ERROR(cudaMemcpy(*output, Session.d_complex, output_size*2, cudaMemcpyDeviceToHost));
-
-	return success ? SUCCESS : FAILURE;
+	return true;
 }

@@ -93,7 +93,6 @@
     <ClCompile Include="mat_parser.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cuda_toolkit.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="mat_parser.h" />
   </ItemGroup>

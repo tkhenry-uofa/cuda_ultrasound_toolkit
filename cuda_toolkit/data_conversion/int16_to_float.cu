@@ -28,7 +28,9 @@ i16_to_f::_kernels::short_to_float(const i16* input, float* output, uint2 input_
 	channel_idx = rx_rows ? channel_idx : (channel_idx + output_dims.channel_count);
 	uint input_idx = (channel_idx * input_dims.x) + raw_sample_idx;
 
-	output[output_idx] = (float)input[input_idx];
+	i16 result = input[input_idx];
+
+	output[output_idx] = (float)result;
 
 }
 

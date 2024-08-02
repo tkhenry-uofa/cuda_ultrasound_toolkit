@@ -68,7 +68,7 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
     {
         size_t element_count = mxGetNumberOfElements(mx_array);
         const mwSize* rf_size = mxGetDimensions(mx_array);
-        dims->sample_count = rf_size[0];
+        dims->sample_count = rf_size[05];
         dims->channel_count = rf_size[1];
         dims->tx_count = rf_size[2];
 

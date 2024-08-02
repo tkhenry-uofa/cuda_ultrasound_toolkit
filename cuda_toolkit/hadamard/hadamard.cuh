@@ -12,10 +12,10 @@
 
 namespace hadamard 
 {
-	__host__
-	bool hadamard_decode(defs::RfDataDims dims, const float* d_input, const float* d_hadamard, float* d_output);
+	__host__ bool 
+	hadamard_decode(defs::RfDataDims dims, const float* d_input, const float* d_hadamard, float* d_output);
 
-	__host__ cudaError_t
+	__host__ bool
 	generate_hadamard(uint size, float** dev_ptr);
 
 	namespace _kernels

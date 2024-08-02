@@ -2,12 +2,10 @@
 #include <string>
 #include <chrono>
 
-#include "cuda_toolkit.h"
+#include "../cuda_toolkit/cuda_toolkit.h"
 
 #include "defs.h"
 #include "mat_parser.h"
-
-//#include "cuda_fft.cuh"
 
 
 bool test_decoding()
@@ -25,30 +23,16 @@ bool test_decoding()
 	size_t output_dims2[3] = { 4352 , 128, 32 };
 
 	float* output = nullptr;
-
-	bool startup_result = startup();
-
-	result_t result = test_convert_and_decode(data_array->data(), input_dims, output_dims, true, &output);
-
+	bool result = test_convert_and_decode(data_array->data(), input_dims, output_dims, true, &output);
 	cleanup();
-
-	//bool success = parser::save_float_array(output, output_dims2, output_file_path, "decoded", false);
-
 	free(output);
 
 	delete data_array;
-	
-	return SUCCESS;
+	return true;
 }
 
 int main()
 {
-
-	int result;
-
-
-	result = test_decoding();
-
-
-	return result;
+	bool result = test_decoding();
+	return !result;
 }
