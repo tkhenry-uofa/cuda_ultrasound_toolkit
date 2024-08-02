@@ -106,18 +106,25 @@ namespace defs
 {
 	static const std::string rf_data_name = "rx_scans";
 
-    // Annotating Dim order
-    typedef union
-    {
-        struct
-        {
-            uint sample_count;
-            uint channel_count;
-            uint tx_count;
-        };
-        struct uint3;
 
-    } RfDataDims;
+    struct RfDataDims
+    {
+        unsigned int sample_count;
+        unsigned int channel_count;
+        unsigned int tx_count;
+
+        RfDataDims(const uint3& input) : sample_count(input.x), channel_count(input.y), tx_count(input.z) {};
+        RfDataDims(const unsigned int * input) : sample_count(input[0]), channel_count(input[1]), tx_count(input[2]) {};
+
+        RfDataDims& operator=(const uint3& input)
+        {
+            sample_count = input.x;
+            channel_count = input.y;
+            tx_count = input.z;
+            return *this;
+        }
+    };
+
     
 }
 

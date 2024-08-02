@@ -105,20 +105,15 @@ bool decode_and_hilbert(bool rx_rows, uint buffer_idx)
 	}
 
 	cudaGraphicsResource_t output_resource = Session.buffers[buffer_idx].cuda_resource;
-
-
 	CUDA_THROW_IF_ERROR(cudaGraphicsMapResources(1, &output_resource, 0));
+
 	size_t num_bytes;
-	cufftComplex * d_output = nullptr;
-
-
+	cufftComplex *d_output = nullptr;
 	CUDA_THROW_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
 
-
-	defs::RfDataDims data_dims = { Session.decoded_dims.x, Session.decoded_dims.y, Session.decoded_dims.z };
-
-	i16_to_f::convert_data(Session.d_input, Session.d_converted, Session.input_dims, data_dims, true);
-	hadamard::hadamard_decode(data_dims, Session.d_converted, Session.d_hadamard, Session.d_decoded);
+	//defs::RfDataDims data_dims = { Session.decoded_dims.x, Session.decoded_dims.y, Session.decoded_dims.z };
+	i16_to_f::convert_data(Session.d_input, Session.d_converted, Session.input_dims, Session.decoded_dims, true);
+	hadamard::hadamard_decode(Session.decoded_dims, Session.d_converted, Session.d_hadamard, Session.d_decoded);
 
 	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
 	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource, 0));
@@ -158,8 +153,7 @@ bool register_cuda_buffers(uint* rf_data_ssbos, uint buffer_count)
 bool test_convert_and_decode(const int16_t* input, uint*input_dims, uint*decoded_dims, bool rx_rows, float** output)
 {
 	uint2 input_dims_struct = { input_dims[0], input_dims[1] };
-	defs::RfDataDims output_dims_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
-
+	defs::RfDataDims output_dims_struct(decoded_dims);
 	size_t input_size = input_dims[0] * input_dims[1] * sizeof(i16);
 	size_t output_size = decoded_dims[0] * decoded_dims[1] * decoded_dims[2] * sizeof(float);
 
