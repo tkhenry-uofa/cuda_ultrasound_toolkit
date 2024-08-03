@@ -6,7 +6,7 @@
 #include <complex>
 #include <string>
 
-#include "defs.h"
+#include "../defs.h"
 
 extern "C" {
 	#include <mat.h>
@@ -15,6 +15,7 @@ extern "C" {
 
 namespace parser
 {
+	bool parse_bp_struct(std::string file_path, defs::BeamformerParams* params);
 	bool load_int16_array(std::string file_path, std::vector<i16>** data_array, defs::RfDataDims* dims);
 
 	bool load_float_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims);

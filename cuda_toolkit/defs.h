@@ -6,37 +6,35 @@
 #include <Windows.h>
 #endif
 
-#include<cuda_gl_interop.h>
+#include <assert.h>
 
-#include <stdexcept>
-#include <stdio.h>
 #include <string>
-#include <string.h>
 #include <chrono>
 #include <vector>
 
 #include <cufft.h>
 #include <cublas_v2.h>
-
-#include <assert.h>
-
-
+#include <cuda_gl_interop.h>
 
 #define MAX_THREADS_PER_BLOCK 1024
 #define MAX_2D_BLOCK_DIM 32
+
+#define TOTAL_TOBE_CHANNELS 265
 #define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
 
 typedef unsigned int uint;
 typedef int16_t i16;
 
-typedef struct
+struct BufferMapping
 {
     cudaGraphicsResource_t cuda_resource;
     uint gl_buffer_id;
-} buffer_mapping;
+};
 
-typedef struct
+struct CudaSession
 {
+
+    bool init;
     uint2 input_dims;
     uint3 decoded_dims;
 
@@ -50,84 +48,77 @@ typedef struct
     cufftComplex* d_complex;
     float* d_hadamard;
 
-    buffer_mapping* buffers;
+    BufferMapping* buffers;
     uint buffer_count;
 
-    bool init;
+    uint* channel_mapping;
+};
 
-} CudaSession;
+struct RfDataDims
+{
+    unsigned int sample_count;
+    unsigned int channel_count;
+    unsigned int tx_count;
 
-extern CudaSession Session;
+    RfDataDims(const uint3& input)
+        : sample_count(input.x), channel_count(input.y), tx_count(input.z) {};
 
-#define TIME_FUNCTION(CALL, MESSAGE)                                                        \
-{                                                                                           \
-    auto start = std::chrono::high_resolution_clock::now();                                 \
-    CALL;                                                                                   \
-    auto elapsed = std::chrono::high_resolution_clock::now() - start;                       \
-    std::cout << MESSAGE << " " <<                                                          \
-      std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() <<         \
-        " seconds." << std::endl;                                                           \
-}                                                                                                   
+    RfDataDims(const unsigned int* input)
+        : sample_count(input[0]), channel_count(input[1]), tx_count(input[2]) {};
+
+    RfDataDims& operator=(const uint3& input)
+    {
+        sample_count = input.x;
+        channel_count = input.y;
+        tx_count = input.z;
+        return *this;
+    }
+};
+
+extern CudaSession Session;                                                                                              
 
 // CUDA API error checking
-#define CUDA_THROW_IF_ERROR(err)                                                             \
+#define CUDA_THROW_IF_ERROR(err)                                                            \
     do {                                                                                    \
         cudaError_t err_ = (err);                                                           \
         if (err_ != cudaSuccess) {                                                          \
             std::printf("CUDA error %s (%d) '%s'\n At %s:%d\n",                             \
                 cudaGetErrorName(err_), err_, cudaGetErrorString(err_), __FILE__, __LINE__);\
-            assert(false);                                                                   \
+            assert(false);                                                                  \
         }                                                                                   \
     } while (0)
 
 // cublas API error checking
-#define CUBLAS_THROW_IF_ERR(err)                                                           \
+#define CUBLAS_THROW_IF_ERR(err)                                                            \
     do {                                                                                    \
         cublasStatus_t err_ = (err);                                                        \
         if (err_ != CUBLAS_STATUS_SUCCESS) {                                                \
             std::printf("cublas error %d at %s:%d\n", err_, __FILE__, __LINE__);            \
-            assert(false);                                                                   \
+            assert(false);                                                                  \
         }                                                                                   \
     } while (0)
 
 // cufft API error checking
-#define CUFFT_THROW_IF_ERR(err)                                                            \
+#define CUFFT_THROW_IF_ERR(err)                                                             \
     do {                                                                                    \
         cufftResult_t err_ = (err);                                                         \
         if (err_ != CUFFT_SUCCESS) {                                                        \
             std::printf("cufft error %d at %s:%d\n", err_, __FILE__, __LINE__);             \
-            assert(false);                                                                   \
+            assert(false);                                                                  \
         }                                                                                   \
     } while (0)
 
 
-
-namespace defs
-{
-	static const std::string rf_data_name = "rx_scans";
-
-
-    struct RfDataDims
-    {
-        unsigned int sample_count;
-        unsigned int channel_count;
-        unsigned int tx_count;
-
-        RfDataDims(const uint3& input) : sample_count(input.x), channel_count(input.y), tx_count(input.z) {};
-        RfDataDims(const unsigned int * input) : sample_count(input[0]), channel_count(input[1]), tx_count(input[2]) {};
-
-        RfDataDims& operator=(const uint3& input)
-        {
-            sample_count = input.x;
-            channel_count = input.y;
-            tx_count = input.z;
-            return *this;
-        }
-    };
-
-    
-}
-
+#define TIME_FUNCTION(CALL, MESSAGE)                                                        \
+{                                                                                           \
+    auto start = std::chrono::high_resolution_clock::now();                                 \
+    CALL;                                                                                   \
+    CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());                                           \
+    auto elapsed = std::chrono::high_resolution_clock::now() - start;                       \
+    std::cout << MESSAGE << " " <<                                                          \
+      std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() <<         \
+        " seconds." << std::endl;                                                           \
+}  
 
 #endif // !DEFS_H
 

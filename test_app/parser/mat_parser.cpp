@@ -2,6 +2,58 @@
 
 #include "mat_parser.h"
 
+bool parser::parse_bp_struct(std::string file_path, defs::BeamformerParams* params)
+{
+    // Get RF Data
+
+    MATFile* file = matOpen(file_path.c_str(), "r");
+
+    mxArray* struct_array = matGetVariable(file, defs::beamformer_params_name.c_str());
+    if (struct_array == NULL) {
+        std::cerr << "Error reading tx configuration struct." << std::endl;
+        return false;
+    }
+
+    mxArray* field_p = mxGetField(struct_array, 0, defs::channel_mapping_name.c_str());
+    uint16_t* channel_map_mx = (uint16_t*)mxGetUint16s(field_p);
+    for (uint i = 0; i < TOTAL_TOBE_CHANNELS; i++)
+    {
+        params->channel_mapping[i] = (uint)channel_map_mx[i];
+    }
+
+    field_p = mxGetField(struct_array, 0, defs::decoded_dims_name.c_str());
+
+    mxArray* sub_field_p = mxGetField(field_p, 0, "x");
+    double* double_mx = (double*)mxGetDoubles(sub_field_p);
+    params->decoded_dims[0] = *double_mx;
+
+    sub_field_p = mxGetField(field_p, 0, "y");
+    double_mx = (double*)mxGetDoubles(sub_field_p);
+    params->decoded_dims[1] = *double_mx;
+
+    sub_field_p = mxGetField(field_p, 0, "z");
+    double_mx = (double*)mxGetDoubles(sub_field_p);
+    params->decoded_dims[2] = *double_mx;
+
+    field_p = mxGetField(struct_array, 0, defs::raw_dims_name.c_str());
+    sub_field_p = mxGetField(field_p, 0, "x");
+    double_mx = (double*)mxGetDoubles(sub_field_p);
+    params->raw_dims[0] = *double_mx;
+
+    sub_field_p = mxGetField(field_p, 0, "y");
+    double_mx = (double*)mxGetDoubles(sub_field_p);
+    params->raw_dims[1] = *double_mx;
+
+    field_p = mxGetField(struct_array, 0, defs::channel_offset_name.c_str());
+    double_mx = (double*)mxGetDoubles(field_p);
+    params->rx_cols = (*double_mx > 0);
+
+
+    mxDestroyArray(struct_array);
+    matClose(file);
+
+}
+
 bool
 parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, defs::RfDataDims* dims)
 {
@@ -93,6 +145,7 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
 bool
 parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::string variable_name, bool complex)
 {
+
     mxArray* volume_array = NULL;
     if (complex)
     {
@@ -105,8 +158,14 @@ parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::
         mxSetSingles(volume_array, (mxSingle*)ptr);
     }
     
+    // Try to open for update, if it fails the file does not exist
+    MATFile* file_p = matOpen(file_path.c_str(), "u");
+    if (!file_p)
+    {
+        // Creates a new file and/or overwrites the old
+        file_p = matOpen(file_path.c_str(), "w");
+    }
 
-    MATFile* file_p = matOpen(file_path.c_str(), "w");
     if (!file_p)
     {
         std::cerr << "Failed to open file for volume: " << file_path << std::endl;

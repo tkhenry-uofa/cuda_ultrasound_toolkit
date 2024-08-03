@@ -90,11 +90,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="mat_parser.cpp" />
+    <ClCompile Include="parser\mat_parser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="defs.h" />
-    <ClInclude Include="mat_parser.h" />
+    <ClInclude Include="parser\mat_parser.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="MatlabPath.props">

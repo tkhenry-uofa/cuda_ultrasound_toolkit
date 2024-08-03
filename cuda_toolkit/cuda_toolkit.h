@@ -21,7 +21,7 @@
 
 		EXPORT_FN bool cleanup();
 
-		EXPORT_FN bool raw_data_to_cuda(const int16_t* input, uint* input_dims, uint* decoded_dims);
+		EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping);
 
 		EXPORT_FN bool register_cuda_buffers(uint* rf_data_ssbos, uint buffer_count);
 
@@ -34,7 +34,7 @@
 		* decoded_dims - [sample_count, rx_channel_count, tx_count]
 		* rx_rows - TRUE|FALSE: The first|second half of the input channels are read
 		*/
-		EXPORT_FN bool test_convert_and_decode(const int16_t* input, uint* input_dims, uint* decoded_dims, bool rx_rows, float** output);
+		EXPORT_FN bool test_convert_and_decode(const int16_t* input, uint* input_dims, uint* decoded_dims, const uint* channel_mapping, bool rx_rows, float** converted, float** decoded, float** complex_out);
 
 		EXPORT_FN bool decode_and_hilbert(bool rx_rows, uint output_buffer);
 

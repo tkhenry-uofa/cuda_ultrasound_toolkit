@@ -6,15 +6,20 @@
 
 #include "../defs.h"
 
+
+
 namespace i16_to_f
 {
 	__host__ bool
-	convert_data(const i16* input, float* output, uint2 input_dims, defs::RfDataDims output_dims, bool rx_rows);
+	convert_data(const i16* input, float* output, bool rx_rows);
+
+	__host__ bool
+	copy_channel_mapping(const uint channel_mapping[TOTAL_TOBE_CHANNELS]);
 
 	namespace _kernels
 	{
 		__global__ void
-		short_to_float(const i16* input, float* output, uint2 input_dims, defs::RfDataDims output_dims, bool rx_rows);
+		short_to_float(const i16* input, float* output, uint2 input_dims, RfDataDims output_dims, bool rx_rows);
 	}
 }
 
