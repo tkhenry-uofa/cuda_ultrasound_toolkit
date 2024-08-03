@@ -9,9 +9,6 @@
 
 CudaSession Session = { false, {0, 0}, {0, 0, 0}, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL };
 
-
-
-
 bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mapping[TOTAL_TOBE_CHANNELS])
 {
 	if (!Session.init)
@@ -158,32 +155,26 @@ bool register_cuda_buffers(uint* rf_data_ssbos, uint buffer_count)
 }
 
 
-bool test_convert_and_decode(const int16_t* input, uint*input_dims, uint*decoded_dims, const uint* channel_mapping, bool rx_rows, cufftComplex** intermediate, cufftComplex** complex_out)
+bool test_convert_and_decode(const int16_t* input, uint*input_dims, uint*decoded_dims, const uint* channel_mapping, bool rx_rows, float** converted, float** decoded, float** complex_out)
 {
 	uint2 input_dims_struct = { input_dims[0], input_dims[1] };
 	RfDataDims output_dims_struct(decoded_dims);
-	size_t input_size = input_dims[0] * input_dims[1];
-	size_t output_size = decoded_dims[0] * decoded_dims[1] * decoded_dims[2];
+	size_t input_size = input_dims[0] * input_dims[1] * sizeof(i16);
+	size_t decoded_size = decoded_dims[0] * decoded_dims[1] * decoded_dims[2] * sizeof(float);
+	size_t complex_size = decoded_size * 2;
 
-	*intermediate = (cufftComplex*)malloc(output_size * sizeof(cufftComplex));
-	*complex_out = (cufftComplex*)malloc(output_size * sizeof(cufftComplex));
+	*converted = (float*)malloc(decoded_size);
+	*decoded = (float*)malloc(decoded_size);
+	*complex_out = (float*)malloc(complex_size);
 
 	init_session(input_dims_struct, *(uint3*)decoded_dims, channel_mapping);
+
 	raw_data_to_cuda(input, input_dims, decoded_dims, channel_mapping);
-
-	cufftComplex *d_intermediate;
-
-	CUDA_THROW_IF_ERROR(cudaMalloc((void**)&d_intermediate, output_size * sizeof(cufftComplex)));
-	init_arrayf((float*)d_intermediate, 0.f, output_size * sizeof(cufftComplex));
-
-	i16_to_f::convert_data(Session.d_input, Session.d_converted, true);
-	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
-	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex,d_intermediate);
 	
-	/*int runs = 10;
+	int runs = 10;
 	for (int i = 0; i < runs; i++)
 	{
-		CUDA_THROW_IF_ERROR(cudaMemcpy(Session.d_input, input, input_size * sizeof(i16), cudaMemcpyHostToDevice));
+		CUDA_THROW_IF_ERROR(cudaMemcpy(Session.d_input, input, input_size, cudaMemcpyHostToDevice));
 
 		TIME_FUNCTION(i16_to_f::convert_data(Session.d_input, Session.d_converted, true), "Convert duration: ");
 		TIME_FUNCTION(hadamard::hadamard_decode(Session.d_converted, Session.d_decoded), "Decode duration: ");
@@ -191,10 +182,11 @@ bool test_convert_and_decode(const int16_t* input, uint*input_dims, uint*decoded
 
 		std::cout << std::endl;
 
-	}*/
+	}
 
-	CUDA_THROW_IF_ERROR(cudaMemcpy(*intermediate, d_intermediate, output_size * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
-	CUDA_THROW_IF_ERROR(cudaMemcpy(*complex_out, Session.d_complex, output_size * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
+	CUDA_THROW_IF_ERROR(cudaMemcpy(*converted, Session.d_converted, decoded_size, cudaMemcpyDeviceToHost));
+	CUDA_THROW_IF_ERROR(cudaMemcpy(*decoded, Session.d_decoded, decoded_size, cudaMemcpyDeviceToHost));
+	CUDA_THROW_IF_ERROR(cudaMemcpy(*complex_out, Session.d_complex, decoded_size, cudaMemcpyDeviceToHost));
 
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
 

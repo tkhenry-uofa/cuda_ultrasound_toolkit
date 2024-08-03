@@ -7,8 +7,6 @@
 #include "../defs.h"
 
 
-__host__ bool
-init_arrayf(float* d_array, float value, size_t total_length);
 
 namespace i16_to_f
 {

@@ -2,8 +2,6 @@
 #include <string>
 #include <chrono>
 
-#include <cufft.h>
-
 #include "../cuda_toolkit/cuda_toolkit.h"
 
 #include "defs.h"
@@ -32,17 +30,17 @@ bool test_decoding()
 		(size_t)params.decoded_dims[2] };
 
 	float* converted = nullptr;
-	cuComplex* intermediate = nullptr;
-	cuComplex* complex = nullptr;
-	bool result = test_convert_and_decode(data_array->data(), params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols, &intermediate, &complex);
+	float* decoded = nullptr;
+	float* complex = nullptr;
+	bool result = test_convert_and_decode(data_array->data(), params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols, &converted, &decoded, &complex);
 	cleanup();
 
 //	result = parser::save_float_array(converted, output_dims, output_file_path, "converted", false);
-	result = parser::save_float_array(intermediate, output_dims, output_file_path, "intermediate", true);
+//	result = parser::save_float_array(decoded, output_dims, output_file_path, "decoded", false);
 	result = parser::save_float_array(complex, output_dims, output_file_path, "complex", true);
 
 	free(converted);
-	free(intermediate);
+	free(decoded);
 	free(complex);
 
 	delete data_array;
