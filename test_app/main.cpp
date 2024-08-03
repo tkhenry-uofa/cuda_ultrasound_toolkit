@@ -35,8 +35,8 @@ bool test_decoding()
 	bool result = test_convert_and_decode(data_array->data(), params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols, &converted, &decoded, &complex);
 	cleanup();
 
-	result = parser::save_float_array(converted, output_dims, output_file_path, "converted", false);
-	result = parser::save_float_array(decoded, output_dims, output_file_path, "decoded", false);
+//	result = parser::save_float_array(converted, output_dims, output_file_path, "converted", false);
+//	result = parser::save_float_array(decoded, output_dims, output_file_path, "decoded", false);
 	result = parser::save_float_array(complex, output_dims, output_file_path, "complex", true);
 
 	free(converted);

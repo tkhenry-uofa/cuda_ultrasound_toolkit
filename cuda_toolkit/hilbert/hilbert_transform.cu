@@ -24,7 +24,7 @@ hilbert::plan_hilbert(int sample_count, int channel_count)
 __host__ bool 
 hilbert::hilbert_transform(float* d_input, cufftComplex* d_output)
 {
-	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(float);
+	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cufftComplex);
 
 	CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
