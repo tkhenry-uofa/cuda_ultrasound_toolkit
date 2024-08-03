@@ -17,6 +17,9 @@ namespace hilbert
 
 	__host__ bool 
 	hilbert_transform(float* d_input, cufftComplex* d_output);
+
+	__host__ bool
+	hilbert_transform2(float* d_input, cufftComplex* d_output, cufftComplex* d_intermediate);
 }
 
 

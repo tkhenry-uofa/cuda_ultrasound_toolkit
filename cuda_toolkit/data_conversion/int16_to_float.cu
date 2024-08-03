@@ -5,6 +5,34 @@
 
 __constant__ uint Channel_Mapping[TOTAL_TOBE_CHANNELS];
 
+
+__global__ void
+init_arrayf_kernel(float* array, float value, size_t length)
+{
+	uint idx = threadIdx.x + blockIdx.x * blockDim.x;
+	if (idx < length)
+	{
+		array[idx] = value;
+	}
+}
+
+__host__ bool
+init_arrayf(float* d_array, float value, size_t total_length)
+{
+	size_t grid_length = (size_t)ceilf((float)total_length / MAX_THREADS_PER_BLOCK);
+
+	dim3 grid_dim(grid_length, 1, 1);
+	dim3 block_dim(MAX_THREADS_PER_BLOCK);
+
+	init_arrayf_kernel << <grid_dim, block_dim >> > (d_array, value, total_length);
+
+	CUDA_THROW_IF_ERROR(cudaGetLastError());
+
+	return true;
+}
+
+
+
 __host__ bool
 i16_to_f::copy_channel_mapping(const uint channel_mapping[TOTAL_TOBE_CHANNELS])
 {

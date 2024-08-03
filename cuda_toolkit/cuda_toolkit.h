@@ -34,7 +34,7 @@
 		* decoded_dims - [sample_count, rx_channel_count, tx_count]
 		* rx_rows - TRUE|FALSE: The first|second half of the input channels are read
 		*/
-		EXPORT_FN bool test_convert_and_decode(const int16_t* input, uint* input_dims, uint* decoded_dims, const uint* channel_mapping, bool rx_rows, float** converted, float** decoded, float** complex_out);
+		EXPORT_FN bool test_convert_and_decode(const int16_t* input, uint* input_dims, uint* decoded_dims, const uint* channel_mapping, bool rx_rows, cufftComplex** intermediate, cufftComplex** complex_out);
 
 		EXPORT_FN bool decode_and_hilbert(bool rx_rows, uint output_buffer);
 
