@@ -155,23 +155,20 @@ bool register_cuda_buffers(uint* rf_data_ssbos, uint buffer_count)
 }
 
 
-bool test_convert_and_decode(const int16_t* input, uint*input_dims, uint*decoded_dims, const uint* channel_mapping, bool rx_rows, float** converted, float** decoded, float** complex_out)
+bool test_convert_and_decode(const int16_t* input, const BeamformerParams& params, complex_f** complex_out, complex_f** intermediate)
 {
-	uint2 input_dims_struct = { input_dims[0], input_dims[1] };
-	RfDataDims output_dims_struct(decoded_dims);
-	size_t input_size = input_dims[0] * input_dims[1] * sizeof(i16);
-	size_t decoded_size = decoded_dims[0] * decoded_dims[1] * decoded_dims[2] * sizeof(float);
+	
+	const uint2 input_dims = *(uint2*)&(params.raw_dims); // lol
+	RfDataDims output_dims(params.decoded_dims);
+	size_t input_size = input_dims.x * input_dims.y * sizeof(i16);
+	size_t decoded_size = output_dims.sample_count * output_dims.channel_count * output_dims.tx_count * sizeof(float);
 	size_t complex_size = decoded_size * 2;
 
-	*converted = (float*)malloc(decoded_size);
-	*decoded = (float*)malloc(decoded_size);
-	*complex_out = (float*)malloc(complex_size);
+	*complex_out = (complex_f*)malloc(complex_size);
 
-	init_session(input_dims_struct, *(uint3*)decoded_dims, channel_mapping);
-
-	raw_data_to_cuda(input, input_dims, decoded_dims, channel_mapping);
+	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping);
 	
-	int runs = 10;
+	int runs = 1;
 	for (int i = 0; i < runs; i++)
 	{
 		CUDA_THROW_IF_ERROR(cudaMemcpy(Session.d_input, input, input_size, cudaMemcpyHostToDevice));
@@ -184,8 +181,6 @@ bool test_convert_and_decode(const int16_t* input, uint*input_dims, uint*decoded
 
 	}
 
-	CUDA_THROW_IF_ERROR(cudaMemcpy(*converted, Session.d_converted, decoded_size, cudaMemcpyDeviceToHost));
-	CUDA_THROW_IF_ERROR(cudaMemcpy(*decoded, Session.d_decoded, decoded_size, cudaMemcpyDeviceToHost));
 	CUDA_THROW_IF_ERROR(cudaMemcpy(*complex_out, Session.d_complex, decoded_size, cudaMemcpyDeviceToHost));
 
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());

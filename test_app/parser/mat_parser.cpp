@@ -162,7 +162,7 @@ parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::
     MATFile* file_p = matOpen(file_path.c_str(), "u");
     if (!file_p)
     {
-        // Creates a new file and/or overwrites the old
+        // Makes a new file or overwrites the old
         file_p = matOpen(file_path.c_str(), "w");
     }
 

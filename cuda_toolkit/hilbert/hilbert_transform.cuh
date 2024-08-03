@@ -16,7 +16,10 @@ namespace hilbert
 	plan_hilbert(int sample_count, int channel_count);
 
 	__host__ bool 
-	hilbert_transform(float* d_input, cufftComplex* d_output);
+	hilbert_transform(float* d_input, cuComplex* d_output);
+
+	__host__ bool
+	hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate);
 }
 
 

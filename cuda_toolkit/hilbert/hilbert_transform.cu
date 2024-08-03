@@ -22,13 +22,25 @@ hilbert::plan_hilbert(int sample_count, int channel_count)
 }
 
 __host__ bool 
-hilbert::hilbert_transform(float* d_input, cufftComplex* d_output)
+hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 {
-	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cufftComplex);
+	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
 	CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
 	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_output));
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
+	return true;
+}
+
+__host__ bool
+hilbert::hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate)
+{
+	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
+
+	CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
+
+	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_intermediate));
+	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_intermediate, d_output, CUFFT_INVERSE));
 	return true;
 }

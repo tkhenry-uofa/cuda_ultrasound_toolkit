@@ -10,6 +10,8 @@ typedef int16_t i16;
 
 #define TOTAL_TOBE_CHANNELS 256
 
+
+
 namespace defs
 {
 	static const std::string rf_data_name = "rx_scans";
@@ -20,13 +22,12 @@ namespace defs
     static const std::string raw_dims_name = "rf_raw_dim";
     static const std::string channel_offset_name = "channel_offset";
 
-
-    struct BeamformerParams {
-        uint channel_mapping[TOTAL_TOBE_CHANNELS];
+    typedef struct {
+        uint channel_mapping[256];
         uint decoded_dims[3];
         uint raw_dims[2];
         bool rx_cols;
-    };
+    } BeamformerParams;
 
 	struct ComplexF {
 		float re = 0.0f;

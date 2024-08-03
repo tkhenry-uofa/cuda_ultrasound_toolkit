@@ -19,11 +19,12 @@
 #define MAX_THREADS_PER_BLOCK 1024
 #define MAX_2D_BLOCK_DIM 32
 
-#define TOTAL_TOBE_CHANNELS 265
+#define TOTAL_TOBE_CHANNELS 256
 #define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
 
 typedef unsigned int uint;
 typedef int16_t i16;
+
 
 struct BufferMapping
 {
