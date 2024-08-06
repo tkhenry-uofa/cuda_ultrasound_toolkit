@@ -7,9 +7,9 @@
 
 #include "cuda_toolkit.h"
 
-CudaSession Session = { false, {0, 0}, {0, 0, 0}, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL };
+CudaSession Session = { false, false, {0, 0}, {0, 0, 0}, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, {NULL, 0}, NULL, 0, NULL};
 
-bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mapping[TOTAL_TOBE_CHANNELS])
+bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mapping[TOTAL_TOBE_CHANNELS], bool rx_cols)
 {
 	if (!Session.init)
 	{
@@ -18,6 +18,7 @@ bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mappi
 
 		Session.input_dims = input_dims;
 		Session.decoded_dims = decoded_dims;
+		Session.rx_cols = rx_cols;
 
 		cublasStatus_t cublas_result = cublasCreate(&(Session.cublas_handle));
 		if (cublas_result != CUBLAS_STATUS_SUCCESS)
@@ -65,6 +66,51 @@ bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mappi
 	return true;
 }
 
+bool
+unregister_cuda_buffers()
+{
+	if (Session.raw_data_ssbo.cuda_resource != NULL)
+	{
+		CUDA_THROW_IF_ERROR(cudaGraphicsUnregisterResource(Session.raw_data_ssbo.cuda_resource));
+	}
+
+	uint old_buffer_count = Session.rf_buffer_count;
+	if (old_buffer_count != 0)
+	{
+		for (uint i = 0; i < old_buffer_count; i++)
+		{
+			CUDA_THROW_IF_ERROR(cudaGraphicsUnregisterResource(Session.rf_data_ssbos[i].cuda_resource));
+		}
+
+		free(Session.rf_data_ssbos);
+	}
+	Session.rf_buffer_count = 0;
+
+	return true;
+}
+
+bool register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
+{
+	if (Session.rf_buffer_count != 0)
+	{
+		unregister_cuda_buffers();
+	}
+	
+	Session.raw_data_ssbo = { NULL, 0 };
+	Session.raw_data_ssbo.gl_buffer_id = raw_data_ssbo;
+	CUDA_THROW_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.raw_data_ssbo.cuda_resource), Session.raw_data_ssbo.gl_buffer_id, cudaGraphicsRegisterFlagsNone));
+
+	Session.rf_data_ssbos = (BufferMapping*)malloc(rf_buffer_count * sizeof(BufferMapping));
+	for (uint i = 0; i < rf_buffer_count; i++)
+	{
+		std::cout << "Registering buffer : " << i << ", " << rf_data_ssbos[i] << std::endl;
+		Session.rf_data_ssbos[i] = { NULL, rf_data_ssbos[i] };
+		CUDA_THROW_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.rf_data_ssbos[i].cuda_resource), Session.rf_data_ssbos[i].gl_buffer_id, cudaGraphicsRegisterFlagsNone));
+	}
+	Session.rf_buffer_count = rf_buffer_count;
+	return true;
+}
+
 bool startup()
 {
 	return true;
@@ -72,6 +118,7 @@ bool startup()
 
 bool cleanup()
 {
+	unregister_cuda_buffers();
 	cudaFree(Session.d_complex);
 	cudaFree(Session.d_hadamard);
 	cudaFree(Session.d_converted);
@@ -82,16 +129,18 @@ bool cleanup()
 	cufftDestroy(Session.inverse_plan);
 
 	free(Session.channel_mapping);
+
+	Session.init = false;
 	return true;
 }
 
-bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping )
+bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols )
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 	if (!Session.init)
 	{
-		init_session(input_struct, decoded_struct, channel_mapping);
+		init_session(input_struct, decoded_struct, channel_mapping, rx_cols);
 	}
 	
 	size_t data_size = input_struct.x * input_struct.y * sizeof(int16_t);
@@ -100,7 +149,36 @@ bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* 
 	return true;
 }
 
-bool decode_and_hilbert(bool rx_cols, uint buffer_idx)
+bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols)
+{
+	uint2 input_struct = { input_dims[0], input_dims[1] };
+	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
+	if (!Session.init)
+	{
+		return init_session(input_struct, decoded_struct, channel_mapping, rx_cols);
+	}
+	else
+	{
+		bool changed = input_struct.x != Session.input_dims.x || input_struct.y != Session.input_dims.y ||
+			decoded_struct.x != Session.decoded_dims.x || decoded_struct.y != Session.decoded_dims.y || decoded_struct.z != Session.decoded_dims.z;
+
+		if (changed)
+		{
+			deinit_cuda_configuration();
+			return init_session(input_struct, decoded_struct, channel_mapping, rx_cols);
+		}
+		return true;
+	}
+}
+
+bool deinit_cuda_configuration()
+{
+	cleanup();
+
+	return true;
+}
+
+bool decode_and_hilbert(uint buffer_idx)
 {
 	
 	auto start = std::chrono::high_resolution_clock::now();
@@ -109,8 +187,17 @@ bool decode_and_hilbert(bool rx_cols, uint buffer_idx)
 		std::cout << "Session not initialized" << std::endl;
 		return false;
 	}
-	cudaGraphicsResource_t output_resource = Session.buffers[buffer_idx].cuda_resource;
 
+	cudaGraphicsResource_t input_resource = Session.raw_data_ssbo.cuda_resource;
+	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[buffer_idx].cuda_resource;
+
+	if (!input_resource || !output_resource)
+	{
+		fprintf(stderr, "Open GL buffers not registered with cuda.");
+		return false;
+	}
+
+	CUDA_THROW_IF_ERROR(cudaGraphicsMapResources(1, &input_resource));
 	CUDA_THROW_IF_ERROR(cudaGraphicsMapResources(1, &output_resource));
 
 	size_t total_count = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z;
@@ -119,65 +206,38 @@ bool decode_and_hilbert(bool rx_cols, uint buffer_idx)
 	uint sample_index = Session.decoded_dims.x;
 
 	size_t num_bytes;
+	i16* d_input = nullptr;
 	cufftComplex *d_output = nullptr;
+	CUDA_THROW_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_input, &num_bytes, input_resource));
 	CUDA_THROW_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
-
-	/*std::cout << "Bytes in pointer " << Session.buffers[buffer_idx].gl_buffer_id << ": " << num_bytes << std::endl;
-	std::cout << "Decoder output size: " << output_size << std::endl;*/
 
 	float sample;
 	int16_t input_sample;
 
-	i16_to_f::convert_data(Session.d_input, Session.d_converted, rx_cols);
+	i16_to_f::convert_data(d_input, Session.d_converted, Session.rx_cols);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
-	std::cout << "Copying" << std::endl;
+	//std::cout << "Copying" << std::endl;
 	//CUDA_THROW_IF_ERROR(cudaMemcpy2D(d_output, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count,cudaMemcpyDefault));
 
 	hilbert::hilbert_transform(Session.d_decoded, d_output);
 
 	//Copy fist acq to all 32
 	uint copy_length = Session.decoded_dims.x * Session.decoded_dims.y;
-	for (int i = 1; i < Session.decoded_dims.z; i++)
+	for (uint i = 1; i < Session.decoded_dims.z; i++)
 	{
 		cuComplex* row = d_output + i * copy_length;
 		cudaMemcpy(row, d_output, copy_length * sizeof(cuComplex), cudaMemcpyDeviceToDevice);
 	}
 
+	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &input_resource));
 	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
 	
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
 
 	return true;
 }
-
-bool register_cuda_buffers(uint* rf_data_ssbos, uint buffer_count)
-{
-	uint old_buffer_count = Session.buffer_count;
-
-	if (old_buffer_count != 0)
-	{
-		for (uint i = 0; i < old_buffer_count; i++)
-		{
-			CUDA_THROW_IF_ERROR(cudaGraphicsUnregisterResource(Session.buffers[i].cuda_resource));
-		}
-		
-		free(Session.buffers);
-	}
-
-	Session.buffers = (BufferMapping*)malloc(buffer_count * sizeof(BufferMapping));
-	for (uint i = 0; i < buffer_count; i++)
-	{
-		std::cout << "Registering buffer : " << i << ", " << rf_data_ssbos[i] << std::endl;
-		Session.buffers[i] = { NULL, rf_data_ssbos[i] };
-		CUDA_THROW_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.buffers[i].cuda_resource), Session.buffers[i].gl_buffer_id, cudaGraphicsRegisterFlagsNone));
-	}
-	Session.buffer_count = buffer_count;
-
-	return true;
-}
-
 
 bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, float** intermediate)
 {
@@ -196,12 +256,10 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 
 	CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(d_intermediate), decoded_size));
 
-	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping);
+	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
 	
 	float sample;
 	int16_t input_sample;
-
-
 
 	i16_to_f::convert_data(Session.d_input, Session.d_converted, params.rx_cols);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);

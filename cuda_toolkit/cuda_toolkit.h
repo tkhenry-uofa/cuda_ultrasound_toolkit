@@ -28,9 +28,13 @@
 
 		EXPORT_FN bool cleanup();
 
-		EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping);
+		EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols);
 
-		EXPORT_FN bool register_cuda_buffers(uint* rf_data_ssbos, uint buffer_count);
+		EXPORT_FN bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols);
+
+		EXPORT_FN bool deinit_cuda_configuration();
+
+		EXPORT_FN bool register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_sso);
 
 		/**
 		* Converts input to floats, hadamard decodes, and hilbert transforms via fft
@@ -43,7 +47,7 @@
 		*/
 		EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, float** intermediate);
 
-		EXPORT_FN bool decode_and_hilbert(bool rx_cols, uint output_buffer);
+		EXPORT_FN bool decode_and_hilbert(uint output_buffer);
 
 #ifdef __cplusplus
 	}

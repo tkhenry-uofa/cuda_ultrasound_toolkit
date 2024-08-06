@@ -36,6 +36,7 @@ struct CudaSession
 {
 
     bool init;
+    bool rx_cols;
     uint2 input_dims;
     uint3 decoded_dims;
 
@@ -49,8 +50,9 @@ struct CudaSession
     cufftComplex* d_complex;
     float* d_hadamard;
 
-    BufferMapping* buffers;
-    uint buffer_count;
+    BufferMapping raw_data_ssbo;
+    BufferMapping* rf_data_ssbos;
+    uint rf_buffer_count;
 
     uint* channel_mapping;
 };
