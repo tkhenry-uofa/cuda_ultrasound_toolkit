@@ -146,7 +146,7 @@ bool decode_and_hilbert(bool rx_cols, uint buffer_idx)
 	}
 
 	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
-	1
+	
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
 
 	return true;

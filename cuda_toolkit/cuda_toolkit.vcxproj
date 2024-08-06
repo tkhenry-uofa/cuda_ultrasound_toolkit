@@ -121,7 +121,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>glew64.lib;%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaToolkitLibDir);C:\Users\tkhen\source\repos\cuda-samples\Common\lib\x64</AdditionalLibraryDirectories>
     </Link>
     <CudaLink>

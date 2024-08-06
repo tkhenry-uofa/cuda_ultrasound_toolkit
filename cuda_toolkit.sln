@@ -11,6 +11,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_toolkit", "cuda_toolkit\cuda_toolkit.vcxproj", "{BDD780B4-C9FD-4D7F-B63D-06A49965263C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ogl_beamforming_cuda", "ogl_beamforming_cuda\ogl_beamforming_cuda.vcxproj", "{35591836-7C1D-4FD5-9DEF-7BD78886D82A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{BDD780B4-C9FD-4D7F-B63D-06A49965263C} = {BDD780B4-C9FD-4D7F-B63D-06A49965263C}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
