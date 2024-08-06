@@ -132,7 +132,7 @@ bool decode_and_hilbert(bool rx_cols, uint buffer_idx)
 	i16_to_f::convert_data(Session.d_input, Session.d_converted, rx_cols);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
-
+	std::cout << "Copying" << std::endl;
 	//CUDA_THROW_IF_ERROR(cudaMemcpy2D(d_output, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count,cudaMemcpyDefault));
 
 	hilbert::hilbert_transform(Session.d_decoded, d_output);
