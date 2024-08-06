@@ -10,6 +10,11 @@
 *.userosscache
 *.sln.docstates
 
+ogl/
+#ogl_beamforming_cuda/
+
+*.csv
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

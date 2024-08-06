@@ -8,6 +8,7 @@ __constant__ uint Channel_Mapping[TOTAL_TOBE_CHANNELS];
 __host__ bool
 i16_to_f::copy_channel_mapping(const uint channel_mapping[TOTAL_TOBE_CHANNELS])
 {
+	std::cout << "First channel mapping: " << channel_mapping[0] << std::endl;
 	CUDA_THROW_IF_ERROR(cudaMemcpyToSymbol(Channel_Mapping, channel_mapping, TOTAL_TOBE_CHANNELS * sizeof(uint)));
 	return true;
 }
@@ -22,7 +23,7 @@ i16_to_f::_kernels::short_to_float(const i16* input, float* output, uint2 input_
 	uint raw_sample_idx = threadIdx.x + blockIdx.x * blockDim.x;
 	uint channel_idx = blockIdx.y;
 
-	uint tx_idx = raw_sample_idx / output_dims.sample_count;
+	uint tx_idx = (uint)floorf((float)raw_sample_idx / output_dims.sample_count);
 	uint sample_idx = raw_sample_idx % output_dims.sample_count;
 
 	if (tx_idx >= output_dims.tx_count)
@@ -55,7 +56,7 @@ i16_to_f::convert_data(const i16* d_input, float* d_output, bool rx_cols)
 	dim3 grid_dim(grid_length, output_dims.channel_count, 1);
 
 	size_t output_size = output_dims.tx_count * output_dims.channel_count * output_dims.sample_count * sizeof(float);
-	CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
+	//CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
 	_kernels::short_to_float << <grid_dim, block_dim >> > (d_input, d_output, input_dims, output_dims, rx_cols);
 	CUDA_THROW_IF_ERROR(cudaGetLastError());
