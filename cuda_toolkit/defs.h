@@ -34,7 +34,6 @@ struct BufferMapping
 
 struct CudaSession
 {
-
     bool init;
     bool rx_cols;
     uint2 input_dims;

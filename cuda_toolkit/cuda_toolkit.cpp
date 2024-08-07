@@ -45,7 +45,7 @@ bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mappi
 		size_t input_size = input_dims.x * input_dims.y;
 		size_t decoded_size = decoded_dims.x * decoded_dims.y * decoded_dims.z;
 
-		std::cout << "Allocing memory" << std::endl;
+		//std::cout << "Allocing memory" << std::endl;
 		CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_input), input_size * sizeof(i16)));
 		CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_converted), decoded_size * sizeof(float)));
 		CUDA_THROW_IF_ERROR(cudaMalloc((void**)&(Session.d_decoded), decoded_size * sizeof(float)));

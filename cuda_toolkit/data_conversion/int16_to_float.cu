@@ -8,7 +8,6 @@ __constant__ uint Channel_Mapping[TOTAL_TOBE_CHANNELS];
 __host__ bool
 i16_to_f::copy_channel_mapping(const uint channel_mapping[TOTAL_TOBE_CHANNELS])
 {
-	std::cout << "First channel mapping: " << channel_mapping[0] << std::endl;
 	CUDA_THROW_IF_ERROR(cudaMemcpyToSymbol(Channel_Mapping, channel_mapping, TOTAL_TOBE_CHANNELS * sizeof(uint)));
 	return true;
 }
