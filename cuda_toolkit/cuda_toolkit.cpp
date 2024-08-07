@@ -224,12 +224,12 @@ bool decode_and_hilbert(uint buffer_idx)
 	hilbert::hilbert_transform(Session.d_decoded, d_output);
 
 	//Copy fist acq to all 32
-	uint copy_length = Session.decoded_dims.x * Session.decoded_dims.y;
-	for (uint i = 1; i < Session.decoded_dims.z; i++)
-	{
-		cuComplex* row = d_output + i * copy_length;
-		cudaMemcpy(row, d_output, copy_length * sizeof(cuComplex), cudaMemcpyDeviceToDevice);
-	}
+	//uint copy_length = Session.decoded_dims.x * Session.decoded_dims.y;
+	//for (uint i = 1; i < Session.decoded_dims.z; i++)
+	//{
+	//	cuComplex* row = d_output + i * copy_length;
+	//	cudaMemcpy(row, d_output, copy_length * sizeof(cuComplex), cudaMemcpyDeviceToDevice);
+	//}
 
 	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &input_resource));
 	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
