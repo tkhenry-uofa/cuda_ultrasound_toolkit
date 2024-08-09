@@ -47,7 +47,7 @@
 		*/
 		EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate);
 
-		EXPORT_FN bool decode_and_hilbert(uint output_buffer);
+		EXPORT_FN bool decode_and_hilbert(size_t input_offset, uint output_buffer);
 
 #ifdef __cplusplus
 	}

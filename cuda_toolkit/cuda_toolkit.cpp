@@ -178,9 +178,8 @@ bool deinit_cuda_configuration()
 	return true;
 }
 
-bool decode_and_hilbert(uint buffer_idx)
+bool decode_and_hilbert(size_t input_offset, uint output_buffer)
 {
-	
 	auto start = std::chrono::high_resolution_clock::now();
 	if (!Session.init)
 	{
@@ -189,7 +188,7 @@ bool decode_and_hilbert(uint buffer_idx)
 	}
 
 	cudaGraphicsResource_t input_resource = Session.raw_data_ssbo.cuda_resource;
-	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[buffer_idx].cuda_resource;
+	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[output_buffer].cuda_resource;
 
 	if (!input_resource || !output_resource)
 	{
@@ -203,21 +202,19 @@ bool decode_and_hilbert(uint buffer_idx)
 	size_t total_count = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z;
 	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
-	uint sample_index = Session.decoded_dims.x;
-
 	size_t num_bytes;
 	i16* d_input = nullptr;
 	cufftComplex *d_output = nullptr;
 	CUDA_THROW_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_input, &num_bytes, input_resource));
 	CUDA_THROW_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
-
-
+	
+	d_input += input_offset / sizeof(i16);
 	i16_to_f::convert_data(d_input, Session.d_converted, Session.rx_cols);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
 	//CUDA_THROW_IF_ERROR(cudaMemcpy2D(d_output, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count,cudaMemcpyDefault));
-
+	
 	hilbert::hilbert_transform(Session.d_decoded, d_output);
 	
 	// Downsample copy
@@ -227,6 +224,17 @@ bool decode_and_hilbert(uint buffer_idx)
 	CUDA_THROW_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
 	
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
+
+	// Advance the input pointer to the right buffer section
+	size_t offset = 10000;
+	cuComplex sample;
+	cuComplex* d_sample = d_output;
+	for (size_t i = 0; i < total_count; i += offset)
+	{
+		CUDA_THROW_IF_ERROR(cudaMemcpy(&sample, d_sample, sizeof(cuComplex), cudaMemcpyDefault));
+		std::cout << "Offset " << i << " output Re: " << sample.x << " Im: " << sample.y << std::endl;
+		d_sample += offset;
+	}
 
 	return true;
 }
