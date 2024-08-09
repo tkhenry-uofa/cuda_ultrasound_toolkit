@@ -225,17 +225,6 @@ bool decode_and_hilbert(size_t input_offset, uint output_buffer)
 	
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
 
-	// Advance the input pointer to the right buffer section
-	size_t offset = 10000;
-	cuComplex sample;
-	cuComplex* d_sample = d_output;
-	for (size_t i = 0; i < total_count; i += offset)
-	{
-		CUDA_THROW_IF_ERROR(cudaMemcpy(&sample, d_sample, sizeof(cuComplex), cudaMemcpyDefault));
-		std::cout << "Offset " << i << " output Re: " << sample.x << " Im: " << sample.y << std::endl;
-		d_sample += offset;
-	}
-
 	return true;
 }
 
