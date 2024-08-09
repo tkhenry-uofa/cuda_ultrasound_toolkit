@@ -12,6 +12,15 @@
 
 namespace hilbert
 {
+	namespace kernels
+	{
+		__global__ void
+		filter(cuComplex* data, uint sample_count, uint cutoff_sample);
+	}
+
+	__host__ bool
+	f_domain_filter(cuComplex* input, uint cutoff_sample);
+
 	__host__ bool
 	plan_hilbert(int sample_count, int channel_count);
 

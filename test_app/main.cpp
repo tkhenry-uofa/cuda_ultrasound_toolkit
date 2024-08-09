@@ -30,14 +30,14 @@ bool test_decoding()
 		(size_t)params.decoded_dims[2] };
 
 
-	float* intermediate = nullptr;
+	complex_f* intermediate = nullptr;
 	complex_f* complex = nullptr;
+	std::cout << "Processing" << std::endl;
 	bool result = test_convert_and_decode(data_array->data(), *(BeamformerParams*)&params, &complex, &intermediate);
 	cleanup();
 
-	size_t hadamard_dims[3] = {32, 32, 1};
-	//result = parser::save_float_array(intermediate, hadamard_dims, output_file_path, "hadamard_cuda", false);
-	result = parser::save_float_array(complex, output_dims, output_file_path, "strided_copy", false);
+	result = parser::save_float_array(intermediate, output_dims, output_file_path, "intermediate", true);
+	result = parser::save_float_array(complex, output_dims, output_file_path, "complex", true);
 
 
 	free(complex);

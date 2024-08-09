@@ -45,7 +45,7 @@
 		* decoded_dims - [sample_count, rx_channel_count, tx_count]
 		* rx_cols - TRUE|FALSE: The first|second half of the input channels are read
 		*/
-		EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, float** intermediate);
+		EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate);
 
 		EXPORT_FN bool decode_and_hilbert(uint output_buffer);
 
