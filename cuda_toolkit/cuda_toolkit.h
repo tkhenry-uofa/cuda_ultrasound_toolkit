@@ -20,14 +20,44 @@
 		} complex_f;
 
 		typedef struct {
-			uint channel_mapping[256];
-			uint decoded_dims[3];
-			uint raw_dims[2];
+			float center_freq;
+			float sample_freq;
+			float c;
+			float pitch;
+			uint row_count;
+			uint col_count;
+		} ArrayParams;
+
+
+		typedef struct {
+
+
+
+			// Which half of channel mapping has the useful data
 			bool rx_cols;
-			uint vol_mins[3];
-			uint vol_maxes[3];
+
+			float focus[3];
+
+			// x: Sample count
+			// y: Rx Channel count
+			// z: Acquisition count
+			uint decoded_dims[3];
+
+			// x: Sample count x Acquisition count + padding
+			// y: Full channel count
+			uint raw_dims[2];
+
+			// Volume configuration ( all in meters)
+			float vol_mins[3];
+			float vol_maxes[3];
 			float axial_resolution;
 			float lateral_resolution;
+
+			ArrayParams array_params;
+
+			// Mapping verasonics channels to row and column numbers
+			// First half are rows, second half are columns
+			uint channel_mapping[256];
 		} BeamformerParams;
 
 		
@@ -60,7 +90,8 @@
 		*/
 		EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate);
 
-		EXPORT_FN bool test_raw_to_beamfrom(const int16_t* input, const BeamformerParams params, )
+
+		EXPORT_FN bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** volume);
 
 		
 

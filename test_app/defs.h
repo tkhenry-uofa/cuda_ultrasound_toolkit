@@ -22,12 +22,12 @@ namespace defs
     static const std::string raw_dims_name = "rf_raw_dim";
     static const std::string channel_offset_name = "channel_offset";
 
-    typedef struct {
-        uint channel_mapping[256];
-        uint decoded_dims[3];
-        uint raw_dims[2];
-        bool rx_cols;
-    } BeamformerParams;
+    static const std::string center_freq_name = "center_frequency";
+    static const std::string sample_freq_name = "sample_frequency";
+    static const std::string speed_of_sound_name = "speed_of_sound";
+    static const std::string pitch_name = "pitch";
+    static const std::string time_offset_name = "time_offset";
+    static const std::string focus_name = "focus";
 
 	struct ComplexF {
 		float re = 0.0f;

@@ -181,8 +181,8 @@ namespace defs
 	enum TransmitType
 	{
 		TX_PLANE = 0,
-		TX_X_LINE = 1,
-		TX_Y_LINE = 2
+		TX_X_FOCUS = 1,
+		TX_Y_FOCUS = 2,
 	};
 
 	struct KernelConstants
@@ -204,7 +204,7 @@ namespace defs
 		size_t tx_count;
 	};
 
-	struct TxConfig {
+	struct ArrayParams {
 		float f0; // Transducer frequency (Hz)
 		float fs; // Data sample rate (Hz)
 

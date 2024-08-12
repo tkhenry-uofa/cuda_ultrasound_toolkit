@@ -4,6 +4,7 @@
 #include "hilbert/hilbert_transform.cuh"
 #include "hadamard/hadamard.cuh"
 #include "data_conversion/int16_to_float.cuh"
+#include "beamformer/beamformer.cuh"
 
 #include "cuda_toolkit.h"
 
@@ -265,6 +266,91 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 	CUDA_THROW_IF_ERROR(cudaMemcpy(*intermediate, d_intermediate, complex_size, cudaMemcpyDeviceToHost));
 
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
+
+	return true;
+}
+
+bool generate_hero_location_array(ArrayParams params, float2** d_location)
+{	
+
+	uint total_count = params.row_count * params.col_count;
+	float2* cpu_array = (float2*)malloc(total_count * sizeof(float2));
+	
+	float row_min = -1.0f * (params.row_count-1) * params.pitch/2;
+	float col_min = -1.0f * (params.col_count-1) * params.pitch/2;
+
+	float2 value;
+	for (uint col = 0; col < params.col_count; col++)
+	{
+		for (uint row = 0; row < params.row_count; row++)
+		{
+			value = { row * params.pitch + row_min, col * params.pitch + col_min };
+			cpu_array[col * params.row_count + row] = value;
+		}
+	}
+
+	CUDA_THROW_IF_ERROR(cudaMalloc(d_location, total_count * sizeof(float2)));
+	CUDA_THROW_IF_ERROR(cudaMemcpy(*d_location, cpu_array, total_count * sizeof(float2), cudaMemcpyHostToDevice));
+
+	free(cpu_array);
+
+	return true;
+
+
+}
+
+bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** volume)
+{
+	RfDataDims dec_data_dims(params.decoded_dims);
+	
+	size_t total_count = dec_data_dims.sample_count * dec_data_dims.channel_count * dec_data_dims.tx_count;
+
+	uint channel_mapping[256];
+
+	init_session({ 0,0 }, *(uint3*)&dec_data_dims, channel_mapping, params.rx_cols);
+
+	VolumeConfiguration vol_config;
+	{
+		vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
+		vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
+		vol_config.axial_resolution = params.axial_resolution;
+		vol_config.lateral_resolution = params.lateral_resolution;
+
+		uint x_count, y_count, z_count;
+		x_count = (uint)floorf((vol_config.maximums.x - vol_config.minimums.x) / params.lateral_resolution);
+		y_count = (uint)floorf((vol_config.maximums.y - vol_config.minimums.y) / params.lateral_resolution);
+		z_count = (uint)floorf((vol_config.maximums.z - vol_config.minimums.z) / params.axial_resolution);
+
+		vol_config.voxel_counts = { x_count, y_count, z_count };
+		vol_config.total_voxels = (size_t)x_count * y_count * z_count;
+		
+		old_beamformer::configure_textures(&vol_config);
+	}
+
+	Session.volume_configuration = vol_config;
+
+	float* d_input;
+	CUDA_THROW_IF_ERROR(cudaMalloc(&d_input, total_count * sizeof(float)));
+	CUDA_THROW_IF_ERROR(cudaMemcpy(d_input, input, total_count * sizeof(float), cudaMemcpyHostToDevice));
+
+	hadamard::hadamard_decode(d_input, Session.d_decoded);
+	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+
+	
+	float* d_volume;
+	float2* d_location;
+	generate_hero_location_array(params.array_params, &d_location);
+
+	CUDA_THROW_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
+
+
+	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
+	old_beamformer::beamform(d_volume, Session.d_complex, d_location, *(float3*)params.focus, samples_per_meter);
+
+	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
+
+	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
+	CUDA_THROW_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
 
 	return true;
 }
