@@ -11,6 +11,7 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include <complex>
 
 #include <cufft.h>
 #include <cublas_v2.h>
@@ -24,6 +25,7 @@
 
 typedef unsigned int uint;
 typedef int16_t i16;
+typedef std::vector<std::complex<float>> ComplexVectorF;
 
 
 struct BufferMapping
@@ -32,29 +34,45 @@ struct BufferMapping
     uint gl_buffer_id;
 };
 
+struct VolumeConfiguration
+{
+	cudaArray_t d_texture_arrays[3] = { nullptr, nullptr, nullptr };
+	cudaTextureObject_t textures[3];
+	uint3 voxel_counts; // x, y, z
+	size_t total_voxels;
+	float3 minimums;
+	float3 maximums;
+	float axial_resolution;
+	float lateral_resolution;
+};
+
 struct CudaSession
 {
-    bool init;
-    bool rx_cols;
-    uint2 input_dims;
-    uint3 decoded_dims;
+    bool init = false;
+    bool rx_cols = false;
+	uint2 input_dims;
+	uint3 decoded_dims;
 
-    cublasHandle_t cublas_handle;
+    cublasHandle_t cublas_handle = nullptr;
     cufftHandle forward_plan;
     cufftHandle inverse_plan;
 
-    int16_t* d_input;
-    float* d_converted;
-    float* d_decoded;
-    cufftComplex* d_complex;
-    float* d_hadamard;
+    int16_t* d_input = nullptr;
+    float* d_converted = nullptr;
+    float* d_decoded = nullptr;
+    cufftComplex* d_complex = nullptr;
+    float* d_hadamard = nullptr;
 
     BufferMapping raw_data_ssbo;
-    BufferMapping* rf_data_ssbos;
+    BufferMapping* rf_data_ssbos = nullptr;
     uint rf_buffer_count;
 
-    uint* channel_mapping;
+	VolumeConfiguration volume_configuration;
+	
+    uint* channel_mapping = nullptr;
 };
+
+
 
 struct RfDataDims
 {
@@ -121,6 +139,98 @@ extern CudaSession Session;
       std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() <<         \
         " seconds." << std::endl;                                                           \
 }  
+
+
+
+
+
+namespace defs
+{
+	// Matlab strings are u16, even though variable names aren't
+	static const std::u16string Plane_tx_name = u"plane";
+	static const std::u16string X_line_tx_name = u"xLine";
+	static const std::u16string Y_line_tx_name = u"yLine";
+
+	static const char* Rf_data_name = "rx_scans";
+	static const char* Loc_data_name = "rx_locs";
+	static const char* Tx_config_name = "tx_config";
+
+	static const char* F0_name = "f0";
+	static const char* Fs_name = "fs";
+
+	static const char* Column_count_name = "cols";
+	static const char* Row_count_name = "rows";
+	static const char* Width_name = "width";
+	static const char* Pitch_name = "pitch";
+
+	static const char* X_min_name = "x_min";
+	static const char* x_max_name = "x_max";
+	static const char* Y_min_name = "y_min";
+	static const char* Y_max_name = "y_max";
+
+	static const char* Tx_count_name = "no_transmits";
+	static const char* Src_location_name = "src";
+	static const char* Transmit_type_name = "transmit";
+	static const char* Pulse_delay_name = "pulse_delay";
+
+
+	struct PositionTextures {
+		cudaTextureObject_t x, y, z;
+	};
+
+	enum TransmitType
+	{
+		TX_PLANE = 0,
+		TX_X_LINE = 1,
+		TX_Y_LINE = 2
+	};
+
+	struct KernelConstants
+	{
+		size_t sample_count;
+		size_t channel_count;
+		size_t tx_count;
+		
+		float3 src_pos;
+		
+		TransmitType tx_type;
+		ulonglong4 volume_size;
+	};
+
+
+	struct RfDataDims {
+		size_t channel_count;
+		size_t sample_count;
+		size_t tx_count;
+	};
+
+	struct TxConfig {
+		float f0; // Transducer frequency (Hz)
+		float fs; // Data sample rate (Hz)
+
+		int column_count; // Array column count
+		int row_count; // Array row count;
+		float width; // Element width (m)
+		float pitch; // Element pitch (m)
+
+		float x_min; // Transducer left elements (m)
+		float x_max; // Transudcer right elements (m)
+		float y_min; // Transducer bottom elements (m)
+		float y_max; // Transducer top elements (m)
+
+		int tx_count; // Number of transmittions
+		float3 src_location; // Location of tx source (m)
+		TransmitType transmit_type; // Transmit type
+		float pulse_delay; // Delay to center of pulse (seconds)
+	};
+
+
+	struct MappedFileHandle {
+		void* file_handle;
+		void* file_view;
+	};
+
+}
 
 #endif // !DEFS_H
 

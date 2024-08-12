@@ -73,7 +73,7 @@ parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, d
 
     if (!mxIsComplex(mx_array))
     {
-        size_t element_count = mxGetNumberOfElements(mx_array);
+        size_t channel_count = mxGetNumberOfElements(mx_array);
         const mwSize* rf_size = mxGetDimensions(mx_array);
         dims->sample_count = rf_size[0];
         dims->channel_count = rf_size[1];
@@ -81,7 +81,7 @@ parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, d
 
         mxInt16* data_array_ptr = mxGetInt16s(mx_array);
 
-        *data_array = new std::vector<i16>(data_array_ptr, &(data_array_ptr[element_count]));
+        *data_array = new std::vector<i16>(data_array_ptr, &(data_array_ptr[channel_count]));
 
         success = true;
     }
@@ -118,7 +118,7 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
 
     if (!mxIsComplex(mx_array))
     {
-        size_t element_count = mxGetNumberOfElements(mx_array);
+        size_t channel_count = mxGetNumberOfElements(mx_array);
         const mwSize* rf_size = mxGetDimensions(mx_array);
         dims->sample_count = rf_size[05];
         dims->channel_count = rf_size[1];
@@ -126,7 +126,7 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
 
         float* data_array_ptr = mxGetSingles(mx_array);
 
-        *data_array = new std::vector<float>(data_array_ptr, &(data_array_ptr[element_count]));
+        *data_array = new std::vector<float>(data_array_ptr, &(data_array_ptr[channel_count]));
 
         success = true;
     }

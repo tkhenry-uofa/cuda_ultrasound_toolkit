@@ -7,7 +7,7 @@
 
 #include "cuda_toolkit.h"
 
-CudaSession Session = { false, false, {0, 0}, {0, 0, 0}, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, {NULL, 0}, NULL, 0, NULL};
+CudaSession Session;
 
 bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mapping[TOTAL_TOBE_CHANNELS], bool rx_cols)
 {
@@ -187,6 +187,7 @@ bool decode_and_hilbert(size_t input_offset, uint output_buffer)
 		return false;
 	}
 
+
 	cudaGraphicsResource_t input_resource = Session.raw_data_ssbo.cuda_resource;
 	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[output_buffer].cuda_resource;
 
@@ -209,7 +210,15 @@ bool decode_and_hilbert(size_t input_offset, uint output_buffer)
 	CUDA_THROW_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
 	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
 	
+
+	std::cout << "Input offset: " << input_offset << std::endl;
 	d_input += input_offset / sizeof(i16);
+	i16 sample;
+	cudaMemcpy(&sample, d_input, sizeof(i16), cudaMemcpyDefault);
+	std::cout << "Value at offset: " << sample << std::endl;
+
+
+
 	i16_to_f::convert_data(d_input, Session.d_converted, Session.rx_cols);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 

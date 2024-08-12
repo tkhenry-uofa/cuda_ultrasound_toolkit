@@ -24,17 +24,30 @@
 			uint decoded_dims[3];
 			uint raw_dims[2];
 			bool rx_cols;
+			uint vol_mins[3];
+			uint vol_maxes[3];
+			float axial_resolution;
+			float lateral_resolution;
 		} BeamformerParams;
 
-		EXPORT_FN bool cleanup();
-
-		EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols);
-
+		
+		/**
+		* OpenGl pipeline functions
+		*/
 		EXPORT_FN bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols);
+
+		EXPORT_FN bool register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_sso);
+
+		EXPORT_FN bool decode_and_hilbert(size_t input_offset, uint output_buffer);
 
 		EXPORT_FN bool deinit_cuda_configuration();
 
-		EXPORT_FN bool register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_sso);
+
+		/**
+		* Test functions
+		*/
+
+		EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols);
 
 		/**
 		* Converts input to floats, hadamard decodes, and hilbert transforms via fft
@@ -47,7 +60,9 @@
 		*/
 		EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate);
 
-		EXPORT_FN bool decode_and_hilbert(size_t input_offset, uint output_buffer);
+		EXPORT_FN bool test_raw_to_beamfrom(const int16_t* input, const BeamformerParams params, )
+
+		
 
 #ifdef __cplusplus
 	}
