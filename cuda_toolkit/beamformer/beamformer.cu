@@ -59,7 +59,7 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 
 	
 	float rx_distance;
-	int scan_index;
+	uint scan_index;
 	float2 element_pos;
 
 	bool mixes_row = ((e % 8) == 1);
@@ -69,10 +69,10 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
 		bool mixes_col = ((t % 8) == 1);
-		if (!mixes_row && !mixes_col)
+	/*	if (!mixes_row && !mixes_col)
 		{
 			continue;
-		}
+		}*/
 
 
 		element_pos = locData[t * Constants.channel_count + e];
@@ -83,7 +83,7 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 		rx_distance = norm3df(voxPos.x - element_pos.x, voxPos.y - element_pos.y, voxPos.z);
 
 		// Plane wave
-		scan_index = lroundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
+		scan_index = (uint)lroundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
 
 		value = rfData[(t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count) + scan_index - 1];
 
@@ -191,7 +191,7 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 	{
 		transmit_type = defs::TX_PLANE;
 	}
-	else if (Session.rx_cols)
+	else if (!Session.rx_cols)
 	{
 		// TX on rows (x) axis so we have x focusing
 		transmit_type = defs::TX_X_FOCUS;
