@@ -48,7 +48,7 @@ bool test_decoding()
 bool test_beamforming()
 {
 	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\hero_acq.mat)";
-	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\beamform_output.mat)";
+	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\beamform_mixes16_output.mat)";
 
 	defs::RfDataDims dims;
 	std::vector<float>* data_array = nullptr;
@@ -61,17 +61,17 @@ bool test_beamforming()
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
 
-	params.vol_mins[0] = -0.01f;
-	params.vol_maxes[0] = 0.01f;
+	params.vol_mins[0] = -0.015f;
+	params.vol_maxes[0] = 0.015f;
 
-	params.vol_mins[1] = -0.01f;
-	params.vol_maxes[1] = 0.01f;
+	params.vol_mins[1] = -0.03f;
+	params.vol_maxes[1] = 0.03f;
 
-	params.vol_mins[2] = 0.01f;
-	params.vol_maxes[2] = 0.07f;
+	params.vol_mins[2] = 0.00f;
+	params.vol_maxes[2] = 0.1f;
 
 	params.lateral_resolution = 0.0002f;
-	params.axial_resolution = 0.0002f;
+	params.axial_resolution = 0.0001f;
 
 	params.array_params.c = 1452;
 	params.array_params.row_count = params.decoded_dims[1];

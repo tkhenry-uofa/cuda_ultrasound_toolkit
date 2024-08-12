@@ -62,12 +62,19 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 	int scan_index;
 	float2 element_pos;
 
-
+	bool mixes_row = ((e % 8) == 1);
 	
 	cuComplex value;
 	// Beamform this voxel per element 
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
+		bool mixes_col = ((t % 8) == 1);
+		if (!mixes_row && !mixes_col)
+		{
+			continue;
+		}
+
+
 		element_pos = locData[t * Constants.channel_count + e];
 
 		float apro = 1.0f;
