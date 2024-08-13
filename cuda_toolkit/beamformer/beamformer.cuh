@@ -21,8 +21,8 @@ namespace _kernels
 	__global__ void
 	old_complexDelayAndSum(const cuComplex* rfData, const float2* locData, float* volume, cudaTextureObject_t textures[3], float samples_per_meter);
 
-	__device__ float
-	f_num_aprodization(float3 vox_loc, float3 element_loc, float f_num);
+	__device__  __inline__ float
+	f_num_aprodization(float3 vox_loc, float2 element_loc, float f_num);
 }
 	
 

@@ -12,9 +12,13 @@
 
 
 __device__ float
-_kernels::f_num_aprodization(float3 vox_loc, float3 element_loc, float f_num)
+_kernels::f_num_aprodization(float3 vox_pos, float2 element_loc, float f_number)
 {
-	return 0.f;
+	float lateral_pos = sqrtf(powf(vox_pos.x - element_loc.x, 2) + powf(vox_pos.y - element_loc.y, 2));
+	float apro = f_number * lateral_pos / vox_pos.z;
+	apro = fminf(apro, 0.5f);
+	apro = cosf(PI_F * apro);
+	return apro*apro;
 }
 
 __global__ void
@@ -32,31 +36,34 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 
 	float3 src_pos = Constants.src_pos;
 
-	const float3 voxPos = {
+	const float3 vox_pos = {
 		tex1D<float>(textures[0], blockIdx.x),
 		tex1D<float>(textures[1], blockIdx.y),
 		tex1D<float>(textures[2], blockIdx.z) };
 
 
 	// If the voxel is between the array and the focus this is -1, otherwise it is 1.
-	int dist_sign = ((voxPos.z - src_pos.z) > 0 ) ? 1 : -1;
+	int dist_sign = ((vox_pos.z - src_pos.z) > 0 ) ? 1 : -1;
 
 	float tx_distance;
 	switch (Constants.tx_type)
 	{
 		case defs::TX_PLANE:
-			tx_distance = voxPos.z;
+			tx_distance = vox_pos.z;
 			break;
 
 		case defs::TX_Y_FOCUS:
-			tx_distance = dist_sign * sqrt(powf(src_pos.z - voxPos.z, 2) + powf(src_pos.y - voxPos.y, 2)) + src_pos.z;
+			tx_distance = dist_sign * sqrt(powf(src_pos.z - vox_pos.z, 2) + powf(src_pos.y - vox_pos.y, 2)) + src_pos.z;
 			break;
 
 		case defs::TX_X_FOCUS:
-			tx_distance = dist_sign * sqrt(powf(src_pos.z - voxPos.z, 2) + powf(src_pos.x - voxPos.x, 2)) + src_pos.z;
+			tx_distance = dist_sign * sqrt(powf(src_pos.z - vox_pos.z, 2) + powf(src_pos.x - vox_pos.x, 2)) + src_pos.z;
 			break;
 	}
 
+	const float f_number = 1.0f;
+
+	
 	
 	float rx_distance;
 	uint scan_index;
@@ -77,10 +84,10 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 
 		element_pos = locData[t * Constants.channel_count + e];
 
+		//float apro = f_num_aprodization(vox_pos, element_pos, f_number);
 		float apro = 1.0f;
-
 		// voxel to rx element
-		rx_distance = norm3df(voxPos.x - element_pos.x, voxPos.y - element_pos.y, voxPos.z);
+		rx_distance = norm3df(vox_pos.x - element_pos.x, vox_pos.y - element_pos.y, vox_pos.z);
 
 		// Plane wave
 		scan_index = (uint)lroundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
