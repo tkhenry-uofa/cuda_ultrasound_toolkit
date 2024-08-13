@@ -62,38 +62,35 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 			break;
 	}
 
-	const float f_number = 1.0f;
-
 	
 	
 	float rx_distance;
-	uint scan_index;
+	int scan_index;
 	float2 rx_vec;
-
-	bool mixes_row = ((e % 8) == 1);
 	
 	cuComplex value;
 	// Beamform this voxel per element 
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
+		/*bool mixes_row = ((e % 8) == 1);
 		bool mixes_col = ((t % 8) == 1);
-	/*	if (!mixes_row && !mixes_col)
+		if (!mixes_row && !mixes_col)
 		{
 			continue;
 		}*/
 
 		rx_vec = locData[t * Constants.channel_count + e];
-		//rx_vec = { rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y };
+		rx_vec = { rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y };
 
-		rx_distance = norm3df(rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y, vox_loc.z);
+		rx_distance = norm3df(ABS(rx_vec.x), ABS(rx_vec.y), vox_loc.z);
 
-		scan_index = (uint)roundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
+		scan_index = lroundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
 
 		value = rfData[(t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count) + scan_index - 1];
 
 		//float apro = f_num_aprodization(rx_vec, vox_loc.z, f_number);
 		float apro = 1.0f;
-		temp[e] = value;
+		temp[e] = cuCaddf(temp[e], value);
 
 	}
 

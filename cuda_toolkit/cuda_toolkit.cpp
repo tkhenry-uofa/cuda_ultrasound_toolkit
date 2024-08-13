@@ -293,10 +293,7 @@ bool generate_hero_location_array(ArrayParams params, float2** d_location)
 	CUDA_THROW_IF_ERROR(cudaMemcpy(*d_location, cpu_array, total_count * sizeof(float2), cudaMemcpyHostToDevice));
 
 	free(cpu_array);
-
 	return true;
-
-
 }
 
 bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** volume)

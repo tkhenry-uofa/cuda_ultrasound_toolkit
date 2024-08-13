@@ -72,19 +72,28 @@ bool test_beamforming()
 	params.vol_maxes[2] = 0.075f;
 
 	params.lateral_resolution = 0.0002f;
-	params.axial_resolution = 0.0002f;
+	params.axial_resolution = 0.0001f;
 
 	params.array_params.c = 1452;
 	params.array_params.row_count = params.decoded_dims[1];
 	params.array_params.col_count = params.decoded_dims[1];
 
+	uint x_count, y_count, z_count;
+	x_count = y_count = z_count = 0;
+	for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += params.lateral_resolution) {
+		x_count++;
+	}
+	for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += params.lateral_resolution) {
+		y_count++;
+	}
+	for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += params.axial_resolution) {
+		z_count++;
+	}
+
 	float* volume = nullptr;
 	std::cout << "Processing" << std::endl;
 
-	size_t vol_dims[3];
-	vol_dims[0] = (size_t)floorf((params.vol_maxes[0] - params.vol_mins[0]) / params.lateral_resolution);
-	vol_dims[1] = (size_t)floorf((params.vol_maxes[1] - params.vol_mins[1]) / params.lateral_resolution);
-	vol_dims[2] = (size_t)floorf((params.vol_maxes[2] - params.vol_mins[2]) / params.axial_resolution);
+	size_t vol_dims[3] = { x_count, y_count, z_count };
 	
 	bool result = hero_raw_to_beamfrom(data_array->data(), params, &volume);
 	result = parser::save_float_array(volume, vol_dims, output_file_path, "volume", false);
