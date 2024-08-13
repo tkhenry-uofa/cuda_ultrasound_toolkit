@@ -17,6 +17,8 @@
 #include <cublas_v2.h>
 #include <cuda_gl_interop.h>
 
+#define PI_F 3.141592654f
+
 #define MAX_THREADS_PER_BLOCK 1024
 #define MAX_2D_BLOCK_DIM 32
 

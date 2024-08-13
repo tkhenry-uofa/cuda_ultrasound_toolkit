@@ -62,6 +62,9 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 			break;
 	}
 
+	const float f_number = 1.0f;
+
+	
 	
 	float rx_distance;
 	uint scan_index;
