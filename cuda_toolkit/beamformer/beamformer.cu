@@ -17,6 +17,7 @@ __device__ inline float
 _kernels::f_num_aprodization(float2 lateral_dist, float depth, float f_num)
 {
 	float apro = f_num * NORM_F2(lateral_dist) / depth;
+	apro = fminf(apro, 0.5);
 	apro = cosf(CUDART_PI_F * apro);
 	return apro * apro;
 }
@@ -26,7 +27,7 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 {
 	__shared__ cuComplex temp[MAX_THREADS_PER_BLOCK];
 
-	const float f_number = 1.0f;
+
 	int e = threadIdx.x;
 
 	if (e >= Constants.channel_count)
@@ -72,12 +73,12 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 	// Beamform this voxel per element 
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
-		/*bool mixes_row = ((e % 8) == 1);
-		bool mixes_col = ((t % 8) == 1);
+		bool mixes_row = ((e % 4) == 1);
+		bool mixes_col = ((t % 4) == 1);
 		if (!mixes_row && !mixes_col)
 		{
 			continue;
-		}*/
+		}
 
 		rx_vec = locData[t * Constants.channel_count + e];
 		rx_vec = { rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y };
@@ -88,8 +89,10 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 
 		value = rfData[(t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count) + scan_index - 1];
 
-		//float apro = f_num_aprodization(rx_vec, vox_loc.z, f_number);
-		float apro = 1.0f;
+		const float f_number = 1.5f;
+		float apro = f_num_aprodization(rx_vec, vox_loc.z, f_number);
+		//float apro = 1.0f;
+		value = SCALE_F2(value, apro);
 		temp[e] = cuCaddf(temp[e], value);
 
 	}

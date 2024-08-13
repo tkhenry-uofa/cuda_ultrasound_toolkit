@@ -27,7 +27,7 @@
 
 #define ABS(x)         ((x) < 0 ? -(x) : (x))
 #define NORM_F2(v) (sqrtf( v.x * v.x + v.y * v.y))
-#define SCALE_F2(v, a) ({v.x * a, v.y * a});
+#define SCALE_F2(v, a) {v.x * a, v.y * a};
 
 typedef unsigned int uint;
 typedef int16_t i16;
