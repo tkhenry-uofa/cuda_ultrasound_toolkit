@@ -315,14 +315,6 @@ bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** v
 		vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
 		vol_config.axial_resolution = params.axial_resolution;
 		vol_config.lateral_resolution = params.lateral_resolution;
-
-		uint x_count, y_count, z_count;
-		x_count = (uint)floorf((vol_config.maximums.x - vol_config.minimums.x) / params.lateral_resolution);
-		y_count = (uint)floorf((vol_config.maximums.y - vol_config.minimums.y) / params.lateral_resolution);
-		z_count = (uint)floorf((vol_config.maximums.z - vol_config.minimums.z) / params.axial_resolution);
-
-		vol_config.voxel_counts = { x_count, y_count, z_count };
-		vol_config.total_voxels = (size_t)x_count * y_count * z_count;
 		
 		old_beamformer::configure_textures(&vol_config);
 	}

@@ -23,6 +23,9 @@
 #define TOTAL_TOBE_CHANNELS 256
 #define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
 
+#define NORM_F2(v) sqrtf( v.x * v.x + v.y * v.y)
+#define SCALE_F2(v, a) v = {v.x * a, v.y * a};
+
 typedef unsigned int uint;
 typedef int16_t i16;
 typedef std::vector<std::complex<float>> ComplexVectorF;

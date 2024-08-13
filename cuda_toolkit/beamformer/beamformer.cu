@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include <chrono>
 #include <cuda/std/complex>
+#include <math_constants.h>
+#include <math_functions.h>
 
 #include "beamformer.cuh"
 
@@ -11,10 +13,12 @@
 
 
 
-__device__ float
-_kernels::f_num_aprodization(float3 vox_loc, float3 element_loc, float f_num)
+__device__ inline float
+_kernels::f_num_aprodization(float2 lateral_dist, float depth, float f_num)
 {
-	return 0.f;
+	float apro = f_num * NORM_F2(lateral_dist) / depth;
+	apro = cosf(CUDART_PI_F * apro);
+	return apro * apro;
 }
 
 __global__ void
@@ -22,6 +26,7 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 {
 	__shared__ cuComplex temp[MAX_THREADS_PER_BLOCK];
 
+	const float f_number = 1.0f;
 	int e = threadIdx.x;
 
 	if (e >= Constants.channel_count)
@@ -32,35 +37,35 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 
 	float3 src_pos = Constants.src_pos;
 
-	const float3 voxPos = {
+	const float3 vox_loc = {
 		tex1D<float>(textures[0], blockIdx.x),
 		tex1D<float>(textures[1], blockIdx.y),
 		tex1D<float>(textures[2], blockIdx.z) };
 
 
 	// If the voxel is between the array and the focus this is -1, otherwise it is 1.
-	int dist_sign = ((voxPos.z - src_pos.z) > 0 ) ? 1 : -1;
+	int dist_sign = ((vox_loc.z - src_pos.z) > 0 ) ? 1 : -1;
 
 	float tx_distance;
 	switch (Constants.tx_type)
 	{
 		case defs::TX_PLANE:
-			tx_distance = voxPos.z;
+			tx_distance = vox_loc.z;
 			break;
 
 		case defs::TX_Y_FOCUS:
-			tx_distance = dist_sign * sqrt(powf(src_pos.z - voxPos.z, 2) + powf(src_pos.y - voxPos.y, 2)) + src_pos.z;
+			tx_distance = dist_sign * sqrt(powf(src_pos.z - vox_loc.z, 2) + powf(src_pos.y - vox_loc.y, 2)) + src_pos.z;
 			break;
 
 		case defs::TX_X_FOCUS:
-			tx_distance = dist_sign * sqrt(powf(src_pos.z - voxPos.z, 2) + powf(src_pos.x - voxPos.x, 2)) + src_pos.z;
+			tx_distance = dist_sign * sqrt(powf(src_pos.z - vox_loc.z, 2) + powf(src_pos.x - vox_loc.x, 2)) + src_pos.z;
 			break;
 	}
 
 	
 	float rx_distance;
 	uint scan_index;
-	float2 element_pos;
+	float2 rx_vec;
 
 	bool mixes_row = ((e % 8) == 1);
 	
@@ -74,22 +79,18 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 			continue;
 		}*/
 
+		rx_vec = locData[t * Constants.channel_count + e];
+		//rx_vec = { rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y };
 
-		element_pos = locData[t * Constants.channel_count + e];
+		rx_distance = norm3df(rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y, vox_loc.z);
 
-		float apro = 1.0f;
-
-		// voxel to rx element
-		rx_distance = norm3df(voxPos.x - element_pos.x, voxPos.y - element_pos.y, voxPos.z);
-
-		// Plane wave
-		scan_index = (uint)lroundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
+		scan_index = (uint)roundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
 
 		value = rfData[(t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count) + scan_index - 1];
 
-		value.x = value.x * apro;
-		value.y = value.y * apro;
-		temp[e] = cuCaddf(temp[e], value);
+		//float apro = f_num_aprodization(rx_vec, vox_loc.z, f_number);
+		float apro = 1.0f;
+		temp[e] = value;
 
 	}
 
@@ -136,15 +137,24 @@ old_beamformer::configure_textures(VolumeConfiguration* config)
 		free(config->d_texture_arrays);
 	}
 
+	uint x_count, y_count, z_count;
+	x_count = y_count = z_count = 0;
 	for (float x = config->minimums.x; x <= config->maximums.x; x += config->lateral_resolution) {
 		x_range.push_back(x);
+		x_count++;
 	}
 	for (float y = config->minimums.y; y <= config->maximums.y; y += config->lateral_resolution) {
 		y_range.push_back(y);
+		y_count++;
 	}
 	for (float z = config->minimums.z; z <= config->maximums.z; z += config->axial_resolution) {
 		z_range.push_back(z);
+		z_count++;
 	}
+
+	config->voxel_counts = { x_count, y_count, z_count };
+	config->total_voxels = x_count * y_count * z_count;
+
 	uint3 voxel_counts = config->voxel_counts;
 
 	// TEXTURE SETUP

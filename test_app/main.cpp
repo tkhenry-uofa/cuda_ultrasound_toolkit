@@ -49,7 +49,7 @@ bool test_beamforming()
 {
 	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\hero_acq.mat)";
 	//std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\hercules_resolution_plane.mat)";
-	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\beamform_hero_output.mat)";
+	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\hero_apro.mat)";
 
 	defs::RfDataDims dims;
 	std::vector<float>* data_array = nullptr;
@@ -62,14 +62,14 @@ bool test_beamforming()
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
 
-	params.vol_mins[0] = -0.005f;
-	params.vol_maxes[0] = 0.005f;
+	params.vol_mins[0] = -0.001f;
+	params.vol_maxes[0] = 0.001f;
 
 	params.vol_mins[1] = -0.03f;
 	params.vol_maxes[1] = 0.03f;
 
 	params.vol_mins[2] = 0.005f;
-	params.vol_maxes[2] = 0.1f;
+	params.vol_maxes[2] = 0.075f;
 
 	params.lateral_resolution = 0.0002f;
 	params.axial_resolution = 0.0002f;
@@ -93,7 +93,6 @@ bool test_beamforming()
 	free(volume);
 
 	delete data_array;
-	return true;
 
 	return true;
 }
