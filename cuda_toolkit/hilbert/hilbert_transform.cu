@@ -28,8 +28,8 @@ hilbert::f_domain_filter(cuComplex* input, uint cutoff_sample)
 
 	std::cout << "Filtering" << std::endl;
 	kernels::filter << <grid_dims, block_dims >> > (input, sample_count, cutoff_sample);
-	CUDA_THROW_IF_ERROR(cudaGetLastError());
-	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	return true;
 }
@@ -55,7 +55,7 @@ hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 {
 	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
-	CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
+	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
 	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_output));
 	//hilbert::f_domain_filter(d_output, 1350);
@@ -66,17 +66,7 @@ hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 __host__ bool
 hilbert::hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate)
 {
-	uint sample_count = Session.decoded_dims.x;
-
-
-	//CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
-
 	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_intermediate));
-	
-	//hilbert::f_domain_filter(d_intermediate, 1350);
-	
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_intermediate, d_output, CUFFT_INVERSE));
-
-	
 	return true;
 }

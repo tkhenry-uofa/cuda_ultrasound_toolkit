@@ -71,12 +71,12 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 
 	if (*dev_ptr != nullptr)
 	{
-		CUDA_THROW_IF_ERROR(cudaFree(*dev_ptr));
+		CUDA_RETURN_IF_ERROR(cudaFree(*dev_ptr));
 		*dev_ptr = nullptr;
 	}
 
 	size_t matrix_size = size * size * sizeof(float);
-	CUDA_THROW_IF_ERROR(cudaMalloc((void**)dev_ptr, matrix_size));
+	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)dev_ptr, matrix_size));
 
 	uint grid_length;
 	dim3 block_dim, grid_dim;
@@ -97,8 +97,8 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 	_kernels::init_hadamard_matrix << <grid_dim, block_dim >> > (*dev_ptr, size);
 
 
-	CUDA_THROW_IF_ERROR(cudaGetLastError());
-	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	for (uint i = 2; i <= size; i *= 2)
 	{
@@ -117,8 +117,8 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 
 		_kernels::generate_hadamard << <grid_dim, block_dim >> > (*dev_ptr, i / 2, size);
 
-		CUDA_THROW_IF_ERROR(cudaGetLastError());
-		CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
+		CUDA_RETURN_IF_ERROR(cudaGetLastError());
+		CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	}
 
 	return true;

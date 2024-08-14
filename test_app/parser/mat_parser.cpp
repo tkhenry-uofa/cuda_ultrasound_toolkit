@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdexcept>
 
 #include "mat_parser.h"
 
@@ -203,45 +204,49 @@ parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, d
 bool
 parser::load_float_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims)
 {
-    
-    bool success = false;
+   
     mxArray* mx_array = nullptr;
 
     *data_array = nullptr;
 
     MATFile* file = matOpen(file_path.c_str(), "r");
+
+    if (!file)
+    {
+        std::cerr << "Input file not found: " + file_path << std::endl;
+        ASSERT(false);
+        return false;
+    }
  
     // Get RF Data
     mx_array = matGetVariable(file, defs::rf_data_name.c_str());
     if (mx_array == NULL) {
         std::cerr << "Error reading rf data array." << std::endl;
-        return success;
-    }
-
-    if (!mxIsComplex(mx_array))
-    {
-        size_t channel_count = mxGetNumberOfElements(mx_array);
-        const mwSize* rf_size = mxGetDimensions(mx_array);
-        dims->sample_count = rf_size[0];
-        dims->channel_count = rf_size[1];
-        dims->tx_count = rf_size[2];
-
-        float* data_array_ptr = mxGetSingles(mx_array);
-
-        *data_array = new std::vector<float>(data_array_ptr, &(data_array_ptr[channel_count]));
-
-        success = true;
-    }
-    else
-    {
-        std::cerr << "Data is complex" << std::endl;
+        ASSERT(false);
         return false;
     }
+
+    if (mxIsComplex(mx_array))
+    {
+        std::cerr << "Data is complex" << std::endl;
+        ASSERT(false);
+        return false;
+    }
+
+    size_t channel_count = mxGetNumberOfElements(mx_array);
+    const mwSize* rf_size = mxGetDimensions(mx_array);
+    dims->sample_count = rf_size[0];
+    dims->channel_count = rf_size[1];
+    dims->tx_count = rf_size[2];
+
+    float* data_array_ptr = mxGetSingles(mx_array);
+
+    *data_array = new std::vector<float>(data_array_ptr, &(data_array_ptr[channel_count]));
 
     mxDestroyArray(mx_array);
     matClose(file);
 
-    return success;
+    return true;
 }
 
 bool

@@ -1,6 +1,7 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+#include <stdexcept>
 #include <stdio.h>
 #include <string.h>
 #include <cufft.h>
@@ -10,7 +11,12 @@ typedef int16_t i16;
 
 #define TOTAL_TOBE_CHANNELS 256
 
-
+#ifdef _DEBUG
+    #include <assert.h>
+    #define ASSERT(x) assert(x);
+#else
+    #define ASSERT(x)
+#endif // _DEBUG
 
 namespace defs
 {

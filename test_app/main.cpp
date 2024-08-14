@@ -47,32 +47,34 @@ bool test_decoding()
 
 bool test_beamforming()
 {
-	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\hero_acq.mat)";
-	//std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\hercules_resolution_plane.mat)";
-	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\mixes32_apro.mat)";
+	std::string data_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\processed_data\)";
+	//std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\processed_data\hero_acq.mat)";
+	std::string input_file_path = data_path + R"(hercules_plane_00.mat)";
+	std::string output_file_path = data_path + R"(hercules_plane_00_output.mat)";
 
 	defs::RfDataDims dims;
 	std::vector<float>* data_array = nullptr;
 
-	parser::load_float_array(input_file_path, &data_array, &dims);
+	bool result = parser::load_float_array(input_file_path, &data_array, &dims);
+	if (!result) return false;
 
 	BeamformerParams params;
-
-	parser::parse_bp_struct(input_file_path, &params);
+	result = parser::parse_bp_struct(input_file_path, &params);
+	if (!result) return false;
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
 
 	params.vol_mins[0] = -0.01f;
 	params.vol_maxes[0] = 0.01f;
 
-	params.vol_mins[1] = -0.03f;
-	params.vol_maxes[1] = 0.03f;
+	params.vol_mins[1] = -0.05f;
+	params.vol_maxes[1] = 0.05f;
 
 	params.vol_mins[2] = 0.005f;
-	params.vol_maxes[2] = 0.075f;
+	params.vol_maxes[2] = 0.08f;
 
-	params.lateral_resolution = 0.0002f;
-	params.axial_resolution = 0.0001f;
+	params.lateral_resolution = 0.0003f;
+	params.axial_resolution = 0.00015f;
 
 	params.array_params.c = 1452;
 	params.array_params.row_count = params.decoded_dims[1];
@@ -95,12 +97,14 @@ bool test_beamforming()
 
 	size_t vol_dims[3] = { x_count, y_count, z_count };
 	
-	bool result = hero_raw_to_beamfrom(data_array->data(), params, &volume);
+	result = hero_raw_to_beamfrom(data_array->data(), params, &volume);
+	if (!result) return false;
+
 	result = parser::save_float_array(volume, vol_dims, output_file_path, "volume", false);
+	if (!result) return false;
 
 
 	free(volume);
-
 	delete data_array;
 
 	return true;

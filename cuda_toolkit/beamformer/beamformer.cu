@@ -73,12 +73,12 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 	// Beamform this voxel per element 
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
-		bool mixes_row = ((e % 4) == 1);
+		/*bool mixes_row = ((e % 4) == 1);
 		bool mixes_col = ((t % 4) == 1);
 		if (!mixes_row && !mixes_col)
 		{
 			continue;
-		}
+		}*/
 
 		rx_vec = locData[t * Constants.channel_count + e];
 		rx_vec = { rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y };
@@ -89,9 +89,9 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 
 		value = rfData[(t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count) + scan_index - 1];
 
-		const float f_number = 1.5f;
-		float apro = f_num_aprodization(rx_vec, vox_loc.z, f_number);
-		//float apro = 1.0f;
+		const float f_number = 1.f;
+		//float apro = f_num_aprodization(rx_vec, vox_loc.z, f_number);
+		float apro = 1.0f;
 		value = SCALE_F2(value, apro);
 		temp[e] = cuCaddf(temp[e], value);
 
@@ -129,14 +129,14 @@ old_beamformer::configure_textures(VolumeConfiguration* config)
 	if (config->d_texture_arrays[0] != nullptr )
 	{
 		// Cleanup old data
-		CUDA_THROW_IF_ERROR(cudaDestroyTextureObject(config->textures[0]));
-		CUDA_THROW_IF_ERROR(cudaDestroyTextureObject(config->textures[1]));
-		CUDA_THROW_IF_ERROR(cudaDestroyTextureObject(config->textures[2]));
+		CUDA_RETURN_IF_ERROR(cudaDestroyTextureObject(config->textures[0]));
+		CUDA_RETURN_IF_ERROR(cudaDestroyTextureObject(config->textures[1]));
+		CUDA_RETURN_IF_ERROR(cudaDestroyTextureObject(config->textures[2]));
 		free(config->textures);
 
-		CUDA_THROW_IF_ERROR(cudaFreeArray(config->d_texture_arrays[0]));
-		CUDA_THROW_IF_ERROR(cudaFreeArray(config->d_texture_arrays[1]));
-		CUDA_THROW_IF_ERROR(cudaFreeArray(config->d_texture_arrays[2]));
+		CUDA_RETURN_IF_ERROR(cudaFreeArray(config->d_texture_arrays[0]));
+		CUDA_RETURN_IF_ERROR(cudaFreeArray(config->d_texture_arrays[1]));
+		CUDA_RETURN_IF_ERROR(cudaFreeArray(config->d_texture_arrays[2]));
 		free(config->d_texture_arrays);
 	}
 
@@ -175,20 +175,20 @@ old_beamformer::configure_textures(VolumeConfiguration* config)
 	memset(&tex_res_desc, 0, sizeof(cudaResourceDesc));
 	tex_res_desc.resType = cudaResourceTypeArray;
 
-	CUDA_THROW_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[0]), &channel_desc, voxel_counts.x));
-	CUDA_THROW_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[0], 0, 0, x_range.data(), voxel_counts.x * sizeof(float), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[0]), &channel_desc, voxel_counts.x));
+	CUDA_RETURN_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[0], 0, 0, x_range.data(), voxel_counts.x * sizeof(float), cudaMemcpyHostToDevice));
 	tex_res_desc.res.array.array = config->d_texture_arrays[0];
-	CUDA_THROW_IF_ERROR(cudaCreateTextureObject(&(config->textures[0]), &tex_res_desc, &tex_desc, NULL));
+	CUDA_RETURN_IF_ERROR(cudaCreateTextureObject(&(config->textures[0]), &tex_res_desc, &tex_desc, NULL));
 
-	CUDA_THROW_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[1]), &channel_desc, voxel_counts.y));
-	CUDA_THROW_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[1], 0, 0, y_range.data(), voxel_counts.y * sizeof(float), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[1]), &channel_desc, voxel_counts.y));
+	CUDA_RETURN_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[1], 0, 0, y_range.data(), voxel_counts.y * sizeof(float), cudaMemcpyHostToDevice));
 	tex_res_desc.res.array.array = config->d_texture_arrays[1];
-	CUDA_THROW_IF_ERROR(cudaCreateTextureObject(&(config->textures[1]), &tex_res_desc, &tex_desc, NULL));
+	CUDA_RETURN_IF_ERROR(cudaCreateTextureObject(&(config->textures[1]), &tex_res_desc, &tex_desc, NULL));
 
-	CUDA_THROW_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[2]), &channel_desc, voxel_counts.z));
-	CUDA_THROW_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[2], 0, 0, z_range.data(), voxel_counts.z * sizeof(float), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[2]), &channel_desc, voxel_counts.z));
+	CUDA_RETURN_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[2], 0, 0, z_range.data(), voxel_counts.z * sizeof(float), cudaMemcpyHostToDevice));
 	tex_res_desc.res.array.array = config->d_texture_arrays[2];
-	CUDA_THROW_IF_ERROR(cudaCreateTextureObject(&(config->textures[2]), &tex_res_desc, &tex_desc, NULL));
+	CUDA_RETURN_IF_ERROR(cudaCreateTextureObject(&(config->textures[2]), &tex_res_desc, &tex_desc, NULL));
 
 	return true;
 }
@@ -204,7 +204,7 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 	{
 		transmit_type = defs::TX_PLANE;
 	}
-	else if (!Session.rx_cols)
+	else if (Session.rx_cols)
 	{
 		// TX on rows (x) axis so we have x focusing
 		transmit_type = defs::TX_X_FOCUS;
@@ -229,8 +229,8 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 	cudaMemcpyToSymbol(Constants, &consts, sizeof(defs::KernelConstants));
 
 	cudaTextureObject_t* d_textures;
-	CUDA_THROW_IF_ERROR(cudaMalloc(&d_textures, 3 * sizeof(cudaTextureObject_t)));
-	CUDA_THROW_IF_ERROR(cudaMemcpy(d_textures, Session.volume_configuration.textures, 3 * sizeof(cudaTextureObject_t), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_textures, 3 * sizeof(cudaTextureObject_t)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_textures, Session.volume_configuration.textures, 3 * sizeof(cudaTextureObject_t), cudaMemcpyHostToDevice));
 
 	uint3 vox_counts = Session.volume_configuration.voxel_counts;
 	size_t total_voxels = Session.volume_configuration.total_voxels;
@@ -239,10 +239,10 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 	dim3 gridDim = vox_counts;
 	auto start = std::chrono::high_resolution_clock::now();
 
-	_kernels::old_complexDelayAndSum << < gridDim, consts.channel_count >> > (d_rf_data, d_loc_data, d_volume, d_textures, samples_per_meter);
+	_kernels::old_complexDelayAndSum << < gridDim, (uint)consts.channel_count >> > (d_rf_data, d_loc_data, d_volume, d_textures, samples_per_meter);
 
-	CUDA_THROW_IF_ERROR(cudaGetLastError());
-	CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;

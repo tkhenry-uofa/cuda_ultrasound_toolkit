@@ -18,6 +18,7 @@
 #include <cuda_gl_interop.h>
 
 #define PI_F 3.141592654f
+#define NaN (float)0xFFFFFFFF; 
 
 #define MAX_THREADS_PER_BLOCK 1024
 #define MAX_2D_BLOCK_DIM 32
@@ -101,16 +102,25 @@ struct RfDataDims
     }
 };
 
-extern CudaSession Session;                                                                                              
+extern CudaSession Session;    
+
+#ifdef _DEBUG
+	#include <assert.h>
+	#define ASSERT(x) assert(x)
+#else
+	#define ASSERT(x)
+#endif // _DEBUG
+
 
 // CUDA API error checking
-#define CUDA_THROW_IF_ERROR(err)                                                            \
+#define CUDA_RETURN_IF_ERROR(err)                                                            \
     do {                                                                                    \
         cudaError_t err_ = (err);                                                           \
         if (err_ != cudaSuccess) {                                                          \
             std::printf("CUDA error %s (%d) '%s'\n At %s:%d\n",                             \
                 cudaGetErrorName(err_), err_, cudaGetErrorString(err_), __FILE__, __LINE__);\
-            assert(false);                                                                  \
+            ASSERT(false);																	\
+			return false;																	\
         }                                                                                   \
     } while (0)
 
@@ -120,7 +130,8 @@ extern CudaSession Session;
         cublasStatus_t err_ = (err);                                                        \
         if (err_ != CUBLAS_STATUS_SUCCESS) {                                                \
             std::printf("cublas error %d at %s:%d\n", err_, __FILE__, __LINE__);            \
-            assert(false);                                                                  \
+            ASSERT(false);                                                                  \
+			return false;																	\
         }                                                                                   \
     } while (0)
 
@@ -130,8 +141,9 @@ extern CudaSession Session;
         cufftResult_t err_ = (err);                                                         \
         if (err_ != CUFFT_SUCCESS) {                                                        \
             std::printf("cufft error %d at %s:%d\n", err_, __FILE__, __LINE__);             \
-            assert(false);                                                                  \
-        }                                                                                   \
+            ASSERT(false);                                                                  \
+			return false;																	\
+		}                                                                                   \
     } while (0)
 
 
@@ -139,7 +151,7 @@ extern CudaSession Session;
 {                                                                                           \
     auto start = std::chrono::high_resolution_clock::now();                                 \
     CALL;                                                                                   \
-    CUDA_THROW_IF_ERROR(cudaDeviceSynchronize());                                           \
+    CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());                                           \
     auto elapsed = std::chrono::high_resolution_clock::now() - start;                       \
     std::cout << MESSAGE << " " <<                                                          \
       std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() <<         \
