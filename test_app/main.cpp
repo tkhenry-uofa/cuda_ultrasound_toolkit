@@ -67,8 +67,8 @@ bool test_beamforming()
 	params.vol_mins[0] = -0.01f;
 	params.vol_maxes[0] = 0.01f;
 
-	params.vol_mins[1] = -0.05f;
-	params.vol_maxes[1] = 0.05f;
+	params.vol_mins[1] = -0.03f;
+	params.vol_maxes[1] = 0.03f;
 
 	params.vol_mins[2] = 0.005f;
 	params.vol_maxes[2] = 0.08f;
