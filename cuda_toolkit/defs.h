@@ -20,7 +20,7 @@
 #define PI_F 3.141592654f
 #define NaN (float)0xFFFFFFFF; 
 
-#define MAX_THREADS_PER_BLOCK 1024
+#define MAX_THREADS_PER_BLOCK 128
 #define MAX_2D_BLOCK_DIM 32
 
 #define TOTAL_TOBE_CHANNELS 256
@@ -77,6 +77,8 @@ struct CudaSession
 	VolumeConfiguration volume_configuration;
 	
     uint* channel_mapping = nullptr;
+
+	float element_pitch;
 };
 
 
@@ -208,11 +210,12 @@ namespace defs
 		size_t sample_count;
 		size_t channel_count;
 		size_t tx_count;
-		
+		uint3 voxel_dims;
+		float3 volume_mins;
+		float3 resolutions;
 		float3 src_pos;
-		
 		TransmitType tx_type;
-		ulonglong4 volume_size;
+		float element_pitch;
 	};
 
 

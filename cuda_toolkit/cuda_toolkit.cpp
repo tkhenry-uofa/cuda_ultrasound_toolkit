@@ -327,16 +327,16 @@ bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** v
 	init_session({ 0,0 }, *(uint3*)&dec_data_dims, channel_mapping, params.rx_cols);
 
 	VolumeConfiguration vol_config;
-	{
-		vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
-		vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
-		vol_config.axial_resolution = params.axial_resolution;
-		vol_config.lateral_resolution = params.lateral_resolution;
+	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
+	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
+	vol_config.axial_resolution = params.axial_resolution;
+	vol_config.lateral_resolution = params.lateral_resolution;
 		
-		old_beamformer::configure_textures(&vol_config);
-	}
-
+	old_beamformer::configure_textures(&vol_config);
+	
 	Session.volume_configuration = vol_config;
+
+	Session.element_pitch = params.array_params.pitch;
 
 	float* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_count * sizeof(float)));

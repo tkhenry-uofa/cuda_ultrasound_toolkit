@@ -64,14 +64,14 @@ bool test_beamforming()
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
 
-	params.vol_mins[0] = -0.01f;
-	params.vol_maxes[0] = 0.01f;
+	params.vol_mins[0] = -0.002f;
+	params.vol_maxes[0] = 0.002f;
 
-	params.vol_mins[1] = -0.03f;
-	params.vol_maxes[1] = 0.03f;
+	params.vol_mins[1] = -0.02f;
+	params.vol_maxes[1] = 0.02f;
 
 	params.vol_mins[2] = 0.005f;
-	params.vol_maxes[2] = 0.08f;
+	params.vol_maxes[2] = 0.055f;
 
 	params.lateral_resolution = 0.0003f;
 	params.axial_resolution = 0.00015f;
@@ -96,9 +96,15 @@ bool test_beamforming()
 	std::cout << "Processing" << std::endl;
 
 	size_t vol_dims[3] = { x_count, y_count, z_count };
+
+	auto start = std::chrono::high_resolution_clock::now();
 	
 	result = hero_raw_to_beamfrom(data_array->data(), params, &volume);
 	if (!result) return false;
+
+	auto end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = end - start;
+	std::cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
 
 	result = parser::save_float_array(volume, vol_dims, output_file_path, "volume", false);
 	if (!result) return false;

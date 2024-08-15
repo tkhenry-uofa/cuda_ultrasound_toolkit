@@ -5,6 +5,8 @@
 #include <math_constants.h>
 #include <math_functions.h>
 
+#include <cub/cub.cuh> 
+
 #include "beamformer.cuh"
 
 #define PULSE_DELAY 0
@@ -14,7 +16,7 @@
 
 
 __device__ inline float
-_kernels::f_num_aprodization(float2 lateral_dist, float depth, float f_num)
+old_beamformer::_kernels::f_num_aprodization(float2 lateral_dist, float depth, float f_num)
 {
 	float apro = f_num * NORM_F2(lateral_dist) / depth;
 	apro = fminf(apro, 0.5);
@@ -23,56 +25,59 @@ _kernels::f_num_aprodization(float2 lateral_dist, float depth, float f_num)
 }
 
 __global__ void
-_kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData, float* volume, cudaTextureObject_t textures[3], float samples_per_meter)
+old_beamformer::_kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData, float* volume, cudaTextureObject_t textures[3], float samples_per_meter)
 {
-	__shared__ cuComplex temp[MAX_THREADS_PER_BLOCK];
 
 
-	int e = threadIdx.x;
 
-	if (e >= Constants.channel_count)
+	//const float3 vox_loc = {
+	//tex1D<float>(textures[0], blockIdx.x % Constants.voxel_dims.x),
+	//tex1D<float>(textures[1], blockIdx.x / Constants.voxel_dims.x),
+	//tex1D<float>(textures[2], blockIdx.y) };
+
+	const float3 vox_loc =
 	{
-		return;
-	}
-	temp[e] = { 0.0f, 0.0f };
-
-	float3 src_pos = Constants.src_pos;
-
-	const float3 vox_loc = {
-		tex1D<float>(textures[0], blockIdx.x),
-		tex1D<float>(textures[1], blockIdx.y),
-		tex1D<float>(textures[2], blockIdx.z) };
+		Constants.volume_mins.x + blockIdx.x * Constants.resolutions.x,
+		Constants.volume_mins.y + blockIdx.y * Constants.resolutions.y,
+		Constants.volume_mins.z + blockIdx.z * Constants.resolutions.z,
+	};
 
 
-	// If the voxel is between the array and the focus this is -1, otherwise it is 1.
-	int dist_sign = ((vox_loc.z - src_pos.z) > 0 ) ? 1 : -1;
+	uint e = threadIdx.x;
+	//uint t = threadIdx.y + blockIdx.z * blockDim.y;
+//	uint thread_id = threadIdx.x + threadIdx.y * blockDim.x;
+
 
 	float tx_distance;
-	switch (Constants.tx_type)
 	{
+		int dist_sign = ((vox_loc.z - Constants.src_pos.z) > 0) ? 1 : -1;
+
+		
+		switch (Constants.tx_type)
+		{
 		case defs::TX_PLANE:
 			tx_distance = vox_loc.z;
 			break;
 
 		case defs::TX_Y_FOCUS:
-			tx_distance = dist_sign * sqrt(powf(src_pos.z - vox_loc.z, 2) + powf(src_pos.y - vox_loc.y, 2)) + src_pos.z;
+			tx_distance = dist_sign * sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
 			break;
 
 		case defs::TX_X_FOCUS:
-			tx_distance = dist_sign * sqrt(powf(src_pos.z - vox_loc.z, 2) + powf(src_pos.x - vox_loc.x, 2)) + src_pos.z;
+			tx_distance = dist_sign * sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.x - vox_loc.x, 2)) + Constants.src_pos.z;
 			break;
+		}
 	}
+	// If the voxel is between the array and the focus this is -1, otherwise it is 1.
 
-	
-	
-	float rx_distance;
-	int scan_index;
-	float2 rx_vec;
-	
-	cuComplex value;
+	// X is constant with the element number, Y will change with the transmit
+	float2 element_loc = {((float)e - 64) * Constants.element_pitch, -64.0f * Constants.element_pitch };
+
+	cuComplex value, total;
 	// Beamform this voxel per element 
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
+
 		/*bool mixes_row = ((e % 4) == 1);
 		bool mixes_col = ((t % 4) == 1);
 		if (!mixes_row && !mixes_col)
@@ -80,22 +85,32 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 			continue;
 		}*/
 
-		rx_vec = locData[t * Constants.channel_count + e];
-		rx_vec = { rx_vec.x - vox_loc.x, rx_vec.y - vox_loc.y };
+	//	float2 element_loc = __ldg(&locData[t * Constants.channel_count + e]);
 
-		rx_distance = norm3df(ABS(rx_vec.x), ABS(rx_vec.y), vox_loc.z);
 
-		scan_index = lroundf((rx_distance + tx_distance) * samples_per_meter + PULSE_DELAY);
 
-		value = rfData[(t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count) + scan_index - 1];
+		float2 rx_vec = { element_loc.x - vox_loc.x, element_loc.y - vox_loc.y };
 
-		const float f_number = 1.f;
+
+		int scan_index = lroundf((norm3df(rx_vec.x, rx_vec.y, vox_loc.z) + tx_distance) * samples_per_meter + PULSE_DELAY);
+
+		size_t channel_offset = (t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count);
+
+		value = __ldg(&rfData[ channel_offset + scan_index - 1]);
+
+		//const float f_number = 1.f;
 		//float apro = f_num_aprodization(rx_vec, vox_loc.z, f_number);
 		float apro = 1.0f;
-		value = SCALE_F2(value, apro);
-		temp[e] = cuCaddf(temp[e], value);
+		//value = SCALE_F2(value, apro);
+		total = cuCaddf(total, value);
+
+		element_loc.y += Constants.element_pitch;
 
 	}
+
+	__shared__ cuComplex temp[MAX_THREADS_PER_BLOCK];
+
+	temp[e] = total;
 
 	__syncthreads();
 
@@ -107,90 +122,19 @@ _kernels::old_complexDelayAndSum(const cuComplex* rfData, const float2* locData,
 
 		if (index < (Constants.channel_count - s))
 		{
+
 			temp[index] = cuCaddf(temp[index], temp[index + s]);
 		}
 
 		__syncthreads();
 	}
 
+
+
 	if (e == 0)
 	{
-		volume[blockIdx.z * gridDim.x * gridDim.y + blockIdx.y * gridDim.x + blockIdx.x] = cuCabsf(temp[0]);
+		atomicAdd(&(volume[blockIdx.z * gridDim.y * gridDim.x + blockIdx.y * gridDim.x + blockIdx.x]), cuCabsf(temp[0]));
 	}
-}
-
-bool
-old_beamformer::configure_textures(VolumeConfiguration* config)
-{
-	std::vector<float> x_range;
-	std::vector<float> y_range;
-	std::vector<float> z_range;
-
-	if (config->d_texture_arrays[0] != nullptr )
-	{
-		// Cleanup old data
-		CUDA_RETURN_IF_ERROR(cudaDestroyTextureObject(config->textures[0]));
-		CUDA_RETURN_IF_ERROR(cudaDestroyTextureObject(config->textures[1]));
-		CUDA_RETURN_IF_ERROR(cudaDestroyTextureObject(config->textures[2]));
-		free(config->textures);
-
-		CUDA_RETURN_IF_ERROR(cudaFreeArray(config->d_texture_arrays[0]));
-		CUDA_RETURN_IF_ERROR(cudaFreeArray(config->d_texture_arrays[1]));
-		CUDA_RETURN_IF_ERROR(cudaFreeArray(config->d_texture_arrays[2]));
-		free(config->d_texture_arrays);
-	}
-
-	uint x_count, y_count, z_count;
-	x_count = y_count = z_count = 0;
-	for (float x = config->minimums.x; x <= config->maximums.x; x += config->lateral_resolution) {
-		x_range.push_back(x);
-		x_count++;
-	}
-	for (float y = config->minimums.y; y <= config->maximums.y; y += config->lateral_resolution) {
-		y_range.push_back(y);
-		y_count++;
-	}
-	for (float z = config->minimums.z; z <= config->maximums.z; z += config->axial_resolution) {
-		z_range.push_back(z);
-		z_count++;
-	}
-
-	config->voxel_counts = { x_count, y_count, z_count };
-	config->total_voxels = x_count * y_count * z_count;
-
-	uint3 voxel_counts = config->voxel_counts;
-
-	// TEXTURE SETUP
-	// 32 bits in the channel 
-	cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc(sizeof(float) * 8, 0, 0, 0, cudaChannelFormatKindFloat);
-
-	cudaTextureDesc tex_desc;
-	memset(&tex_desc, 0, sizeof(cudaTextureDesc));
-	tex_desc.addressMode[0] = cudaAddressModeClamp;
-	tex_desc.filterMode = cudaFilterModePoint;
-	tex_desc.readMode = cudaReadModeElementType;
-	tex_desc.normalizedCoords = false;
-
-	cudaResourceDesc tex_res_desc;
-	memset(&tex_res_desc, 0, sizeof(cudaResourceDesc));
-	tex_res_desc.resType = cudaResourceTypeArray;
-
-	CUDA_RETURN_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[0]), &channel_desc, voxel_counts.x));
-	CUDA_RETURN_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[0], 0, 0, x_range.data(), voxel_counts.x * sizeof(float), cudaMemcpyHostToDevice));
-	tex_res_desc.res.array.array = config->d_texture_arrays[0];
-	CUDA_RETURN_IF_ERROR(cudaCreateTextureObject(&(config->textures[0]), &tex_res_desc, &tex_desc, NULL));
-
-	CUDA_RETURN_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[1]), &channel_desc, voxel_counts.y));
-	CUDA_RETURN_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[1], 0, 0, y_range.data(), voxel_counts.y * sizeof(float), cudaMemcpyHostToDevice));
-	tex_res_desc.res.array.array = config->d_texture_arrays[1];
-	CUDA_RETURN_IF_ERROR(cudaCreateTextureObject(&(config->textures[1]), &tex_res_desc, &tex_desc, NULL));
-
-	CUDA_RETURN_IF_ERROR(cudaMallocArray(&(config->d_texture_arrays[2]), &channel_desc, voxel_counts.z));
-	CUDA_RETURN_IF_ERROR(cudaMemcpyToArray(config->d_texture_arrays[2], 0, 0, z_range.data(), voxel_counts.z * sizeof(float), cudaMemcpyHostToDevice));
-	tex_res_desc.res.array.array = config->d_texture_arrays[2];
-	CUDA_RETURN_IF_ERROR(cudaCreateTextureObject(&(config->textures[2]), &tex_res_desc, &tex_desc, NULL));
-
-	return true;
 }
 
 
@@ -214,15 +158,20 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 		transmit_type = defs::TX_Y_FOCUS;
 	}
 
+	VolumeConfiguration vol_config = Session.volume_configuration;
+
 
 	defs::KernelConstants consts =
 	{
 		Session.decoded_dims.x,
 		Session.decoded_dims.y,
 		Session.decoded_dims.z,
+		vol_config.voxel_counts,
+		vol_config.minimums,
+		{vol_config.lateral_resolution, vol_config.lateral_resolution, vol_config.axial_resolution},
 		src_pos,
 		transmit_type,
-		Session.volume_configuration.total_voxels
+		Session.element_pitch,
 	};
 
 
@@ -232,14 +181,24 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_textures, 3 * sizeof(cudaTextureObject_t)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_textures, Session.volume_configuration.textures, 3 * sizeof(cudaTextureObject_t), cudaMemcpyHostToDevice));
 
-	uint3 vox_counts = Session.volume_configuration.voxel_counts;
-	size_t total_voxels = Session.volume_configuration.total_voxels;
+	uint3 vox_counts = vol_config.voxel_counts;
 
 
-	dim3 gridDim = vox_counts;
+
+	// We fit as many transmits into the y block dimension as possible. 
+	// Once the block is full more are added on the z grid dimension
+	//uint tx_per_block = MAX_THREADS_PER_BLOCK / consts.channel_count;
+	//uint tx_blocks = consts.tx_count / tx_per_block;
+
+	//dim3 grid_dim = { vox_counts.x * vox_counts.y, vox_counts.z, tx_blocks };
+	//dim3 block_dim = { (uint)consts.channel_count, tx_per_block, 1 };
+
+	dim3 grid_dim = { vox_counts.x, vox_counts.y, vox_counts.z};
+	dim3 block_dim = { (uint)consts.channel_count, 1, 1 };
+
 	auto start = std::chrono::high_resolution_clock::now();
 
-	_kernels::old_complexDelayAndSum << < gridDim, (uint)consts.channel_count >> > (d_rf_data, d_loc_data, d_volume, d_textures, samples_per_meter);
+	_kernels::old_complexDelayAndSum << < grid_dim, block_dim >> > (d_rf_data, d_loc_data, d_volume, d_textures, samples_per_meter);
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
