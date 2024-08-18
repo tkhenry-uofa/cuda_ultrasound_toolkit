@@ -41,7 +41,7 @@ bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* 
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 	if (!Session.init)
 	{
-		init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
+		_init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
 	}
 	
 	size_t data_size = input_struct.x * input_struct.y * sizeof(int16_t);
@@ -90,7 +90,7 @@ bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** v
 
 	uint channel_mapping[256];
 	uint rf_data_dims[2] = { 0,0 };
-	init_session(rf_data_dims, params.decoded_dims, channel_mapping, params.rx_cols);
+	_init_session(rf_data_dims, params.decoded_dims, channel_mapping, params.rx_cols);
 
 	VolumeConfiguration vol_config;
 	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };

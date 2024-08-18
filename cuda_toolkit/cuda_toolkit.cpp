@@ -8,10 +8,37 @@
 
 CudaSession Session;
 
+/*****************************************************************************************************************************
+* Internal helpers
+*****************************************************************************************************************************/
+
 bool
-cleanup()
+_unregister_cuda_buffers()
 {
-	unregister_cuda_buffers();
+	if (Session.raw_data_ssbo.cuda_resource != NULL)
+	{
+		CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(Session.raw_data_ssbo.cuda_resource));
+	}
+
+	uint old_buffer_count = Session.rf_buffer_count;
+	if (old_buffer_count != 0)
+	{
+		for (uint i = 0; i < old_buffer_count; i++)
+		{
+			CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(Session.rf_data_ssbos[i].cuda_resource));
+		}
+
+		free(Session.rf_data_ssbos);
+	}
+	Session.rf_buffer_count = 0;
+
+	return true;
+}
+
+bool
+_cleanup_session()
+{
+	_unregister_cuda_buffers();
 	cudaFree(Session.d_complex);
 	cudaFree(Session.d_hadamard);
 	cudaFree(Session.d_converted);
@@ -27,9 +54,8 @@ cleanup()
 	return true;
 }
 
-
 bool 
-init_session(const uint input_dims[2], const uint decoded_dims[3], const uint channel_mapping[256], bool rx_cols)
+_init_session(const uint input_dims[2], const uint decoded_dims[3], const uint channel_mapping[256], bool rx_cols)
 {
 	if (!Session.init)
 	{
@@ -90,27 +116,31 @@ init_session(const uint input_dims[2], const uint decoded_dims[3], const uint ch
 	return true;
 }
 
+/*****************************************************************************************************************************
+* API FUNCTIONS
+*****************************************************************************************************************************/
+
 bool
-unregister_cuda_buffers()
+init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols)
 {
-	if (Session.raw_data_ssbo.cuda_resource != NULL)
+	uint2 input_struct = { input_dims[0], input_dims[1] };
+	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
+	if (!Session.init)
 	{
-		CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(Session.raw_data_ssbo.cuda_resource));
+		return _init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
 	}
-
-	uint old_buffer_count = Session.rf_buffer_count;
-	if (old_buffer_count != 0)
+	else
 	{
-		for (uint i = 0; i < old_buffer_count; i++)
+		bool changed = input_struct.x != Session.input_dims.x || input_struct.y != Session.input_dims.y ||
+			decoded_struct.x != Session.decoded_dims.x || decoded_struct.y != Session.decoded_dims.y || decoded_struct.z != Session.decoded_dims.z;
+
+		if (changed)
 		{
-			CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(Session.rf_data_ssbos[i].cuda_resource));
+			_cleanup_session();
+			return _init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
 		}
-
-		free(Session.rf_data_ssbos);
+		return true;
 	}
-	Session.rf_buffer_count = 0;
-
-	return true;
 }
 
 bool 
@@ -118,7 +148,7 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 {
 	if (Session.rf_buffer_count != 0)
 	{
-		unregister_cuda_buffers();
+		_unregister_cuda_buffers();
 	}
 	
 	Session.raw_data_ssbo = { NULL, 0 };
@@ -133,38 +163,6 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 		CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.rf_data_ssbos[i].cuda_resource), Session.rf_data_ssbos[i].gl_buffer_id, cudaGraphicsRegisterFlagsNone));
 	}
 	Session.rf_buffer_count = rf_buffer_count;
-	return true;
-}
-
-
-bool 
-init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols)
-{
-	uint2 input_struct = { input_dims[0], input_dims[1] };
-	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
-	if (!Session.init)
-	{
-		return init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
-	}
-	else
-	{
-		bool changed = input_struct.x != Session.input_dims.x || input_struct.y != Session.input_dims.y ||
-			decoded_struct.x != Session.decoded_dims.x || decoded_struct.y != Session.decoded_dims.y || decoded_struct.z != Session.decoded_dims.z;
-
-		if (changed)
-		{
-			deinit_cuda_configuration();
-			return init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
-		}
-		return true;
-	}
-}
-
-bool 
-deinit_cuda_configuration()
-{
-	cleanup();
-
 	return true;
 }
 
@@ -200,9 +198,6 @@ decode_and_hilbert(size_t input_offset, uint output_buffer)
 	d_input = d_input + input_offset / sizeof(i16);
 
 	i16_to_f::convert_data(d_input, Session.d_converted, Session.rx_cols);
-	
-
-
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
 	// Skip hilbert transform and copy each decoded value to the real part of the output,
@@ -216,7 +211,6 @@ decode_and_hilbert(size_t input_offset, uint output_buffer)
 
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
-	
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	return true;
