@@ -4,8 +4,6 @@
 
 #include "beamformer.cuh"
 
-
-
 bool
 old_beamformer::configure_textures(VolumeConfiguration* config)
 {

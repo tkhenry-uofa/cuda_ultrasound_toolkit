@@ -8,44 +8,41 @@
 
 CudaSession Session;
 
-
-float sample_value(float* d_value)
+bool
+cleanup()
 {
-	float sample = 0;
-	cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(float), cudaMemcpyDeviceToHost);
+	unregister_cuda_buffers();
+	cudaFree(Session.d_complex);
+	cudaFree(Session.d_hadamard);
+	cudaFree(Session.d_converted);
+	cudaFree(Session.d_decoded);
+	cudaFree(Session.d_input);
+	cublasDestroy(Session.cublas_handle);
+	cufftDestroy(Session.forward_plan);
+	cufftDestroy(Session.inverse_plan);
 
-	if (err != cudaSuccess)
-	{
-		return NaN;
-	}
+	free(Session.channel_mapping);
 
-	return sample;
-}
-
-i16 sample_value_i16(i16* d_value)
-{
-	i16 sample = 0;
-	cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(i16), cudaMemcpyDeviceToHost);
-
-	if (err != cudaSuccess)
-	{
-		return -0;
-	}
-
-	return sample;
+	Session.init = false;
+	return true;
 }
 
 
-
-bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mapping[TOTAL_TOBE_CHANNELS], bool rx_cols)
+bool 
+init_session(const uint input_dims[2], const uint decoded_dims[3], const uint channel_mapping[256], bool rx_cols)
 {
 	if (!Session.init)
 	{
-
 		i16_to_f::copy_channel_mapping(channel_mapping);
 
-		Session.input_dims = input_dims;
-		Session.decoded_dims = decoded_dims;
+		Session.input_dims.x = input_dims[0];
+		Session.input_dims.y = input_dims[1];
+
+		Session.decoded_dims.x = decoded_dims[0];
+		Session.decoded_dims.y = decoded_dims[1];
+		Session.decoded_dims.z = decoded_dims[2];
+
+
 		Session.rx_cols = rx_cols;
 
 		cublasStatus_t cublas_result = cublasCreate(&(Session.cublas_handle));
@@ -69,8 +66,8 @@ bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mappi
 			return false;
 		}
 
-		size_t input_size = input_dims.x * input_dims.y;
-		size_t decoded_size = decoded_dims.x * decoded_dims.y * decoded_dims.z;
+		size_t input_size = input_dims[0] * input_dims[1];
+		size_t decoded_size = decoded_dims[0] * decoded_dims[1] * decoded_dims[2];
 
 		//std::cout << "Allocing memory" << std::endl;
 		CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(Session.d_input), input_size * sizeof(i16)));
@@ -78,12 +75,12 @@ bool init_session(uint2 input_dims, uint3 decoded_dims, const uint channel_mappi
 		CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(Session.d_decoded), decoded_size * sizeof(float)));
 		CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(Session.d_complex), decoded_size * sizeof(cuComplex)));
 
-		bool success = hadamard::generate_hadamard(decoded_dims.z, &(Session.d_hadamard));
+		bool success = hadamard::generate_hadamard(decoded_dims[2], &(Session.d_hadamard));
 
 		assert(success);
 
-		uint fft_channel_count = decoded_dims.y * decoded_dims.z;
-		uint sample_count = decoded_dims.x;
+		uint fft_channel_count = decoded_dims[1] * decoded_dims[2];
+		uint sample_count = decoded_dims[0];
 
 		hilbert::plan_hilbert(sample_count, fft_channel_count);
 
@@ -116,7 +113,8 @@ unregister_cuda_buffers()
 	return true;
 }
 
-bool register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
+bool 
+register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
 {
 	if (Session.rf_buffer_count != 0)
 	{
@@ -138,51 +136,15 @@ bool register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_d
 	return true;
 }
 
-bool startup()
-{
-	return true;
-}
 
-bool cleanup()
-{
-	unregister_cuda_buffers();
-	cudaFree(Session.d_complex);
-	cudaFree(Session.d_hadamard);
-	cudaFree(Session.d_converted);
-	cudaFree(Session.d_decoded);
-	cudaFree(Session.d_input);
-	cublasDestroy(Session.cublas_handle);
-	cufftDestroy(Session.forward_plan);
-	cufftDestroy(Session.inverse_plan);
-
-	free(Session.channel_mapping);
-
-	Session.init = false;
-	return true;
-}
-
-bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols )
+bool 
+init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols)
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 	if (!Session.init)
 	{
-		init_session(input_struct, decoded_struct, channel_mapping, rx_cols);
-	}
-	
-	size_t data_size = input_struct.x * input_struct.y * sizeof(int16_t);
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(Session.d_input, input, data_size, cudaMemcpyHostToDevice));
-
-	return true;
-}
-
-bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols)
-{
-	uint2 input_struct = { input_dims[0], input_dims[1] };
-	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
-	if (!Session.init)
-	{
-		return init_session(input_struct, decoded_struct, channel_mapping, rx_cols);
+		return init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
 	}
 	else
 	{
@@ -192,20 +154,22 @@ bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, c
 		if (changed)
 		{
 			deinit_cuda_configuration();
-			return init_session(input_struct, decoded_struct, channel_mapping, rx_cols);
+			return init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
 		}
 		return true;
 	}
 }
 
-bool deinit_cuda_configuration()
+bool 
+deinit_cuda_configuration()
 {
 	cleanup();
 
 	return true;
 }
 
-bool decode_and_hilbert(size_t input_offset, uint output_buffer)
+bool 
+decode_and_hilbert(size_t input_offset, uint output_buffer)
 {
 	auto start = std::chrono::high_resolution_clock::now();
 	if (!Session.init)
@@ -258,108 +222,3 @@ bool decode_and_hilbert(size_t input_offset, uint output_buffer)
 	return true;
 }
 
-bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate)
-{
-	const uint2 input_dims = *(uint2*)&(params.raw_dims); // lol
-	RfDataDims output_dims(params.decoded_dims);
-	size_t input_size = input_dims.x * input_dims.y * sizeof(i16);
-	size_t decoded_size = output_dims.sample_count * output_dims.channel_count * output_dims.tx_count * sizeof(float);
-	size_t complex_size = decoded_size * 2;
-
-	size_t total_count = output_dims.sample_count * output_dims.channel_count * output_dims.tx_count;
-
-	*complex_out = (complex_f*)malloc(complex_size);
-	*intermediate = (complex_f*)malloc(complex_size);
-	cuComplex* d_intermediate;
-
-	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(d_intermediate), complex_size));
-
-	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
-
-	i16_to_f::convert_data(Session.d_input, Session.d_converted, params.rx_cols);
-	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
-
-	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, d_intermediate);
-//	CUDA_THROW_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
-
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*complex_out, Session.d_complex, complex_size, cudaMemcpyDeviceToHost));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*intermediate, d_intermediate, complex_size, cudaMemcpyDeviceToHost));
-
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
-
-	return true;
-}
-
-bool generate_hero_location_array(ArrayParams params, float2** d_location)
-{	
-
-	uint total_count = params.row_count * params.col_count;
-	float2* cpu_array = (float2*)malloc(total_count * sizeof(float2));
-	
-	float row_min = -1.0f * (params.row_count-1) * params.pitch/2;
-	float col_min = -1.0f * (params.col_count-1) * params.pitch/2;
-
-	float2 value;
-	for (uint col = 0; col < params.col_count; col++)
-	{
-		for (uint row = 0; row < params.row_count; row++)
-		{
-			value = { row * params.pitch + row_min, col * params.pitch + col_min };
-			cpu_array[col * params.row_count + row] = value;
-		}
-	}
-
-	CUDA_RETURN_IF_ERROR(cudaMalloc(d_location, total_count * sizeof(float2)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*d_location, cpu_array, total_count * sizeof(float2), cudaMemcpyHostToDevice));
-
-	free(cpu_array);
-	return true;
-}
-
-bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** volume)
-{
-	RfDataDims dec_data_dims(params.decoded_dims);
-	
-	size_t total_count = dec_data_dims.sample_count * dec_data_dims.channel_count * dec_data_dims.tx_count;
-
-	uint channel_mapping[256];
-
-	init_session({ 0,0 }, *(uint3*)&dec_data_dims, channel_mapping, params.rx_cols);
-
-	VolumeConfiguration vol_config;
-	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
-	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
-	vol_config.axial_resolution = params.axial_resolution;
-	vol_config.lateral_resolution = params.lateral_resolution;
-		
-	old_beamformer::configure_textures(&vol_config);
-	
-	Session.volume_configuration = vol_config;
-
-	Session.element_pitch = params.array_params.pitch;
-
-	float* d_input;
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_count * sizeof(float)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_count * sizeof(float), cudaMemcpyHostToDevice));
-
-	hadamard::hadamard_decode(d_input, Session.d_decoded);
-	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
-
-	
-	float* d_volume;
-	float2* d_location;
-	generate_hero_location_array(params.array_params, &d_location);
-
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
-
-
-	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
-	old_beamformer::beamform(d_volume, Session.d_complex, d_location, *(float3*)params.focus, samples_per_meter);
-
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
-
-	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
-
-	return true;
-}

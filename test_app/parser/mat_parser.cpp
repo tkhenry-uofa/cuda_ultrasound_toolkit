@@ -85,7 +85,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     if (field_p)
     {
         double_mx = (double*)mxGetDoubles(field_p);
-        params->array_params.center_freq = *double_mx;
+        params->array_params.center_freq = (float)*double_mx;
     }
     else
     {
@@ -96,7 +96,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     if (field_p)
     {
         double_mx = (double*)mxGetDoubles(field_p);
-        params->array_params.sample_freq = *double_mx;
+        params->array_params.sample_freq = (float)*double_mx;
     }
     else
     {
@@ -107,7 +107,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     if (field_p)
     {
         double_mx = (double*)mxGetDoubles(field_p);
-        params->array_params.pitch = *double_mx;
+        params->array_params.pitch = (float)*double_mx;
     }
     else
     {
@@ -121,7 +121,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         if (sub_field_p)
         {
             double_mx = (double*)mxGetDoubles(sub_field_p);
-            params->focus[0] = *double_mx;
+            params->focus[0] = (float)*double_mx;
         }
         else
         {
@@ -132,7 +132,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         if (sub_field_p)
         {
             double_mx = (double*)mxGetDoubles(sub_field_p);
-            params->focus[1] = *double_mx;
+            params->focus[1] = (float)*double_mx;
         }
         else
         {
@@ -143,7 +143,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         if (sub_field_p)
         {
             double_mx = (double*)mxGetDoubles(sub_field_p);
-            params->focus[2] = *double_mx;
+            params->focus[2] = (float)*double_mx;
         }
         else
         {
@@ -155,6 +155,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     mxDestroyArray(struct_array);
     matClose(file);
 
+    return true;
 }
 
 bool
@@ -178,9 +179,9 @@ parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, d
     {
         size_t channel_count = mxGetNumberOfElements(mx_array);
         const mwSize* rf_size = mxGetDimensions(mx_array);
-        dims->sample_count = rf_size[0];
-        dims->channel_count = rf_size[1];
-        dims->tx_count = rf_size[2];
+        dims->sample_count = (uint)rf_size[0];
+        dims->channel_count = (uint)rf_size[1];
+        dims->tx_count = (uint)rf_size[2];
 
         mxInt16* data_array_ptr = mxGetInt16s(mx_array);
 
@@ -235,9 +236,9 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
 
     size_t channel_count = mxGetNumberOfElements(mx_array);
     const mwSize* rf_size = mxGetDimensions(mx_array);
-    dims->sample_count = rf_size[0];
-    dims->channel_count = rf_size[1];
-    dims->tx_count = rf_size[2];
+    dims->sample_count = (uint)rf_size[0];
+    dims->channel_count = (uint)rf_size[1];
+    dims->tx_count = (uint)rf_size[2];
 
     float* data_array_ptr = mxGetSingles(mx_array);
 

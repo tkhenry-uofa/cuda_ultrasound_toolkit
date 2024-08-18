@@ -4,11 +4,6 @@
 #include <device_launch_parameters.h>
 #include "../defs.h"
 
-__constant__ KernelConstants Constants;
-
-
-
-
 namespace old_beamformer
 {
 	namespace _kernels
@@ -24,16 +19,7 @@ namespace old_beamformer
 	}
 
 	bool configure_textures(VolumeConfiguration* config);
-
 	bool beamform(float* d_volume, const cuComplex* d_rf_data, const float2* d_loc_data, const float3 focus_pos, float samples_per_meter);
-
-
-	
-
 }
-
-
-
-
 
 #endif // !BEAMFORMER_CUH

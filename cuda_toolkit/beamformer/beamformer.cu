@@ -9,6 +9,8 @@
 
 #include "beamformer.cuh"
 
+__constant__ KernelConstants Constants;
+
 #define PULSE_DELAY 0
 //#define SAMPLES_PER_METER 32467.5F // 50 MHz, 1540 m/s
 #define SAMPLES_PER_METER 32467.5F // 50 MHz, 1540 m/s
@@ -77,7 +79,6 @@ old_beamformer::_kernels::delay_and_sum(const cuComplex* rfData, float* volume, 
 		rx_vec.y += Constants.element_pitch;
 	}
 
-	float2 carry = total;
 	__syncthreads();
 	/* Each warp sums up their totals using intrinsics and stores the output
 	 in that warp's index in temp*/

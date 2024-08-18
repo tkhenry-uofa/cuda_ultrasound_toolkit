@@ -21,6 +21,9 @@
     <ClCompile Include="cuda_toolkit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cuda_toolkit_testing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_toolkit.h">
@@ -32,6 +35,9 @@
     <ClInclude Include="hilbert\hilbert_transform.cuh" />
     <ClInclude Include="hadamard\hadamard.cuh" />
     <ClInclude Include="data_conversion\int16_to_float.cuh" />
+    <ClInclude Include="cuda_toolkit_testing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="hilbert\hilbert_transform.cu" />

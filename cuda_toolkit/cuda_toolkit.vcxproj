@@ -158,10 +158,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cuda_toolkit.cpp" />
+    <ClCompile Include="cuda_toolkit_testing.cpp" />
     <ClCompile Include="dllmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_toolkit.h" />
+    <ClInclude Include="cuda_toolkit_testing.h" />
     <ClInclude Include="data_conversion\int16_to_float.cuh" />
     <ClInclude Include="hadamard\hadamard.cuh" />
     <ClInclude Include="hilbert\hilbert_transform.cuh">

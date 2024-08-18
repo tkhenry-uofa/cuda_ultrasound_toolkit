@@ -7,7 +7,7 @@
 #include <string>
 
 #include "../defs.h"
-#include "../../cuda_toolkit/cuda_toolkit.h"
+#include "../../cuda_toolkit/cuda_toolkit_testing.h"
 
 extern "C" {
 	#include <mat.h>

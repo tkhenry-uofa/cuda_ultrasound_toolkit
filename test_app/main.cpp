@@ -2,7 +2,7 @@
 #include <string>
 #include <chrono>
 
-#include "../cuda_toolkit/cuda_toolkit.h"
+#include "../cuda_toolkit/cuda_toolkit_testing.h"
 
 #include "defs.h"
 #include "parser/mat_parser.h"
@@ -67,8 +67,8 @@ bool test_beamforming()
 	params.vol_mins[0] = -0.02f;
 	params.vol_maxes[0] = 0.02f;
 
-	params.vol_mins[1] = -0.001f;
-	params.vol_maxes[1] = 0.001f;
+	params.vol_mins[1] = -0.003f;
+	params.vol_maxes[1] = 0.003f;
 
 	params.vol_mins[2] = 0.000f;
 	params.vol_maxes[2] = 0.100f;

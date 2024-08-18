@@ -89,31 +89,7 @@ struct CudaSession
 	float element_pitch;
 };
 
-
 extern CudaSession Session;
-
-
-struct RfDataDims
-{
-    unsigned int sample_count;
-    unsigned int channel_count;
-    unsigned int tx_count;
-
-    RfDataDims(const uint3& input)
-        : sample_count(input.x), channel_count(input.y), tx_count(input.z) {};
-
-    RfDataDims(const unsigned int* input)
-        : sample_count(input[0]), channel_count(input[1]), tx_count(input[2]) {};
-
-    RfDataDims& operator=(const uint3& input)
-    {
-        sample_count = input.x;
-        channel_count = input.y;
-        tx_count = input.z;
-        return *this;
-    }
-};
-
 
 struct PositionTextures {
 	cudaTextureObject_t x, y, z;
@@ -144,6 +120,32 @@ struct MappedFileHandle {
 	void* file_handle;
 	void* file_view;
 };
+
+inline float sample_value(float* d_value)
+{
+    float sample = 0;
+    cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(float), cudaMemcpyDeviceToHost);
+
+    if (err != cudaSuccess)
+    {
+        return NaN;
+    }
+
+    return sample;
+}
+
+inline i16 sample_value_i16(i16* d_value)
+{
+    i16 sample = 0;
+    cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(i16), cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+    {
+        return -0;
+    }
+    return sample;
+}
+
+
 
 #ifdef _DEBUG
 	#include <assert.h>
