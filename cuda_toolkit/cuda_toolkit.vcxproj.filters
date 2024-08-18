@@ -37,5 +37,8 @@
     <CudaCompile Include="hilbert\hilbert_transform.cu" />
     <CudaCompile Include="hadamard\hadamard.cu" />
     <CudaCompile Include="data_conversion\int16_to_float.cu" />
+    <CudaCompile Include="beamformer\beamformer.cu" />
+    <CudaCompile Include="beamformer\beamformer.cuh" />
+    <CudaCompile Include="beamformer\beamformer_helpers.cu" />
   </ItemGroup>
 </Project>

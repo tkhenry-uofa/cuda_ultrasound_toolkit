@@ -8,7 +8,7 @@ __constant__ uint Channel_Mapping[TOTAL_TOBE_CHANNELS];
 __host__ bool
 i16_to_f::copy_channel_mapping(const uint channel_mapping[TOTAL_TOBE_CHANNELS])
 {
-	CUDA_THROW_IF_ERROR(cudaMemcpyToSymbol(Channel_Mapping, channel_mapping, TOTAL_TOBE_CHANNELS * sizeof(uint)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Channel_Mapping, channel_mapping, TOTAL_TOBE_CHANNELS * sizeof(uint)));
 	return true;
 }
 
@@ -58,7 +58,7 @@ i16_to_f::convert_data(const i16* d_input, float* d_output, bool rx_cols)
 	//CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
 	_kernels::short_to_float << <grid_dim, block_dim >> > (d_input, d_output, input_dims, output_dims, rx_cols);
-	CUDA_THROW_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 
 	return true;
 }
