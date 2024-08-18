@@ -4,7 +4,7 @@
 #include <device_launch_parameters.h>
 #include "../defs.h"
 
-__constant__ defs::KernelConstants Constants;
+__constant__ KernelConstants Constants;
 
 
 
@@ -14,10 +14,13 @@ namespace old_beamformer
 	namespace _kernels
 	{
 		__global__ void
-			old_complexDelayAndSum(const cuComplex* rfData, const float2* locData, float* volume, cudaTextureObject_t textures[3], float samples_per_meter);
+			delay_and_sum(const cuComplex* rfData, float* volume, float samples_per_meter, const float2* location_array);
 
 		__device__ inline float
-			f_num_aprodization(float2 lateral_dist, float depth, float f_num);
+			f_num_aprodization(float lateral_dist, float depth, float f_num);
+
+		__global__ void
+			double_loop(const cuComplex* rfData, float* volume, float samples_per_meter);
 	}
 
 	bool configure_textures(VolumeConfiguration* config);

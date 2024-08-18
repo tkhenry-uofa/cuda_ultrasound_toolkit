@@ -23,12 +23,20 @@
 #define MAX_THREADS_PER_BLOCK 128
 #define MAX_2D_BLOCK_DIM 32
 
+#define WARP_SIZE 32
+
 #define TOTAL_TOBE_CHANNELS 256
 #define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
 
-#define ABS(x)         ((x) < 0 ? -(x) : (x))
-#define NORM_F2(v) (sqrtf( v.x * v.x + v.y * v.y))
+#define SCALAR_ABS(x)         ((x) < 0 ? -(x) : (x))
 #define SCALE_F2(v, a) {v.x * a, v.y * a};
+
+
+#define NORM_F2(v) (sqrtf( v.x * v.x + v.y * v.y))
+#define NORM_F3(v) (sqrtf( v.x * v.x + v.y * v.y + v.z * v.z))
+
+
+#define ADD_F2(v,u) {(v).x + (u).x, (v).y + (u).y}
 
 typedef unsigned int uint;
 typedef int16_t i16;
@@ -82,6 +90,8 @@ struct CudaSession
 };
 
 
+extern CudaSession Session;
+
 
 struct RfDataDims
 {
@@ -104,7 +114,36 @@ struct RfDataDims
     }
 };
 
-extern CudaSession Session;    
+
+struct PositionTextures {
+	cudaTextureObject_t x, y, z;
+};
+
+enum TransmitType
+{
+	TX_PLANE = 0,
+	TX_X_FOCUS = 1,
+	TX_Y_FOCUS = 2,
+};
+
+struct KernelConstants
+{
+	size_t sample_count;
+	size_t channel_count;
+	size_t tx_count;
+	uint3 voxel_dims;
+	float3 volume_mins;
+	float3 resolutions;
+	float3 src_pos;
+	TransmitType tx_type;
+	float element_pitch;
+};
+
+
+struct MappedFileHandle {
+	void* file_handle;
+	void* file_view;
+};
 
 #ifdef _DEBUG
 	#include <assert.h>
@@ -161,97 +200,6 @@ extern CudaSession Session;
 }  
 
 
-
-
-
-namespace defs
-{
-	// Matlab strings are u16, even though variable names aren't
-	static const std::u16string Plane_tx_name = u"plane";
-	static const std::u16string X_line_tx_name = u"xLine";
-	static const std::u16string Y_line_tx_name = u"yLine";
-
-	static const char* Rf_data_name = "rx_scans";
-	static const char* Loc_data_name = "rx_locs";
-	static const char* Tx_config_name = "tx_config";
-
-	static const char* F0_name = "f0";
-	static const char* Fs_name = "fs";
-
-	static const char* Column_count_name = "cols";
-	static const char* Row_count_name = "rows";
-	static const char* Width_name = "width";
-	static const char* Pitch_name = "pitch";
-
-	static const char* X_min_name = "x_min";
-	static const char* x_max_name = "x_max";
-	static const char* Y_min_name = "y_min";
-	static const char* Y_max_name = "y_max";
-
-	static const char* Tx_count_name = "no_transmits";
-	static const char* Src_location_name = "src";
-	static const char* Transmit_type_name = "transmit";
-	static const char* Pulse_delay_name = "pulse_delay";
-
-
-	struct PositionTextures {
-		cudaTextureObject_t x, y, z;
-	};
-
-	enum TransmitType
-	{
-		TX_PLANE = 0,
-		TX_X_FOCUS = 1,
-		TX_Y_FOCUS = 2,
-	};
-
-	struct KernelConstants
-	{
-		size_t sample_count;
-		size_t channel_count;
-		size_t tx_count;
-		uint3 voxel_dims;
-		float3 volume_mins;
-		float3 resolutions;
-		float3 src_pos;
-		TransmitType tx_type;
-		float element_pitch;
-	};
-
-
-	struct RfDataDims {
-		size_t channel_count;
-		size_t sample_count;
-		size_t tx_count;
-	};
-
-	struct ArrayParams {
-		float f0; // Transducer frequency (Hz)
-		float fs; // Data sample rate (Hz)
-
-		int column_count; // Array column count
-		int row_count; // Array row count;
-		float width; // Element width (m)
-		float pitch; // Element pitch (m)
-
-		float x_min; // Transducer left elements (m)
-		float x_max; // Transudcer right elements (m)
-		float y_min; // Transducer bottom elements (m)
-		float y_max; // Transducer top elements (m)
-
-		int tx_count; // Number of transmittions
-		float3 src_location; // Location of tx source (m)
-		TransmitType transmit_type; // Transmit type
-		float pulse_delay; // Delay to center of pulse (seconds)
-	};
-
-
-	struct MappedFileHandle {
-		void* file_handle;
-		void* file_view;
-	};
-
-}
 
 #endif // !DEFS_H
 

@@ -3,10 +3,6 @@
     "files": [
         {
             "is_open": true,
-            "path": "../../../../../OneDrive/Documents/NVIDIA Nsight Compute/no_loop.ncu-rep"
-        },
-        {
-            "is_open": true,
             "path": "../../../../../OneDrive/Documents/NVIDIA Nsight Compute/tx_loop.ncu-rep"
         }
     ],
