@@ -47,15 +47,15 @@ bool test_decoding()
 
 bool test_beamforming()
 {
-	std::string data_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\processed_data\)";
-	//std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\processed_data\hero_acq.mat)";
-	std::string input_file_path = data_path + R"(hero_acq.mat)";
-	std::string output_file_path = data_path + R"(hero_acq_output.mat)";
+	std::string data_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
+	data_path = data_path + R"(second_hercules_plane)" + R"(\)";
+	std::string input_file_path = data_path + R"(00.mat)";
+	std::string output_file_path = data_path + R"(00_beamformed.mat)";
 
 	defs::RfDataDims dims;
-	std::vector<float>* data_array = nullptr;
+	std::vector<i16>* data_array = nullptr;
 
-	bool result = parser::load_float_array(input_file_path, &data_array, &dims);
+	bool result = parser::load_int16_array(input_file_path, &data_array, &dims);
 	if (!result) return false;
 
 	BeamformerParams params;
@@ -70,7 +70,7 @@ bool test_beamforming()
 	params.vol_mins[1] = -0.003f;
 	params.vol_maxes[1] = 0.003f;
 
-	params.vol_mins[2] = 0.000f;
+	params.vol_mins[2] = 0.01f;
 	params.vol_maxes[2] = 0.100f;
 
 	params.lateral_resolution = 0.0003f;
@@ -79,6 +79,8 @@ bool test_beamforming()
 	params.array_params.c = 1452;
 	params.array_params.row_count = params.decoded_dims[1];
 	params.array_params.col_count = params.decoded_dims[1];
+
+	params.array_params.pitch = (params.array_params.xdc_maxes[0] - params.array_params.xdc_mins[0]) / params.array_params.col_count;
 
 	uint x_count, y_count, z_count;
 	x_count = y_count = z_count = 0;
@@ -99,7 +101,7 @@ bool test_beamforming()
 
 	auto start = std::chrono::high_resolution_clock::now();
 	
-	result = hero_raw_to_beamfrom(data_array->data(), params, &volume);
+	result = hero_raw_to_beamform(data_array->data(), params, &volume);
 	if (!result) return false;
 
 	auto end = std::chrono::high_resolution_clock::now();

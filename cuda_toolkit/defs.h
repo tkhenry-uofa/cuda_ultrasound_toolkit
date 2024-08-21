@@ -37,7 +37,7 @@
 
 
 #define ADD_F2(v,u) {(v).x + (u).x, (v).y + (u).y}
-
+typedef unsigned long long int uint64;
 typedef unsigned int uint;
 typedef int16_t i16;
 typedef std::vector<std::complex<float>> ComplexVectorF;

@@ -20,10 +20,30 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     if (field_p)
     {
         uint16_t* channel_map_mx = (uint16_t*)mxGetUint16s(field_p);
-        for (uint i = 0; i < TOTAL_TOBE_CHANNELS; i++)
+        if (!channel_map_mx)
         {
-            params->channel_mapping[i] = (uint)channel_map_mx[i];
+            double* channel_map_d = (double*)mxGetDoubles(field_p);
+            if (!channel_map_d)
+            {
+                std::cout << "Failed to read " << defs::channel_mapping_name << " invalid data type." << std::endl;
+            }
+            else
+            {
+                for (uint i = 0; i < TOTAL_TOBE_CHANNELS; i++)
+                {
+                    params->channel_mapping[i] = (uint)channel_map_d[i];
+                }
+            }
         }
+        else
+        {
+            for (uint i = 0; i < TOTAL_TOBE_CHANNELS; i++)
+            {
+                params->channel_mapping[i] = (uint)channel_map_mx[i];
+            }
+        }
+
+        
     }
     else
     {
@@ -149,8 +169,62 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         {
             std::cout << "Failed to read focus z" << std::endl;
         }
+
     }
-    
+
+    field_p = mxGetField(struct_array, 0, defs::xdc_min_name.c_str());
+    if (field_p)
+    {
+        sub_field_p = mxGetField(field_p, 0, "x");
+        if (sub_field_p)
+        {
+            double_mx = (double*)mxGetDoubles(sub_field_p);
+            params->array_params.xdc_mins[0] = (float)*double_mx;
+        }
+        else
+        {
+            std::cout << "Failed to read xdc min x" << std::endl;
+        }
+
+        sub_field_p = mxGetField(field_p, 0, "y");
+        if (sub_field_p)
+        {
+            double_mx = (double*)mxGetDoubles(sub_field_p);
+            params->array_params.xdc_mins[1] = (float)*double_mx;
+        }
+        else
+        {
+            std::cout << "Failed to read xdc min y" << std::endl;
+        }
+
+    }
+
+    field_p = mxGetField(struct_array, 0, defs::xdc_max_name.c_str());
+    if (field_p)
+    {
+        sub_field_p = mxGetField(field_p, 0, "x");
+        if (sub_field_p)
+        {
+            double_mx = (double*)mxGetDoubles(sub_field_p);
+            params->array_params.xdc_maxes[0] = (float)*double_mx;
+        }
+        else
+        {
+            std::cout << "Failed to read xdc max x" << std::endl;
+        }
+
+        sub_field_p = mxGetField(field_p, 0, "y");
+        if (sub_field_p)
+        {
+            double_mx = (double*)mxGetDoubles(sub_field_p);
+            params->array_params.xdc_maxes[1] = (float)*double_mx;
+        }
+        else
+        {
+            std::cout << "Failed to read xdc max y" << std::endl;
+        }
+
+    }
     
     mxDestroyArray(struct_array);
     matClose(file);
@@ -167,6 +241,12 @@ parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, d
     *data_array = nullptr;
 
     MATFile* file = matOpen(file_path.c_str(), "r");
+
+    if (!file)
+    {
+        std::cerr << "Cannot open file: " << file_path << std::endl;
+        return success;
+    }
 
     // Get RF Data
     mx_array = matGetVariable(file, defs::rf_data_name.c_str());

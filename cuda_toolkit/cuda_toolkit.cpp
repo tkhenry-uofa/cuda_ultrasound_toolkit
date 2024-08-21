@@ -201,10 +201,10 @@ decode_and_hilbert(size_t input_offset, uint output_buffer)
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
 	// Skip hilbert transform and copy each decoded value to the real part of the output,
-	//CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, total_count * sizeof(cuComplex)));
-	//CUDA_THROW_IF_ERROR(cudaMemcpy2D(d_output, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count,cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, total_count * sizeof(cuComplex)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(d_output, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count,cudaMemcpyDefault));
 	
-	hilbert::hilbert_transform(Session.d_decoded, d_output);
+	//hilbert::hilbert_transform(Session.d_decoded, d_output);
 	
 	// Downsample copy
 	//CUDA_THROW_IF_ERROR(cudaMemcpy2D(d_output, sizeof(cuComplex), Session.d_complex, 2*sizeof(cuComplex), sizeof(cuComplex), total_count/2, cudaMemcpyDefault));

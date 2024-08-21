@@ -19,6 +19,8 @@ typedef struct {
 	float pitch;
 	uint row_count;
 	uint col_count;
+	float xdc_mins[2];
+	float xdc_maxes[2];
 } ArrayParams;
 
 
@@ -66,7 +68,7 @@ EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, co
 EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate);
 
 
-EXPORT_FN bool hero_raw_to_beamfrom(const float* input, BeamformerParams params, float** volume);
+EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float** volume);
 
 
 
