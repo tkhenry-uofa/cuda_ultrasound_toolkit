@@ -5,8 +5,6 @@
 
 bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
 {
-    // Get RF Data
-
     MATFile* file = matOpen(file_path.c_str(), "r");
 
     mxArray* struct_array = matGetVariable(file, defs::beamformer_params_name.c_str());
@@ -233,6 +231,62 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
 }
 
 bool
+parser::load_f2_tx_config(std::string file_path, BeamformerParams* params)
+{
+    bool success = false;
+
+    MATFile* file = matOpen(file_path.c_str(), "r");
+
+    mxArray* struct_array = matGetVariable(file, defs::sims::tx_config_name.c_str());
+    if (struct_array == NULL) {
+        std::cerr << "Error reading tx configuration struct." << std::endl;
+        ASSERT(false);
+        return false;
+    }
+
+
+    // TODO: Catch log and throw null returns
+    mxArray* field_p = mxGetField(struct_array, 0, defs::sims::f0_name.c_str());
+    params->array_params.center_freq = (float)*mxGetDoubles(field_p);
+    field_p = mxGetField(struct_array, 0, defs::sims::fs_name.c_str());
+    params->array_params.sample_freq = (float)*mxGetDoubles(field_p);
+
+
+    field_p = mxGetField(struct_array, 0, defs::sims::col_count_name.c_str());
+    params->array_params.col_count = (int)*mxGetDoubles(field_p);
+    field_p = mxGetField(struct_array, 0, defs::sims::row_count_name.c_str());
+    params->array_params.row_count = (int)*mxGetDoubles(field_p);
+
+    field_p = mxGetField(struct_array, 0, defs::sims::pitch_name.c_str());
+    params->array_params.pitch = (float)*mxGetDoubles(field_p);
+
+    field_p = mxGetField(struct_array, 0, defs::sims::x_min_name.c_str());
+    params->array_params.xdc_mins[0] = (float)*mxGetDoubles(field_p);
+    field_p = mxGetField(struct_array, 0, defs::sims::x_max_name.c_str());
+    params->array_params.xdc_maxes[0] = (float)*mxGetDoubles(field_p);
+    field_p = mxGetField(struct_array, 0, defs::sims::y_min_name.c_str());
+    params->array_params.xdc_mins[1] = (float)*mxGetDoubles(field_p);
+    field_p = mxGetField(struct_array, 0, defs::sims::y_max_name.c_str());
+    params->array_params.xdc_maxes[1] = (float)*mxGetDoubles(field_p);
+
+    field_p = mxGetField(struct_array, 0, defs::sims::tx_count_name.c_str());
+    params->decoded_dims[2] = (int)*mxGetDoubles(field_p);
+    field_p = mxGetField(struct_array, 0, defs::sims::pulse_delay_name.c_str());
+    params->pulse_delay = (float)*mxGetDoubles(field_p);
+
+    field_p = mxGetField(struct_array, 0, defs::sims::focus_name.c_str());
+    double* src_locs = (double*)mxGetDoubles(field_p);
+    params->focus[0] = src_locs[0];
+    params->focus[1] = src_locs[1];
+    params->focus[2] = src_locs[2];
+
+
+    success = true;
+    return success;
+}
+
+
+bool
 parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, defs::RfDataDims* dims)
 {
     bool success = false;
@@ -283,7 +337,7 @@ parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, d
 
 
 bool
-parser::load_float_array(std::string file_path, std::vector<float>** data_array, defs::RfDataDims* dims)
+parser::load_float_array(std::string file_path, std::vector<float>** data_array, uint3* dims)
 {
    
     mxArray* mx_array = nullptr;
@@ -300,7 +354,7 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
     }
  
     // Get RF Data
-    mx_array = matGetVariable(file, defs::rf_data_name.c_str());
+    mx_array = matGetVariable(file, defs::sims::rf_data_name.c_str());
     if (mx_array == NULL) {
         std::cerr << "Error reading rf data array." << std::endl;
         ASSERT(false);
@@ -314,21 +368,71 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
         return false;
     }
 
-    size_t channel_count = mxGetNumberOfElements(mx_array);
+    size_t element_count = mxGetNumberOfElements(mx_array);
     const mwSize* rf_size = mxGetDimensions(mx_array);
-    dims->sample_count = (uint)rf_size[0];
-    dims->channel_count = (uint)rf_size[1];
-    dims->tx_count = (uint)rf_size[2];
+    dims->x = (uint)rf_size[0];
+    dims->y = (uint)rf_size[1];
+    dims->x = (uint)rf_size[2];
 
     float* data_array_ptr = mxGetSingles(mx_array);
 
-    *data_array = new std::vector<float>(data_array_ptr, &(data_array_ptr[channel_count]));
+    *data_array = new std::vector<float>(data_array_ptr, &(data_array_ptr[element_count]));
 
     mxDestroyArray(mx_array);
     matClose(file);
 
     return true;
 }
+
+bool
+parser::load_complex_array(std::string file_path, std::vector<cuComplex>** data_array, uint3* dims)
+{
+
+    mxArray* mx_array = nullptr;
+
+    *data_array = nullptr;
+
+    MATFile* file = matOpen(file_path.c_str(), "r");
+
+    if (!file)
+    {
+        std::cerr << "Input file not found: " + file_path << std::endl;
+        ASSERT(false);
+        return false;
+    }
+
+    // Get RF Data
+    mx_array = matGetVariable(file, defs::sims::rf_data_name.c_str());
+    if (mx_array == NULL) {
+        std::cerr << "Error reading rf data array." << std::endl;
+        ASSERT(false);
+        return false;
+    }
+
+    if (!mxIsComplex(mx_array))
+    {
+        std::cerr << "Data is not complex" << std::endl;
+        ASSERT(false);
+        return false;
+    }
+
+    size_t element_count = mxGetNumberOfElements(mx_array);
+    const mwSize* rf_size = mxGetDimensions(mx_array);
+    dims->x = (uint)rf_size[0];
+    dims->y = (uint)rf_size[1];
+    dims->z = (uint)rf_size[2];
+
+    cuComplex* data_array_ptr = (cuComplex*)mxGetComplexSingles(mx_array);
+
+    *data_array = new std::vector<cuComplex>(data_array_ptr, &(data_array_ptr[element_count]));
+
+    mxDestroyArray(mx_array);
+    matClose(file);
+
+    return true;
+}
+
+
 
 bool
 parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::string variable_name, bool complex)
@@ -369,3 +473,5 @@ parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::
 
     return true;
 }
+
+

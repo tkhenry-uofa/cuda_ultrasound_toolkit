@@ -5,7 +5,7 @@
 #include "beamformer.cuh"
 
 bool
-old_beamformer::configure_volume(VolumeConfiguration* config)
+beamformer::configure_volume(VolumeConfiguration* config)
 {
 	std::vector<float> x_range;
 	std::vector<float> y_range;

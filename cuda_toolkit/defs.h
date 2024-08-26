@@ -86,6 +86,7 @@ struct CudaSession
 	
     uint* channel_mapping = nullptr;
 
+    float pulse_delay;
 	float element_pitch;
 };
 
@@ -113,6 +114,7 @@ struct KernelConstants
 	float3 src_pos;
 	TransmitType tx_type;
 	float element_pitch;
+    float pulse_delay;
 };
 
 

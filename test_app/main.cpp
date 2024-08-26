@@ -45,10 +45,81 @@ bool test_decoding()
 	return true;
 }
 
+bool beamform_from_fieldii()
+{
+	std::string data_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\mixes\data\ql02\)";
+	std::string input_file_path = data_path + R"(point_scan_200_-10.mat)";
+	std::string output_file_path = data_path + R"(point_scan_200_-10_beamformed.mat)";
+
+	uint3 dims;
+	std::vector<cuComplex>* data_array = nullptr;
+
+	bool result = parser::load_complex_array(input_file_path, &data_array, &dims);
+	if (!result) return false;
+
+	BeamformerParams params;
+	result = parser::load_f2_tx_config(input_file_path, &params);
+	if (!result) return false;
+
+	params.decoded_dims[0] = dims.x;
+	params.decoded_dims[1] = params.array_params.row_count;
+	params.decoded_dims[2] = params.array_params.row_count;
+
+	size_t vol_dims[3] = { 0,0,0 };
+	{
+		params.vol_mins[0] = -0.03f;
+		params.vol_maxes[0] = 0.03f;
+
+		params.vol_mins[1] = -0.02f;
+		params.vol_maxes[1] = 0.02f;
+
+		params.vol_mins[2] = 0.001f;
+		params.vol_maxes[2] = 0.060f;
+
+		params.lateral_resolution = 0.0002f;
+		params.axial_resolution = 0.0002f;
+
+		params.array_params.c = 1452;
+
+		for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += params.lateral_resolution) {
+			vol_dims[0]++;
+		}
+		for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += params.lateral_resolution) {
+			vol_dims[1]++;
+		}
+		for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += params.axial_resolution) {
+			vol_dims[2]++;
+		}
+	}
+
+	float* volume = nullptr;
+	std::cout << "Processing" << std::endl;
+
+	auto start = std::chrono::high_resolution_clock::now();
+
+	result = fully_sampled_beamform((float*)data_array->data(), params, &volume);
+	if (!result) return false;
+
+	auto end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = end - start;
+	std::cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
+
+	result = parser::save_float_array(volume, vol_dims, output_file_path, "volume", false);
+	if (!result) return false;
+
+
+	free(volume);
+	delete data_array;
+
+	return true;
+
+	return true;
+}
+
 bool test_beamforming()
 {
 	std::string data_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
-	data_path = data_path + R"(second_hercules_plane)" + R"(\)";
+	data_path = data_path + R"(hercules_plane)" + R"(\)";
 	std::string input_file_path = data_path + R"(00.mat)";
 	std::string output_file_path = data_path + R"(00_beamformed.mat)";
 
@@ -67,11 +138,11 @@ bool test_beamforming()
 	params.vol_mins[0] = -0.02f;
 	params.vol_maxes[0] = 0.02f;
 
-	params.vol_mins[1] = -0.003f;
-	params.vol_maxes[1] = 0.003f;
+	params.vol_mins[1] = -0.02f;
+	params.vol_maxes[1] = 0.02f;
 
-	params.vol_mins[2] = 0.01f;
-	params.vol_maxes[2] = 0.100f;
+	params.vol_mins[2] = 0.001f;
+	params.vol_maxes[2] = 0.060f;
 
 	params.lateral_resolution = 0.0003f;
 	params.axial_resolution = 0.00015f;
@@ -120,6 +191,6 @@ bool test_beamforming()
 
 int main()
 {
-	bool result = test_beamforming();
+	bool result = beamform_from_fieldii();
 	return !result;
 }

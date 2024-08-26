@@ -5,6 +5,7 @@
 
 #include "cuda_toolkit.h"
 
+
 typedef unsigned int uint;
 
 typedef struct {
@@ -28,6 +29,7 @@ typedef struct {
 	// Which half of channel mapping has the useful data
 	bool rx_cols;
 	float focus[3];
+	float pulse_delay; // Delay to the middle of the pulse(s)
 	// x: Sample count
 	// y: Rx Channel count
 	// z: Acquisition count
@@ -69,6 +71,8 @@ EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerPar
 
 
 EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float** volume);
+
+EXPORT_FN bool fully_sampled_beamform(const float* input, BeamformerParams params, float** volume);
 
 
 

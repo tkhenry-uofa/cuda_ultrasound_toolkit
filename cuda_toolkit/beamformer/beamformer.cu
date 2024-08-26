@@ -11,19 +11,17 @@
 
 __constant__ KernelConstants Constants;
 
-#define PULSE_DELAY 0
-
 __device__ __inline__ float
-old_beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float f_num)
+beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float f_num)
 {
 	float apro = f_num * lateral_dist / depth;
-	apro = fminf(apro, 0.5);
+	apro = fminf(apro, 0.25);
 	apro = cosf(CUDART_PI_F * apro);
 	return apro * apro;
 }
 
 __global__ void
-old_beamformer::_kernels::delay_and_sum(const cuComplex* rfData, float* volume, float samples_per_meter, const float2* location_array, uint64* times)
+beamformer::_kernels::delay_and_sum(const cuComplex* rfData, float* volume, float samples_per_meter, const float2* location_array, uint64* times)
 {
 	__shared__ cuComplex temp[MAX_THREADS_PER_BLOCK/WARP_SIZE];
 
@@ -68,9 +66,10 @@ old_beamformer::_kernels::delay_and_sum(const cuComplex* rfData, float* volume, 
 		loop_start = clock64();
 	}
 
+	uint delay_samples = (uint)roundf(Constants.pulse_delay * Constants.sample_count);
 	for (int t = 0; t < 128; t++)
 	{
-		uint scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + PULSE_DELAY);
+		uint scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
 		size_t channel_offset = (t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count);
 		value = __ldg(&rfData[channel_offset + scan_index - 1]);
 		f_num_aprodization(lateral_dist, vox_loc.z, 1.5);
@@ -111,7 +110,7 @@ old_beamformer::_kernels::delay_and_sum(const cuComplex* rfData, float* volume, 
 }
 
 __global__ void
-old_beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float samples_per_meter, uint64* times)
+beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float samples_per_meter, uint64* times)
 {
 	int tid = threadIdx.x;
 	uint64 start_time;
@@ -144,26 +143,32 @@ old_beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, fl
 
 	float lateral_dist = sqrtf(vox_loc.x * vox_loc.x + vox_loc.y * vox_loc.y);
 
-	float tx_distance = vox_loc.z;
+//	float tx_distance = vox_loc.z;
+
+	float tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
 
 	cuComplex total = {0.0f, 0.0f}, value;
 	
+	uint delay_samples = (uint)roundf(Constants.pulse_delay * 50e6f);
+
 	float3 rx_vec = { (- 63.5f) * element_pitch - vox_loc.x, ( - 63.5f) * element_pitch - vox_loc.y, vox_loc.z };
 	float starting_y = rx_vec.y;
 	float apro;
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
+	uint scan_index;
 	for (int t = 0; t < 128; t++)
 	{
 		for (int e = 0; e < 128; e++)
 		{
-			uint scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + PULSE_DELAY);
+			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
 			
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
-			/*apro = f_num_aprodization(lateral_dist, vox_loc.z, 0.5);
+			apro = f_num_aprodization(lateral_dist, vox_loc.z, 0.5);
 
-			value = SCALE_F2(value, apro);*/
+			value = SCALE_F2(value, apro);
+	//	if(!(t == 0 ))
 			total = ADD_F2(total, value);
 
 			rx_vec.y += element_pitch;
@@ -173,7 +178,10 @@ old_beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, fl
 		rx_vec.x += element_pitch;
 		rx_vec.y = starting_y;
 	}
-	volume[volume_offset] = NORM_F2(total);
+
+	total = SCALE_F2(total, 1e26f);
+	float result = sqrtf(total.x * total.x + total.y * total.y);
+	volume[volume_offset] = result;
 
 	if (tid == 0)
 	{
@@ -184,12 +192,12 @@ old_beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, fl
 }
 
 bool
-old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const float2* d_loc_data, float3 src_pos, float samples_per_meter)
+beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
 {
 
 	TransmitType transmit_type;
 
-	if (src_pos.z == 0.0f)
+	if (focus_pos.z == 0.0f)
 	{
 		transmit_type = TX_PLANE;
 	}
@@ -214,9 +222,10 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 		vol_config.voxel_counts,
 		vol_config.minimums,
 		{vol_config.lateral_resolution, vol_config.lateral_resolution, vol_config.axial_resolution},
-		src_pos,
+		focus_pos,
 		transmit_type,
 		Session.element_pitch,
+		Session.pulse_delay,
 	};
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
@@ -237,20 +246,20 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 	_kernels::double_loop << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
 	
 
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(times, d_times, 2 * sizeof(uint64), cudaMemcpyDefault));
-	cudaDeviceProp prop;
-	cudaGetDeviceProperties(&prop, 0);
-	float clockRate = prop.clockRate * 1e3;  // Convert kHz to Hz
+	//CUDA_RETURN_IF_ERROR(cudaMemcpy(times, d_times, 2 * sizeof(uint64), cudaMemcpyDefault));
+	//cudaDeviceProp prop;
+//	cudaGetDeviceProperties(&prop, 0);
+	//float clockRate = prop.clockRate * 1e3;  // Convert kHz to Hz
 
-	float total_time = (float)times[0] / clockRate;
-	float reduce_time = (float)times[1] / clockRate;
+	//float total_time = (float)times[0] / clockRate;
+	//float reduce_time = (float)times[1] / clockRate;
 
 	//std::cout << "Loop kernel time: " << total_time << std::endl;
 	//std::cout << "Reduction time: " << reduce_time << std::endl;
 
-	grid_dim = { vox_counts.x, vox_counts.y, vox_counts.z };
+	//grid_dim = { vox_counts.x, vox_counts.y, vox_counts.z };
 
-	//_kernels::delay_and_sum << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_loc_data, d_times);
+	//_kernels::delay_and_sum << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
 	//CUDA_RETURN_IF_ERROR(cudaMemcpy(times, d_times, 2 * sizeof(uint64), cudaMemcpyDefault));
 
 	//total_time = (float)times[0] / clockRate;
@@ -264,6 +273,8 @@ old_beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, const floa
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
+
+	std::cout << "First volume value: " << sample_value(d_volume) << std::endl;
 
 	return true;
 

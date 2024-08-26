@@ -98,7 +98,7 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 	vol_config.axial_resolution = params.axial_resolution;
 	vol_config.lateral_resolution = params.lateral_resolution;
 
-	old_beamformer::configure_volume(&vol_config);
+	beamformer::configure_volume(&vol_config);
 
 	Session.volume_configuration = vol_config;
 
@@ -116,13 +116,11 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 
 	
 	float* d_volume;
-	float2* d_location;
-	generate_hero_location_array(params.array_params, &d_location);
 
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
-	old_beamformer::beamform(d_volume, Session.d_complex, d_location, *(float3*)params.focus, samples_per_meter);
+	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
@@ -130,6 +128,43 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
 
 	cudaFree(d_input);
+
+	return true;
+}
+
+bool 
+fully_sampled_beamform(const float* input, BeamformerParams params, float** volume)
+{
+	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
+	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
+
+	cuComplex* input_c = (cuComplex*)input;
+	VolumeConfiguration vol_config;
+	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
+	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
+	vol_config.axial_resolution = params.axial_resolution;
+	vol_config.lateral_resolution = params.lateral_resolution;
+
+	beamformer::configure_volume(&vol_config);
+
+	Session.volume_configuration = vol_config;
+	Session.element_pitch = params.array_params.pitch;
+	Session.pulse_delay = params.pulse_delay;
+	Session.decoded_dims = { params.decoded_dims[0] ,params.decoded_dims[1], params.decoded_dims[2] };
+
+	cuComplex* d_input;
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_count * sizeof(cuComplex)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input_c, total_count * sizeof(cuComplex), cudaMemcpyDefault));
+
+	float* d_volume;
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
+
+	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
+	beamformer::beamform(d_volume, d_input, *(float3*)params.focus, samples_per_meter);
+
+	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
+
 
 	return true;
 }
