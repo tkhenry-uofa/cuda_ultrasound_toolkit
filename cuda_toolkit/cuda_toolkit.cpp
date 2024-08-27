@@ -39,17 +39,20 @@ bool
 _cleanup_session()
 {
 	_unregister_cuda_buffers();
-	cudaFree(Session.d_complex);
-	cudaFree(Session.d_hadamard);
-	cudaFree(Session.d_converted);
-	cudaFree(Session.d_decoded);
-	cudaFree(Session.d_input);
+	CUDA_NULL_FREE(Session.d_complex);
+	CUDA_NULL_FREE(Session.d_hadamard);
+	CUDA_NULL_FREE(Session.d_converted);
+	CUDA_NULL_FREE(Session.d_decoded);
+	CUDA_NULL_FREE(Session.d_input);
 	cublasDestroy(Session.cublas_handle);
 	cufftDestroy(Session.forward_plan);
 	cufftDestroy(Session.inverse_plan);
 
-	free(Session.channel_mapping);
-
+	if (Session.channel_mapping)
+	{
+		free(Session.channel_mapping);
+		Session.channel_mapping = nullptr;
+	}
 	Session.init = false;
 	return true;
 }
@@ -123,16 +126,15 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const uint c
 bool
 init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols)
 {
-	uint2 input_struct = { input_dims[0], input_dims[1] };
-	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 	if (!Session.init)
 	{
 		return _init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
 	}
 	else
 	{
-		bool changed = input_struct.x != Session.input_dims.x || input_struct.y != Session.input_dims.y ||
-			decoded_struct.x != Session.decoded_dims.x || decoded_struct.y != Session.decoded_dims.y || decoded_struct.z != Session.decoded_dims.z;
+		bool changed = input_dims[0] != Session.input_dims.x || input_dims[1] != Session.input_dims.y ||
+					   decoded_dims[0] != Session.decoded_dims.x || decoded_dims[1] != Session.decoded_dims.y || 
+					   decoded_dims[2] != Session.decoded_dims.z;
 
 		if (changed)
 		{

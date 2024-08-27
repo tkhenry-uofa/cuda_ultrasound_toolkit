@@ -69,11 +69,7 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 {
 	assert(ISPOWEROF2(size));
 
-	if (*dev_ptr != nullptr)
-	{
-		CUDA_RETURN_IF_ERROR(cudaFree(*dev_ptr));
-		*dev_ptr = nullptr;
-	}
+	CUDA_NULL_FREE(*dev_ptr);
 
 	size_t matrix_size = size * size * sizeof(float);
 	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)dev_ptr, matrix_size));

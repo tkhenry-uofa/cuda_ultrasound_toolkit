@@ -157,6 +157,14 @@ inline i16 sample_value_i16(i16* d_value)
 #endif // _DEBUG
 
 
+#define CUDA_NULL_FREE(PTR)                 \
+    do {                                    \
+        if(PTR)                             \
+        {                                   \
+            cudaFree(PTR); PTR = nullptr;   \
+        }                                   \
+    } while (0)                             \
+
 // CUDA API error checking
 #define CUDA_RETURN_IF_ERROR(err)                                                            \
     do {                                                                                    \
