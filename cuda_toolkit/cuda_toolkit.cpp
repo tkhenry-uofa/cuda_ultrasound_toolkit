@@ -16,8 +16,10 @@ bool
 _unregister_cuda_buffers()
 {
 	if (Session.raw_data_ssbo.cuda_resource != NULL)
+	if (Session.raw_data_ssbo.cuda_resource != nullptr)
 	{
 		CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(Session.raw_data_ssbo.cuda_resource));
+		Session.raw_data_ssbo.cuda_resource = nullptr;
 	}
 
 	uint old_buffer_count = Session.rf_buffer_count;
@@ -38,7 +40,6 @@ _unregister_cuda_buffers()
 bool
 _cleanup_session()
 {
-	_unregister_cuda_buffers();
 	CUDA_NULL_FREE(Session.d_complex);
 	CUDA_NULL_FREE(Session.d_hadamard);
 	CUDA_NULL_FREE(Session.d_converted);
@@ -153,7 +154,7 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 		_unregister_cuda_buffers();
 	}
 	
-	Session.raw_data_ssbo = { NULL, 0 };
+	Session.raw_data_ssbo = { nullptr, 0 };
 	Session.raw_data_ssbo.gl_buffer_id = raw_data_ssbo;
 	CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.raw_data_ssbo.cuda_resource), Session.raw_data_ssbo.gl_buffer_id, cudaGraphicsRegisterFlagsNone));
 
