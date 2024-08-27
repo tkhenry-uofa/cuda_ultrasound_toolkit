@@ -42,9 +42,15 @@
 
 		/**
 		* input_offset: Offset into raw_data_ssbo 
-		* output_buffer_idx: index into rf_data_ssbos for the output buffer
+		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
 		*/
-		EXPORT_FN bool decode_and_hilbert(size_t input_offset, uint output_buffer_idx);
+		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx);
+
+		/**
+		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
+		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
+		*/
+		EXPORT_FN bool cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx);
 
 		// Internal init
 		bool _init_session(const uint input_dims[2], const uint decoded_dims[3], const uint channel_mapping[256], bool rx_cols);

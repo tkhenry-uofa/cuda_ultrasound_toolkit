@@ -28,6 +28,9 @@ namespace hilbert
 	hilbert_transform(float* d_input, cuComplex* d_output);
 
 	__host__ bool
+	hilbert_transformC2C(cuComplex* d_input, cuComplex* d_output);
+
+	__host__ bool
 	hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate);
 }
 

@@ -71,6 +71,7 @@ struct CudaSession
     cublasHandle_t cublas_handle = nullptr;
     cufftHandle forward_plan;
     cufftHandle inverse_plan;
+    cufftHandle strided_plan;
 
     int16_t* d_input = nullptr;
     float* d_converted = nullptr;

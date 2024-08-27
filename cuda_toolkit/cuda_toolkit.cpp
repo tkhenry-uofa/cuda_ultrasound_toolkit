@@ -169,10 +169,9 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 	return true;
 }
 
-bool 
-decode_and_hilbert(size_t input_offset, uint output_buffer)
+bool
+cuda_decode(size_t input_offset, uint output_buffer_idx)
 {
-	auto start = std::chrono::high_resolution_clock::now();
 	if (!Session.init)
 	{
 		std::cout << "Session not initialized" << std::endl;
@@ -180,7 +179,7 @@ decode_and_hilbert(size_t input_offset, uint output_buffer)
 	}
 
 	cudaGraphicsResource_t input_resource = Session.raw_data_ssbo.cuda_resource;
-	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[output_buffer].cuda_resource;
+	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[output_buffer_idx].cuda_resource;
 	if (!input_resource || !output_resource)
 	{
 		fprintf(stderr, "Open GL buffers not registered with cuda.");
@@ -193,7 +192,7 @@ decode_and_hilbert(size_t input_offset, uint output_buffer)
 
 	size_t num_bytes;
 	i16* d_input = nullptr;
-	cufftComplex *d_output = nullptr;
+	cufftComplex* d_output = nullptr;
 	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_input, &num_bytes, input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -203,14 +202,9 @@ decode_and_hilbert(size_t input_offset, uint output_buffer)
 	i16_to_f::convert_data(d_input, Session.d_converted, Session.rx_cols);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
-	// Skip hilbert transform and copy each decoded value to the real part of the output,
+	// Insert 0s between each value for their imaginary components
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, total_count * sizeof(cuComplex)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(d_output, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count,cudaMemcpyDefault));
-	
-	//hilbert::hilbert_transform(Session.d_decoded, d_output);
-	
-	// Downsample copy
-	//CUDA_THROW_IF_ERROR(cudaMemcpy2D(d_output, sizeof(cuComplex), Session.d_complex, 2*sizeof(cuComplex), sizeof(cuComplex), total_count/2, cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(d_output, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
@@ -219,3 +213,35 @@ decode_and_hilbert(size_t input_offset, uint output_buffer)
 	return true;
 }
 
+bool
+cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
+{
+	if (!Session.init)
+	{
+		std::cout << "Session not initialized" << std::endl;
+		return false;
+	}
+
+	cudaGraphicsResource_t input_resource = Session.rf_data_ssbos[input_buffer_idx].cuda_resource;
+	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[output_buffer_idx].cuda_resource;
+	if (!input_resource || !output_resource)
+	{
+		fprintf(stderr, "Open GL buffers not registered with cuda.");
+		return false;
+	}
+
+	CUDA_RETURN_IF_ERROR(cudaGraphicsMapResources(1, &input_resource));
+	CUDA_RETURN_IF_ERROR(cudaGraphicsMapResources(1, &output_resource));
+
+	size_t num_bytes;
+	cuComplex* d_input = nullptr;
+	cuComplex* d_output = nullptr;
+	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_input, &num_bytes, input_resource));
+	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
+
+	hilbert::hilbert_transformC2C(d_input, d_output);
+
+	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &input_resource));
+	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+}
