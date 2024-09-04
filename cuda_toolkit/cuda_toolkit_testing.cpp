@@ -1,13 +1,31 @@
 #include "defs.h"
-#include "hilbert/hilbert_transform.cuh"
-#include "hadamard/hadamard.cuh"
-#include "data_conversion/int16_to_float.cuh"
+#include "filters/hilbert_transform.cuh"
+#include "decoding/hadamard.cuh"
+#include "decoding/int16_to_float.cuh"
 #include "beamformer/beamformer.cuh"
 
 #include "cuda_toolkit_testing.h"
 
 
-bool generate_hero_location_array(ArrayParams params, float2** d_location)
+void
+print_array(float* out_array, uint size)
+{
+	std::cout << "Output" << std::endl;
+	for (uint i = 0; i < size; i++)
+	{
+		for (uint j = 0; j < size; j++)
+		{
+			std::cout << out_array[i * size + j] << " ";
+		}
+
+		std::cout << std::endl;
+	}
+
+	std::cout << std::endl;
+}
+
+bool 
+generate_hero_location_array(ArrayParams params, float2** d_location)
 {
 
 	uint total_count = params.row_count * params.col_count;
@@ -28,14 +46,15 @@ bool generate_hero_location_array(ArrayParams params, float2** d_location)
 		}
 	}
 
-	CUDA_RETURN_IF_ERROR(cudaMalloc(d_location, total_count * sizeof(float2)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*d_location, cpu_array, total_count * sizeof(float2), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERR(cudaMalloc(d_location, total_count * sizeof(float2)));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(*d_location, cpu_array, total_count * sizeof(float2), cudaMemcpyHostToDevice));
 
 	free(cpu_array);
 	return true;
 }
 
-bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols )
+bool 
+raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols )
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
@@ -45,14 +64,15 @@ bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* 
 	}
 	
 	size_t data_size = input_struct.x * input_struct.y * sizeof(int16_t);
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(Session.d_input, input, data_size, cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(Session.d_input, input, data_size, cudaMemcpyHostToDevice));
 
 	return true;
 }
 
-bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate)
+bool 
+test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate)
 {
-	const uint2 input_dims = *(uint2*)&(params.raw_dims); // lol
+	const uint2 input_dims = *(uint2*)&(params.raw_dims);
 	const uint3 output_dims = *(uint3*)&(params.decoded_dims);
 	size_t input_size = input_dims.x * input_dims.y * sizeof(i16);
 	size_t decoded_size = output_dims.x * output_dims.y * output_dims.z * sizeof(float);
@@ -64,7 +84,7 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 	*intermediate = (complex_f*)malloc(complex_size);
 	cuComplex* d_intermediate;
 
-	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(d_intermediate), complex_size));
+	CUDA_RETURN_IF_ERR(cudaMalloc((void**)&(d_intermediate), complex_size));
 
 	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
 
@@ -74,15 +94,16 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, d_intermediate);
 //	CUDA_THROW_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*complex_out, Session.d_complex, complex_size, cudaMemcpyDeviceToHost));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*intermediate, d_intermediate, complex_size, cudaMemcpyDeviceToHost));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(*complex_out, Session.d_complex, complex_size, cudaMemcpyDeviceToHost));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(*intermediate, d_intermediate, complex_size, cudaMemcpyDeviceToHost));
 
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERR(cudaDeviceSynchronize());
 
 	return true;
 }
 
-bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float** volume)
+bool 
+hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float** volume)
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
@@ -106,8 +127,8 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 
 
 	i16* d_input;
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
 
 	
 	i16_to_f::convert_data(d_input, Session.d_converted, params.rx_cols);
@@ -117,15 +138,15 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 	
 	float* d_volume;
 
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
+	CUDA_RETURN_IF_ERR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
 
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERR(cudaDeviceSynchronize());
 
 	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
 
 	cudaFree(d_input);
 
@@ -137,6 +158,12 @@ fully_sampled_beamform(const float* input, BeamformerParams params, float** volu
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
+
+	uint in_dim[2] = { 16,16 };
+	uint out_dim[3] = { 16,16,16 };
+	uint ch_mapping[256];
+
+	_init_session(in_dim, out_dim, ch_mapping, false);
 
 	cuComplex* input_c = (cuComplex*)input;
 	VolumeConfiguration vol_config;
@@ -153,18 +180,19 @@ fully_sampled_beamform(const float* input, BeamformerParams params, float** volu
 	Session.decoded_dims = { params.decoded_dims[0] ,params.decoded_dims[1], params.decoded_dims[2] };
 
 	cuComplex* d_input;
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_count * sizeof(cuComplex)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input_c, total_count * sizeof(cuComplex), cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERR(cudaMalloc(&d_input, total_count * sizeof(cuComplex)));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(d_input, input_c, total_count * sizeof(cuComplex), cudaMemcpyDefault));
 
 	float* d_volume;
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
+	CUDA_RETURN_IF_ERR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	beamformer::beamform(d_volume, d_input, *(float3*)params.focus, samples_per_meter);
 
 	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
 
 
 	return true;
 }
+

@@ -191,6 +191,6 @@ bool test_beamforming()
 
 int main()
 {
-	bool result = beamform_from_fieldii();
+	bool result = test_beamforming();
 	return !result;
 }

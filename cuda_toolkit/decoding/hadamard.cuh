@@ -8,6 +8,7 @@
 
 #include <cublas_v2.h>
 
+#include "../session.h"
 #include "../defs.h"
 
 namespace hadamard 

@@ -121,7 +121,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib;cusparse.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaToolkitLibDir);C:\Users\tkhen\source\repos\cuda-samples\Common\lib\x64</AdditionalLibraryDirectories>
     </Link>
     <CudaLink>
@@ -154,9 +154,9 @@
     <CudaCompile Include="beamformer\beamformer_helpers.cu" />
     <CudaCompile Include="beamformer\beamformer.cu" />
     <CudaCompile Include="beamformer\beamformer.cuh" />
-    <CudaCompile Include="data_conversion\int16_to_float.cu" />
-    <CudaCompile Include="hadamard\hadamard.cu" />
-    <CudaCompile Include="hilbert\hilbert_transform.cu" />
+    <CudaCompile Include="decoding\int16_to_float.cu" />
+    <CudaCompile Include="decoding\hadamard.cu" />
+    <CudaCompile Include="filters\hilbert_transform.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cuda_toolkit.cpp" />
@@ -166,12 +166,15 @@
   <ItemGroup>
     <ClInclude Include="cuda_toolkit.h" />
     <ClInclude Include="cuda_toolkit_testing.h" />
-    <ClInclude Include="data_conversion\int16_to_float.cuh" />
-    <ClInclude Include="hadamard\hadamard.cuh" />
-    <ClInclude Include="hilbert\hilbert_transform.cuh">
+    <ClInclude Include="decoding\int16_to_float.cuh" />
+    <ClInclude Include="decoding\hadamard.cuh" />
+    <ClInclude Include="filters\hilbert_transform.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="defs.h" />
+    <ClInclude Include="filters\sparse_filters.h" />
+    <ClInclude Include="session.h" />
+    <ClInclude Include="sparse_matrix.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

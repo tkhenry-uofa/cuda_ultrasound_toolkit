@@ -2,6 +2,8 @@
 #define	BEAMFORMER_CUH
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+
+#include "../session.h"
 #include "../defs.h"
 
 namespace beamformer

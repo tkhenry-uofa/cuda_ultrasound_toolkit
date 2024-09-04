@@ -72,7 +72,7 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 	CUDA_NULL_FREE(*dev_ptr);
 
 	size_t matrix_size = size * size * sizeof(float);
-	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)dev_ptr, matrix_size));
+	CUDA_RETURN_IF_ERR(cudaMalloc((void**)dev_ptr, matrix_size));
 
 	uint grid_length;
 	dim3 block_dim, grid_dim;
@@ -93,8 +93,8 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 	_kernels::init_hadamard_matrix << <grid_dim, block_dim >> > (*dev_ptr, size);
 
 
-	CUDA_RETURN_IF_ERROR(cudaGetLastError());
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERR(cudaGetLastError());
+	CUDA_RETURN_IF_ERR(cudaDeviceSynchronize());
 
 	for (uint i = 2; i <= size; i *= 2)
 	{
@@ -113,8 +113,8 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 
 		_kernels::generate_hadamard << <grid_dim, block_dim >> > (*dev_ptr, i / 2, size);
 
-		CUDA_RETURN_IF_ERROR(cudaGetLastError());
-		CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+		CUDA_RETURN_IF_ERR(cudaGetLastError());
+		CUDA_RETURN_IF_ERR(cudaDeviceSynchronize());
 	}
 
 	return true;
@@ -130,7 +130,7 @@ hadamard::hadamard_decode(const float* d_input, float* d_output)
 	float alpha = 1/((float)dims.x/2);
 	float beta = 0.0f;
 
-	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, dims.z, dims.z, &alpha, d_input, tx_size, Session.d_hadamard, dims.z, &beta, d_output, tx_size));
+	CUBLAS_RETURN_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, dims.z, dims.z, &alpha, d_input, tx_size, Session.d_hadamard, dims.z, &beta, d_output, tx_size));
 
 	return true;
 }

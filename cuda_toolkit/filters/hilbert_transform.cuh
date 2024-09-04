@@ -5,9 +5,12 @@
 #include <vector>
 #include <complex>
 
+
+#include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+#include "../session.h"
 #include "../defs.h"
 
 namespace hilbert

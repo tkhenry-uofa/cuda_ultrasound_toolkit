@@ -17,6 +17,10 @@
 #include <cublas_v2.h>
 #include <cuda_gl_interop.h>
 
+#pragma warning(disable : 4996)
+
+#include <cusparse.h>
+
 #define PI_F 3.141592654f
 #define NaN (float)0xFFFFFFFF; 
 
@@ -60,38 +64,6 @@ struct VolumeConfiguration
 	float axial_resolution;
 	float lateral_resolution;
 };
-
-struct CudaSession
-{
-    bool init = false;
-    bool rx_cols = false;
-	uint2 input_dims;
-	uint3 decoded_dims;
-
-    cublasHandle_t cublas_handle = nullptr;
-    cufftHandle forward_plan;
-    cufftHandle inverse_plan;
-    cufftHandle strided_plan;
-
-    int16_t* d_input = nullptr;
-    float* d_converted = nullptr;
-    float* d_decoded = nullptr;
-    cufftComplex* d_complex = nullptr;
-    float* d_hadamard = nullptr;
-
-    BufferMapping raw_data_ssbo;
-    BufferMapping* rf_data_ssbos = nullptr;
-    uint rf_buffer_count;
-
-	VolumeConfiguration volume_configuration;
-	
-    uint* channel_mapping = nullptr;
-
-    float pulse_delay;
-	float element_pitch;
-};
-
-extern CudaSession Session;
 
 struct PositionTextures {
 	cudaTextureObject_t x, y, z;
@@ -148,6 +120,17 @@ inline i16 sample_value_i16(i16* d_value)
     return sample;
 }
 
+inline int sample_value_int(int* d_value)
+{
+    int sample = 0;
+    cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(int), cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+    {
+        return -0;
+    }
+    return sample;
+}
+
 
 
 #ifdef _DEBUG
@@ -167,7 +150,7 @@ inline i16 sample_value_i16(i16* d_value)
     } while (0)                             \
 
 // CUDA API error checking
-#define CUDA_RETURN_IF_ERROR(err)                                                            \
+#define CUDA_RETURN_IF_ERR(err)                                                            \
     do {                                                                                    \
         cudaError_t err_ = (err);                                                           \
         if (err_ != cudaSuccess) {                                                          \
@@ -178,8 +161,20 @@ inline i16 sample_value_i16(i16* d_value)
         }                                                                                   \
     } while (0)
 
+// CUDA API error checking
+#define CUDA_THROW_IF_ERR(err)                                                            \
+    do {                                                                                    \
+        cudaError_t err_ = (err);                                                           \
+        if (err_ != cudaSuccess) {                                                          \
+            std::printf("CUDA error %s (%d) '%s'\n At %s:%d\n",                             \
+                cudaGetErrorName(err_), err_, cudaGetErrorString(err_), __FILE__, __LINE__);\
+            ASSERT(false);																	\
+			throw std::runtime_error("Cuda runtime error.");							    \
+        }                                                                                   \
+    } while (0)
+
 // cublas API error checking
-#define CUBLAS_THROW_IF_ERR(err)                                                            \
+#define CUBLAS_RETURN_IF_ERR(err)                                                            \
     do {                                                                                    \
         cublasStatus_t err_ = (err);                                                        \
         if (err_ != CUBLAS_STATUS_SUCCESS) {                                                \
@@ -190,10 +185,21 @@ inline i16 sample_value_i16(i16* d_value)
     } while (0)
 
 // cufft API error checking
-#define CUFFT_THROW_IF_ERR(err)                                                             \
+#define CUFFT_RETURN_IF_ERR(err)                                                             \
     do {                                                                                    \
         cufftResult_t err_ = (err);                                                         \
         if (err_ != CUFFT_SUCCESS) {                                                        \
+            std::printf("cufft error %d at %s:%d\n", err_, __FILE__, __LINE__);             \
+            ASSERT(false);                                                                  \
+			return false;																	\
+		}                                                                                   \
+    } while (0)
+
+// cufft API error checking
+#define CUSPARSE_RETURN_IF_ERR(err)                                                         \
+    do {                                                                                    \
+        cusparseStatus_t err_ = (err);                                                      \
+        if (err_ != CUSPARSE_STATUS_SUCCESS) {                                              \
             std::printf("cufft error %d at %s:%d\n", err_, __FILE__, __LINE__);             \
             ASSERT(false);                                                                  \
 			return false;																	\
@@ -205,7 +211,7 @@ inline i16 sample_value_i16(i16* d_value)
 {                                                                                           \
     auto start = std::chrono::high_resolution_clock::now();                                 \
     CALL;                                                                                   \
-    CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());                                           \
+    CUDA_RETURN_IF_ERR(cudaDeviceSynchronize());                                          \
     auto elapsed = std::chrono::high_resolution_clock::now() - start;                       \
     std::cout << MESSAGE << " " <<                                                          \
       std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() <<         \

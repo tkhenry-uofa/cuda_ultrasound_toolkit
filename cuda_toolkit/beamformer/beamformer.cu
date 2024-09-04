@@ -227,13 +227,13 @@ beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_p
 		Session.element_pitch,
 		Session.pulse_delay,
 	};
-	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
+	CUDA_RETURN_IF_ERR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
 
 	uint64 *times, *d_times;
 
 	times = (uint64*)malloc(2 * sizeof(uint64));
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_times, 2 * sizeof(uint64)));
+	CUDA_RETURN_IF_ERR(cudaMalloc(&d_times, 2 * sizeof(uint64)));
 
 	uint3 vox_counts = vol_config.voxel_counts;
 	uint xy_count = vox_counts.x * vox_counts.y;
@@ -267,8 +267,8 @@ beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_p
 	//
 	//std::cout << "Unrolled time: " << total_time << std::endl;
 
-	CUDA_RETURN_IF_ERROR(cudaGetLastError());
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERR(cudaGetLastError());
+	CUDA_RETURN_IF_ERR(cudaDeviceSynchronize());
 
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;

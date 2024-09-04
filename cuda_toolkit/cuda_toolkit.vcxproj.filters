@@ -32,17 +32,26 @@
     <ClInclude Include="defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hilbert\hilbert_transform.cuh" />
-    <ClInclude Include="hadamard\hadamard.cuh" />
-    <ClInclude Include="data_conversion\int16_to_float.cuh" />
+    <ClInclude Include="filters\hilbert_transform.cuh" />
+    <ClInclude Include="decoding\hadamard.cuh" />
+    <ClInclude Include="decoding\int16_to_float.cuh" />
     <ClInclude Include="cuda_toolkit_testing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="session.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sparse_matrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="filters\sparse_filters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="hilbert\hilbert_transform.cu" />
-    <CudaCompile Include="hadamard\hadamard.cu" />
-    <CudaCompile Include="data_conversion\int16_to_float.cu" />
+    <CudaCompile Include="filters\hilbert_transform.cu" />
+    <CudaCompile Include="decoding\hadamard.cu" />
+    <CudaCompile Include="decoding\int16_to_float.cu" />
     <CudaCompile Include="beamformer\beamformer.cu" />
     <CudaCompile Include="beamformer\beamformer.cuh" />
     <CudaCompile Include="beamformer\beamformer_helpers.cu" />

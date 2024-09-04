@@ -169,6 +169,24 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         }
 
     }
+    else
+    {
+        // Only the depth is specified
+        field_p = mxGetField(struct_array, 0, defs::focal_depth.c_str());
+        if(field_p)
+        {
+            double_mx = (double*)mxGetDoubles(field_p);
+            params->focus[2] = (float)*double_mx;
+
+            params->focus[0] = 0.0f;
+            params->focus[1] = 0.0f;
+        }
+        else
+        {
+            std::cout << "Failed to read focus" << std::endl;
+        }
+        
+    }
 
     field_p = mxGetField(struct_array, 0, defs::xdc_min_name.c_str());
     if (field_p)

@@ -1,5 +1,4 @@
-#ifndef DEFS_H
-#define DEFS_H
+#pragma once
 
 #include <stdexcept>
 #include <stdio.h>
@@ -35,6 +34,7 @@ namespace defs
     static const std::string pitch_name = "pitch";
     static const std::string time_offset_name = "time_offset";
     static const std::string focus_name = "focus";
+    static const std::string focal_depth = "focal_depth";
     static const std::string xdc_min_name = "xdc_min_xy";
     static const std::string xdc_max_name = "xdc_max_xy";
 
@@ -83,6 +83,4 @@ namespace defs
     } RfDataDims;
 }
 
-
-#endif // !DEFS_H
 
