@@ -11,11 +11,11 @@
 
 __constant__ KernelConstants Constants;
 
-__device__ __inline__ float
+__device__ __inline__  float
 beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float f_num)
 {
 	float apro = f_num * lateral_dist / depth;
-	apro = fminf(apro, 0.25);
+	apro = fminf(apro, 0.5);
 	apro = cosf(CUDART_PI_F * apro);
 	return apro * apro;
 }
@@ -141,17 +141,37 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 		Constants.volume_mins.z + z_voxel * Constants.resolutions.z,
 	};
 
-	float lateral_dist = sqrtf(vox_loc.x * vox_loc.x + vox_loc.y * vox_loc.y);
+	float xdc_edge = 63.5f * element_pitch;
 
-//	float tx_distance = vox_loc.z;
+	float apro_argument = 0;
+	float tx_distance = 0;
+	bool diverging = (Constants.src_pos.z < 0.0f);
+	if (diverging)
+	{
+		tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
+		float tx_angle = atan2f(xdc_edge, -Constants.src_pos.z);
+		float max_lateral_dist = xdc_edge + vox_loc.z * tanf(tx_angle);
+		float2 lateral_ratios = { vox_loc.y / max_lateral_dist, vox_loc.x / xdc_edge };
+		lateral_ratios = { fmaxf(lateral_ratios.x, 1),fmaxf(lateral_ratios.y, 1) };
 
-	float tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
+		apro_argument = NORM_F2(lateral_ratios);
+		apro_argument = fmaxf(apro_argument, 1);
+	}
+	else
+	{
+		tx_distance = vox_loc.z;
+		float max_lateral_dist = sqrtf(xdc_edge * xdc_edge);
+		apro_argument = sqrt(vox_loc.x * vox_loc.x + vox_loc.y * vox_loc.y) / max_lateral_dist;
+		apro_argument = fmaxf(apro_argument, 1);
+	}
+
+	float apro_depth = vox_loc.z / Constants.z_max;
 
 	cuComplex total = {0.0f, 0.0f}, value;
 	
 	uint delay_samples = (uint)roundf(Constants.pulse_delay * 50e6f);
 
-	float3 rx_vec = { (- 63.5f) * element_pitch - vox_loc.x, ( - 63.5f) * element_pitch - vox_loc.y, vox_loc.z };
+	float3 rx_vec = { -xdc_edge - vox_loc.x, -xdc_edge - vox_loc.y, vox_loc.z };
 	float starting_y = rx_vec.y;
 	float apro;
 	size_t channel_offset = 0;
@@ -165,10 +185,12 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 			
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
-			apro = f_num_aprodization(lateral_dist, vox_loc.z, 0.5);
+			apro = f_num_aprodization(apro_argument, apro_depth, 0.5);
 
 			value = SCALE_F2(value, apro);
-	//	if(!(t == 0 ))
+
+			if (t == 0) value = SCALE_F2(value, I_SQRT_128);
+
 			total = ADD_F2(total, value);
 
 			rx_vec.y += element_pitch;
@@ -179,7 +201,6 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 		rx_vec.y = starting_y;
 	}
 
-	total = SCALE_F2(total, 1e26f);
 	float result = sqrtf(total.x * total.x + total.y * total.y);
 	volume[volume_offset] = result;
 
@@ -226,6 +247,7 @@ beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_p
 		transmit_type,
 		Session.element_pitch,
 		Session.pulse_delay,
+		vol_config.maximums.z,
 	};
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
@@ -245,27 +267,6 @@ beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_p
 
 	_kernels::double_loop << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
 	
-
-	//CUDA_RETURN_IF_ERROR(cudaMemcpy(times, d_times, 2 * sizeof(uint64), cudaMemcpyDefault));
-	//cudaDeviceProp prop;
-//	cudaGetDeviceProperties(&prop, 0);
-	//float clockRate = prop.clockRate * 1e3;  // Convert kHz to Hz
-
-	//float total_time = (float)times[0] / clockRate;
-	//float reduce_time = (float)times[1] / clockRate;
-
-	//std::cout << "Loop kernel time: " << total_time << std::endl;
-	//std::cout << "Reduction time: " << reduce_time << std::endl;
-
-	//grid_dim = { vox_counts.x, vox_counts.y, vox_counts.z };
-
-	//_kernels::delay_and_sum << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
-	//CUDA_RETURN_IF_ERROR(cudaMemcpy(times, d_times, 2 * sizeof(uint64), cudaMemcpyDefault));
-
-	//total_time = (float)times[0] / clockRate;
-	//reduce_time = (float)times[1] / clockRate;
-	//
-	//std::cout << "Unrolled time: " << total_time << std::endl;
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());

@@ -10,9 +10,14 @@ __global__ void
 hilbert::kernels::filter(cuComplex* data, uint sample_count, uint cutoff_sample)
 {
 	uint sample_idx = threadIdx.x + blockIdx.x * blockDim.x;
-	if (sample_idx < sample_count && sample_idx >= cutoff_sample)
+	if (sample_idx < sample_count && sample_idx > cutoff_sample)
 	{
 		data[blockIdx.y * sample_count + sample_idx] = { 0.0f, 0.0f };
+	}
+	else if (sample_idx == 0 || sample_idx == cutoff_sample)
+	{
+		cuComplex value = data[blockIdx.y * sample_count + sample_idx];
+		data[blockIdx.y * sample_count + sample_idx] = SCALE_F2(value, 0.5f);
 	}
 }
 
@@ -82,6 +87,7 @@ __host__ bool
 hilbert::hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate)
 {
 	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_intermediate));
+	hilbert::f_domain_filter(d_intermediate, Session.decoded_dims.x/2-1);
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_intermediate, d_output, CUFFT_INVERSE));
 	return true;
 }

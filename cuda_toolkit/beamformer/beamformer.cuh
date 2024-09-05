@@ -12,7 +12,7 @@ namespace beamformer
 			delay_and_sum(const cuComplex* rfData, float* volume, float samples_per_meter, const float2* location_array, uint64* times);
 
 		__device__ inline float
-			f_num_aprodization(float lateral_dist, float depth, float f_num);
+			f_num_aprodization(float lateral_dist_ratio, float depth, float f_num);
 
 		__global__ void
 			double_loop(const cuComplex* rfData, float* volume, float samples_per_meter, uint64* times);

@@ -41,13 +41,13 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
             }
         }
 
-        
+
     }
     else
     {
         std::cout << "Failed to read " << defs::channel_mapping_name << std::endl;
     }
-    
+
     field_p = mxGetField(struct_array, 0, defs::decoded_dims_name.c_str());
     mxArray* sub_field_p;
     double* double_mx;
@@ -71,9 +71,9 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     }
 
 
-    
+
     field_p = mxGetField(struct_array, 0, defs::raw_dims_name.c_str());
-    if(field_p)
+    if (field_p)
     {
         sub_field_p = mxGetField(field_p, 0, "x");
         double_mx = (double*)mxGetDoubles(sub_field_p);
@@ -89,7 +89,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     }
 
     field_p = mxGetField(struct_array, 0, defs::channel_offset_name.c_str());
-    if( field_p )
+    if (field_p)
     {
         double_mx = (double*)mxGetDoubles(field_p);
         params->rx_cols = (*double_mx > 0);
@@ -145,7 +145,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         {
             std::cout << "Failed to read focus x" << std::endl;
         }
-        
+
         sub_field_p = mxGetField(field_p, 0, "y");
         if (sub_field_p)
         {
@@ -166,6 +166,24 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         else
         {
             std::cout << "Failed to read focus z" << std::endl;
+        }
+
+    }
+    else
+    {
+        // Only the depth is specified
+        field_p = mxGetField(struct_array, 0, defs::focal_depth.c_str());
+        if (field_p)
+        {
+            double_mx = (double*)mxGetDoubles(field_p);
+            params->focus[2] = (float)*double_mx;
+
+            params->focus[0] = 0.0f;
+            params->focus[1] = 0.0f;
+        }
+        else
+        {
+            std::cout << "Failed to read focus" << std::endl;
         }
 
     }
@@ -223,7 +241,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
         }
 
     }
-    
+
     mxDestroyArray(struct_array);
     matClose(file);
 
@@ -339,7 +357,7 @@ parser::load_int16_array(std::string file_path, std::vector<i16>** data_array, d
 bool
 parser::load_float_array(std::string file_path, std::vector<float>** data_array, uint3* dims)
 {
-   
+
     mxArray* mx_array = nullptr;
 
     *data_array = nullptr;
@@ -352,7 +370,7 @@ parser::load_float_array(std::string file_path, std::vector<float>** data_array,
         ASSERT(false);
         return false;
     }
- 
+
     // Get RF Data
     mx_array = matGetVariable(file, defs::sims::rf_data_name.c_str());
     if (mx_array == NULL) {
@@ -449,7 +467,7 @@ parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::
         volume_array = mxCreateNumericArray(3, dims, mxSINGLE_CLASS, mxREAL);
         mxSetSingles(volume_array, (mxSingle*)ptr);
     }
-    
+
     // Try to open for update, if it fails the file does not exist
     MATFile* file_p = matOpen(file_path.c_str(), "w");
 
@@ -473,5 +491,3 @@ parser::save_float_array(void* ptr, size_t dims[3], std::string file_path, std::
 
     return true;
 }
-
-

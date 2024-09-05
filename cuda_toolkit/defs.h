@@ -23,6 +23,8 @@
 #define MAX_THREADS_PER_BLOCK 128
 #define MAX_2D_BLOCK_DIM 32
 
+#define I_SQRT_128 0.088388347648318f
+
 #define WARP_SIZE 32
 
 #define TOTAL_TOBE_CHANNELS 256
@@ -116,6 +118,7 @@ struct KernelConstants
 	TransmitType tx_type;
 	float element_pitch;
     float pulse_delay;
+    float z_max;
 };
 
 

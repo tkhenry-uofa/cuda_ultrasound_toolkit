@@ -24,8 +24,8 @@ bool test_decoding()
 	parser::parse_bp_struct(params_file_path, &params);
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
-	size_t output_dims[3] = { 
-		(size_t)params.decoded_dims[0], 
+	size_t output_dims[3] = {
+		(size_t)params.decoded_dims[0],
 		(size_t)params.decoded_dims[1],
 		(size_t)params.decoded_dims[2] };
 
@@ -33,7 +33,7 @@ bool test_decoding()
 	complex_f* intermediate = nullptr;
 	complex_f* complex = nullptr;
 	std::cout << "Processing" << std::endl;
-	bool result = test_convert_and_decode(data_array->data(),params, &complex, &intermediate);
+	bool result = test_convert_and_decode(data_array->data(), params, &complex, &intermediate);
 
 	result = parser::save_float_array(intermediate, output_dims, output_file_path, "intermediate", true);
 	result = parser::save_float_array(complex, output_dims, output_file_path, "complex", true);
@@ -118,10 +118,10 @@ bool beamform_from_fieldii()
 
 bool test_beamforming()
 {
-	std::string data_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
-	data_path = data_path + R"(hercules_plane)" + R"(\)";
-	std::string input_file_path = data_path + R"(00.mat)";
-	std::string output_file_path = data_path + R"(00_beamformed.mat)";
+	std::string data_root = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
+	std::string data_path = data_root + R"(cyst_herc_div_sin8)" + R"(\)";
+	std::string input_file_path = data_path + R"(46.mat)";
+	std::string output_file_path = data_root + R"(beamformed\)" + R"(cyst_herc_div_sin8_46.mat)";
 
 	defs::RfDataDims dims;
 	std::vector<i16>* data_array = nullptr;
@@ -135,19 +135,19 @@ bool test_beamforming()
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
 
-	params.vol_mins[0] = -0.02f;
-	params.vol_maxes[0] = 0.02f;
+	params.vol_mins[0] = -0.03f;
+	params.vol_maxes[0] = 0.03f;
 
-	params.vol_mins[1] = -0.02f;
-	params.vol_maxes[1] = 0.02f;
+	params.vol_mins[1] = -0.03f;
+	params.vol_maxes[1] = 0.03f;
 
-	params.vol_mins[2] = 0.001f;
-	params.vol_maxes[2] = 0.060f;
+	params.vol_mins[2] = 0.01f;
+	params.vol_maxes[2] = 0.120f;
 
-	params.lateral_resolution = 0.0003f;
+	params.lateral_resolution = 0.0003;;
 	params.axial_resolution = 0.00015f;
 
-	params.array_params.c = 1452;
+	params.array_params.c = 1480;
 	params.array_params.row_count = params.decoded_dims[1];
 	params.array_params.col_count = params.decoded_dims[1];
 
@@ -171,7 +171,7 @@ bool test_beamforming()
 	size_t vol_dims[3] = { x_count, y_count, z_count };
 
 	auto start = std::chrono::high_resolution_clock::now();
-	
+
 	result = hero_raw_to_beamform(data_array->data(), params, &volume);
 	if (!result) return false;
 
@@ -191,6 +191,6 @@ bool test_beamforming()
 
 int main()
 {
-	bool result = beamform_from_fieldii();
+	bool result = test_beamforming();
 	return !result;
 }
