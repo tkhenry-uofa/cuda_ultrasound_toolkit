@@ -47,6 +47,7 @@ hilbert::plan_hilbert(int sample_count, int channel_count)
 	size_t work_size = 0;
 
 	int data_length = sample_count * channel_count;
+	int double_l = data_length * 2;
 
 	CUFFT_THROW_IF_ERR(cufftEstimateMany(1, &sample_count, &sample_count, 1, sample_count, &sample_count, 1, sample_count, CUFFT_R2C, channel_count, &work_size));
 
@@ -71,13 +72,23 @@ hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 }
 
 __host__ bool
-hilbert::hilbert_transformC2C(cuComplex* d_input, cuComplex* d_output)
+hilbert::hilbert_transform_strided(float* d_input, cuComplex* d_output)
 {
 	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
-	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.strided_plan, (float*)d_input, d_output));
+
+
+	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.strided_plan, d_input, d_output));
+
+	float scale = 1 / ((float)Session.decoded_dims.x / 2);
+
+	float* sample = (float*)d_output;
+	///std::cout << "First input value: Re:" << sample_value(d_input+ Session.decoded_dims.x) << " Im: " << sample_value(d_input+1+ Session.decoded_dims.x) << std::endl;
+	std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
+	hilbert::f_domain_filter(d_output, Session.decoded_dims.x/2);
+	std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
 	//hilbert::f_domain_filter(d_output, 1350);
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
 	return true;
@@ -87,7 +98,10 @@ __host__ bool
 hilbert::hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate)
 {
 	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_intermediate));
-	hilbert::f_domain_filter(d_intermediate, Session.decoded_dims.x/2-1);
+	float* sample = (float*)d_intermediate;
+	hilbert::f_domain_filter(d_intermediate, Session.decoded_dims.x / 2-1);
+	///std::cout << "First input value: Re:" << sample_value(d_input+ Session.decoded_dims.x) << " Im: " << sample_value(d_input+1+ Session.decoded_dims.x) << std::endl;
+	std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) << std::endl;
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_intermediate, d_output, CUFFT_INVERSE));
 	return true;
 }

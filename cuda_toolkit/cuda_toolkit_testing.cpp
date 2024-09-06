@@ -112,7 +112,7 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 	
 	i16_to_f::convert_data(d_input, Session.d_converted, params.rx_cols);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
-	//hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, Session.d_complex);
+	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, Session.d_complex);
 
 	CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
