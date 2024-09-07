@@ -149,7 +149,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 	bool diverging = (Constants.src_pos.z < 0.0f);
 	if (diverging)
 	{
-		tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
+		tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.x - vox_loc.x, 2)) + Constants.src_pos.z;
 		float tx_angle = atan2f(xdc_edge, -Constants.src_pos.z);
 		max_lateral_dist = xdc_edge + vox_loc.z * tanf(tx_angle);
 		float2 lateral_ratios = { vox_loc.y / xdc_edge, vox_loc.x / max_lateral_dist };
@@ -173,7 +173,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 
 	cuComplex total = {0.0f, 0.0f}, value;
 	
-	uint delay_samples = 393/4;
+	uint delay_samples = 2;
 
 	float3 rx_vec = { -xdc_edge - vox_loc.x, -xdc_edge - vox_loc.y, vox_loc.z };
 	float starting_y = rx_vec.y;
@@ -181,10 +181,19 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
+
+	int mixes_number = 128/32;
 	for (int t = 0; t < 128; t++)
 	{
 		for (int e = 0; e < 128; e++)
 		{
+			if (e % mixes_number != 0 && t % mixes_number != 0)
+			{
+				rx_vec.y += element_pitch;
+				channel_offset += sample_count;
+				continue;
+			}
+
 			float2 lateral_ratios = { rx_vec.x / max_lateral_dist, rx_vec.y / xdc_edge };
 			apro_argument = NORM_F2(lateral_ratios);
 

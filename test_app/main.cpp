@@ -119,9 +119,9 @@ bool beamform_from_fieldii()
 bool test_beamforming()
 {
 	std::string data_root = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
-	std::string data_path = data_root + R"(240905_ATS539_Cyst_HERCULES-Diverging-TxColumn-Sine-8)" + R"(\)";
-	std::string input_file_path = data_path + R"(new_cyst.mat)";
-	std::string output_file_path = data_root + R"(beamformed\)" + R"(new_cyst_beam.mat)";
+	std::string data_path = data_root + R"(Resolution_HERCULES-Diverging-TxColumn)" + R"(\)";
+	std::string input_file_path = data_path + R"(49.mat)";
+	std::string output_file_path = data_root + R"(beamformed\)" + R"(reso_mixes32.mat)";
 
 	defs::RfDataDims dims;
 	std::vector<i16>* data_array = nullptr;
@@ -135,16 +135,16 @@ bool test_beamforming()
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
 
-	params.vol_mins[0] = -0.15f;
-	params.vol_maxes[0] = 0.15f;
+	params.vol_mins[0] = -0.1f;
+	params.vol_maxes[0] = 0.1f;
 
 	params.vol_mins[1] = -0.015f;
 	params.vol_maxes[1] = 0.015f;
 
 	params.vol_mins[2] = 0.01f;
-	params.vol_maxes[2] = 0.09f;
+	params.vol_maxes[2] = 0.120f;
 
-	params.lateral_resolution = 0.00015;
+	params.lateral_resolution = 0.0003;
 	params.axial_resolution = 0.00015f;
 
 	params.array_params.c = 1454;

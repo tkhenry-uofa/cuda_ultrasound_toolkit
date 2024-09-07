@@ -72,10 +72,9 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
 	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, d_intermediate);
-//	CUDA_THROW_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*complex_out, Session.d_complex, complex_size, cudaMemcpyDeviceToHost));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*intermediate, d_intermediate, complex_size, cudaMemcpyDeviceToHost));
+	//CUDA_RETURN_IF_ERROR(cudaMemcpy(*complex_out, Session.d_complex, complex_size, cudaMemcpyDeviceToHost));
+	//CUDA_RETURN_IF_ERROR(cudaMemcpy(*intermediate, d_intermediate, complex_size, cudaMemcpyDeviceToHost));
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
