@@ -47,9 +47,10 @@ bool test_decoding()
 
 bool beamform_from_fieldii()
 {
-	std::string data_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\mixes\data\ql02\)";
-	std::string input_file_path = data_path + R"(point_scan_200_-10.mat)";
-	std::string output_file_path = data_path + R"(point_scan_200_-10_beamformed.mat)";
+	std::string data_root = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
+	std::string data_path = data_root + R"(field_ii)" + R"(\)";
+	std::string input_file_path = data_path + R"(psf_plane.mat)";
+	std::string output_file_path = data_root + R"(beamformed\psf_plane\)" + R"(8_stagger_apro.mat)";
 
 	uint3 dims;
 	std::vector<cuComplex>* data_array = nullptr;
@@ -67,17 +68,18 @@ bool beamform_from_fieldii()
 
 	size_t vol_dims[3] = { 0,0,0 };
 	{
-		params.vol_mins[0] = -0.03f;
-		params.vol_maxes[0] = 0.03f;
+		params.vol_mins[0] = -0.015f;
+		params.vol_maxes[0] = 0.015f;
 
-		params.vol_mins[1] = -0.02f;
-		params.vol_maxes[1] = 0.02f;
+		params.vol_mins[1] = -0.015f;
+		params.vol_maxes[1] = 0.015f;
 
-		params.vol_mins[2] = 0.001f;
-		params.vol_maxes[2] = 0.060f;
+		params.vol_mins[2] = 0.065;
+		params.vol_maxes[2] = 0.095f;
 
-		params.lateral_resolution = 0.0002f;
-		params.axial_resolution = 0.0002f;
+		params.lateral_resolution = 0.0001;
+		params.axial_resolution = 0.0001f;
+
 
 		params.array_params.c = 1452;
 
@@ -105,7 +107,7 @@ bool beamform_from_fieldii()
 	std::cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
 
 	result = parser::save_float_array(volume, vol_dims, output_file_path, "volume", false);
-	if (!result) return false;
+	if (!result) std::cout << "Failed to save volume" << std::endl;
 
 
 	free(volume);
@@ -121,7 +123,7 @@ bool test_beamforming()
 	std::string data_root = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
 	std::string data_path = data_root + R"(Resolution_HERCULES-Diverging-TxColumn)" + R"(\)";
 	std::string input_file_path = data_path + R"(49.mat)";
-	std::string output_file_path = data_root + R"(beamformed\)" + R"(reso_mixes32.mat)";
+	std::string output_file_path = data_root + R"(beamformed\)" + R"(reso_mixes16.mat)";
 
 	defs::RfDataDims dims;
 	std::vector<i16>* data_array = nullptr;
@@ -135,17 +137,17 @@ bool test_beamforming()
 
 	uint input_dims[2] = { dims.sample_count, dims.channel_count };
 
-	params.vol_mins[0] = -0.1f;
-	params.vol_maxes[0] = 0.1f;
+	params.vol_mins[0] = -0.015f;
+	params.vol_maxes[0] = 0.015f;
 
 	params.vol_mins[1] = -0.015f;
 	params.vol_maxes[1] = 0.015f;
 
-	params.vol_mins[2] = 0.01f;
-	params.vol_maxes[2] = 0.120f;
+	params.vol_mins[2] = 0.04f;
+	params.vol_maxes[2] = 0.06f;
 
-	params.lateral_resolution = 0.0003;
-	params.axial_resolution = 0.00015f;
+	params.lateral_resolution = 0.0001;
+	params.axial_resolution = 0.0001f;
 
 	params.array_params.c = 1454;
 	params.array_params.row_count = params.decoded_dims[1];
@@ -191,6 +193,6 @@ bool test_beamforming()
 
 int main()
 {
-	bool result = test_beamforming();
+	bool result = beamform_from_fieldii();
 	return !result;
 }

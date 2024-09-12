@@ -15,98 +15,28 @@ __device__ __inline__  float
 beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float f_num)
 {
 	float apro = f_num * lateral_dist / depth;
-	apro = fminf(apro, 0.25);
+	apro = fminf(apro, 0.5);
 	apro = cosf(CUDART_PI_F * apro);
 	return apro * apro;
 }
 
-__global__ void
-beamformer::_kernels::delay_and_sum(const cuComplex* rfData, float* volume, float samples_per_meter, const float2* location_array, uint64* times)
+// Returns true if this element should be used for mixes
+__device__ __inline__ bool
+offset_mixes(int transmit, int element, int mixes_number, int offset, int pivot)
 {
-	__shared__ cuComplex temp[MAX_THREADS_PER_BLOCK/WARP_SIZE];
+	int transmit_offset = 0;
+	int element_offset = 0;
 
-	uint e = threadIdx.x;
 
-	// Start timing the reduction portion
-    uint64 start_time;
-    if (e == 0) {
-        start_time = clock64();
-    }
-	const float3 vox_loc =
-	{
-		Constants.volume_mins.x + blockIdx.x * Constants.resolutions.x,
-		Constants.volume_mins.y + blockIdx.y * Constants.resolutions.y,
-		Constants.volume_mins.z + blockIdx.z * Constants.resolutions.z,
-	};
-
-	float lateral_dist = sqrtf(vox_loc.x * vox_loc.x + vox_loc.y * vox_loc.y);
-
-	float tx_distance;
-	int dist_sign = ((vox_loc.z - Constants.src_pos.z) > 0) ? 1 : -1;
-	switch (Constants.tx_type)
-	{
-	case TX_PLANE:
-		tx_distance = vox_loc.z;
-		break;
-
-	case TX_Y_FOCUS:
-		tx_distance = dist_sign * sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
-		break;
-
-	case TX_X_FOCUS:
-		tx_distance = dist_sign * sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.x - vox_loc.x, 2)) + Constants.src_pos.z;
-		break;
-	}
-
-	cuComplex total, value;
-	float3 rx_vec = { ((float)e - 63.5f) * Constants.element_pitch - vox_loc.x, (-63.5f) * Constants.element_pitch - vox_loc.y, vox_loc.z};
-
-	uint64 loop_start;
-	if (e == 0) {
-		loop_start = clock64();
-	}
-
-	uint delay_samples = (uint)roundf(Constants.pulse_delay * Constants.sample_count);
-	for (int t = 0; t < 128; t++)
-	{
-		uint scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
-		size_t channel_offset = (t * Constants.sample_count * Constants.channel_count) + (e * Constants.sample_count);
-		value = __ldg(&rfData[channel_offset + scan_index - 1]);
-		f_num_aprodization(lateral_dist, vox_loc.z, 1.5);
-
-		total = ADD_F2(total, value);
-
-		rx_vec.y += Constants.element_pitch;
-	}
-
-	__syncthreads();
-
-	uint64 reduce_start_time = clock64();
-	/* Each warp sums up their totals using intrinsics and stores the output
-	 in that warp's index in temp*/
-	for (int offset = WARP_SIZE / 2; offset > 0; offset /= 2)
-	{
-		double double_value = __shfl_xor_sync(0xFFFFFFFF, *(double*)&total, offset);
-		total = ADD_F2(*(cuComplex*)&double_value, total);
-	}
-	if (e % WARP_SIZE == 0)
-	{
-		temp[e / WARP_SIZE] = total;
-	}
-	__syncthreads();
+	if (transmit >= pivot) element_offset = offset;
+	if (element >= pivot) transmit_offset = offset;
 	
-	if (e == 0) 
+	if (element % mixes_number != element_offset && transmit % mixes_number != transmit_offset)
 	{
-		total = { 0.0f, 0.0f };
-		for (int i = 1; i < MAX_THREADS_PER_BLOCK / WARP_SIZE; i++)
-		{
-			total = ADD_F2(total, temp[i]);
-		}
-		volume[blockIdx.z * gridDim.y * gridDim.x + blockIdx.y * gridDim.x + blockIdx.x] = NORM_F2(total);
-		uint64 end_time = clock64();
-		times[0] = end_time - start_time;
-		times[1] = reduce_start_time - loop_start;
+		return false;
 	}
+
+	return true;
 }
 
 __global__ void
@@ -163,17 +93,14 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 	else
 	{
 		tx_distance = vox_loc.z;
-		max_lateral_dist = sqrtf(xdc_edge * xdc_edge);
-		apro_argument = sqrt(vox_loc.x * vox_loc.x + vox_loc.y * vox_loc.y) / max_lateral_dist;
-		apro_argument = fminf(apro_argument, 1);
+		max_lateral_dist = 2*xdc_edge;
 	}
 
-	max_lateral_dist += xdc_edge;
 	float apro_depth = vox_loc.z / Constants.z_max;
 
 	cuComplex total = {0.0f, 0.0f}, value;
 	
-	uint delay_samples = 2;
+	uint delay_samples = 4*2*3/2;
 
 	float3 rx_vec = { -xdc_edge - vox_loc.x, -xdc_edge - vox_loc.y, vox_loc.z };
 	float starting_y = rx_vec.y;
@@ -182,31 +109,38 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
 
-	int mixes_number = 128/32;
+	int mixes_number = 128/8;
+	//int mixes_offset = 0;
+	int mixes_offset = mixes_number / 2;
+	int mixes_pivot = Constants.channel_count / 2;
 	for (int t = 0; t < 128; t++)
 	{
 		for (int e = 0; e < 128; e++)
 		{
-			if (e % mixes_number != 0 && t % mixes_number != 0)
+			if (!offset_mixes(t, e, mixes_number, mixes_offset, 64))
 			{
 				rx_vec.y += element_pitch;
 				channel_offset += sample_count;
 				continue;
 			}
 
-			float2 lateral_ratios = { rx_vec.x / max_lateral_dist, rx_vec.y / xdc_edge };
-			apro_argument = NORM_F2(lateral_ratios);
+			float2 lateral_ratios;
+			if (diverging)
+			{
+				lateral_ratios = { rx_vec.x / max_lateral_dist, rx_vec.y / xdc_edge };
+			}
+			else
+			{
+				lateral_ratios = { rx_vec.x / max_lateral_dist, rx_vec.y / max_lateral_dist};
+			}
 
 			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
-			
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
-
-
-			apro = f_num_aprodization(apro_argument, apro_depth, 0.5);
-
-			value = SCALE_F2(value, apro);
-
 			if (t == 0) value = SCALE_F2(value, I_SQRT_128);
+
+			apro_argument = NORM_F2(lateral_ratios);
+			apro = f_num_aprodization(apro_argument, apro_depth, 1.5);
+			value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
 
