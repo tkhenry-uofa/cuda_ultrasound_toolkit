@@ -11,15 +11,15 @@
 namespace i16_to_f
 {
 	__host__ bool
-	convert_data(const i16* input, float* output, bool rx_rows);
+	convert_data(const i16* input, float* output);
 
 	__host__ bool
-	copy_channel_mapping(const uint channel_mapping[TOTAL_TOBE_CHANNELS]);
+	copy_channel_mapping(const u16 channel_mapping[TOTAL_TOBE_CHANNELS]);
 
 	namespace _kernels
 	{
 		__global__ void
-		short_to_float(const i16* input, float* output, uint2 input_dims, uint3 output_dims, bool rx_cols);
+		short_to_float(const i16* input, float* output, uint2 input_dims, uint3 output_dims, uint channel_offset);
 	}
 }
 

@@ -59,7 +59,7 @@ _cleanup_session()
 }
 
 bool 
-_init_session(const uint input_dims[2], const uint decoded_dims[3], const uint channel_mapping[256], bool rx_cols)
+_init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256], uint channel_offset)
 {
 	if (!Session.init)
 	{
@@ -73,7 +73,7 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const uint c
 		Session.decoded_dims.z = decoded_dims[2];
 
 
-		Session.rx_cols = rx_cols;
+		Session.channel_offset = channel_offset;
 
 		cublasStatus_t cublas_result = cublasCreate(&(Session.cublas_handle));
 		if (cublas_result != CUBLAS_STATUS_SUCCESS)
@@ -125,22 +125,22 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const uint c
 *****************************************************************************************************************************/
 
 bool
-init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols)
+init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping, uint channel_offset)
 {
 	if (!Session.init)
 	{
-		return _init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
+		return _init_session(input_dims, decoded_dims, channel_mapping, channel_offset);
 	}
 	else
 	{
 		bool changed = input_dims[0] != Session.input_dims.x || input_dims[1] != Session.input_dims.y ||
 					   decoded_dims[0] != Session.decoded_dims.x || decoded_dims[1] != Session.decoded_dims.y || 
-					   decoded_dims[2] != Session.decoded_dims.z;
+					   decoded_dims[2] != Session.decoded_dims.z || channel_offset != Session.channel_offset;
 
 		if (changed)
 		{
 			_cleanup_session();
-			return _init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
+			return _init_session(input_dims, decoded_dims, channel_mapping, channel_offset);
 		}
 		return true;
 	}
@@ -172,6 +172,8 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 bool
 cuda_decode(size_t input_offset, uint output_buffer_idx)
 {
+
+	std::cout << "Input offset: " << input_offset << std::endl;
 	if (!Session.init)
 	{
 		std::cout << "Session not initialized" << std::endl;
@@ -199,8 +201,17 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
 
 	d_input = d_input + input_offset / sizeof(i16);
 
-	i16_to_f::convert_data(d_input, Session.d_converted, Session.rx_cols);
+	std::cout << "Channel offset: " << Session.channel_offset << std::endl;
+
+	std::cout << "First input value: " << sample_value_i16(d_input) << std::endl;
+
+
+	i16_to_f::convert_data(d_input, Session.d_converted);
+
+	std::cout << "First converted value: " << sample_value(Session.d_converted) << std::endl;
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
+
+	std::cout << "First decoded value: " << sample_value(Session.d_decoded) << std::endl;
 
 	// Insert 0s between each value for their imaginary components
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, total_count * sizeof(cuComplex)));

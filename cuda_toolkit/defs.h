@@ -36,12 +36,13 @@
 
 #define NORM_F2(v) (sqrtf( v.x * v.x + v.y * v.y))
 #define NORM_F3(v) (sqrtf( v.x * v.x + v.y * v.y + v.z * v.z))
-
-
 #define ADD_F2(v,u) {(v).x + (u).x, (v).y + (u).y}
+
+
 typedef unsigned long long int uint64;
 typedef unsigned int uint;
 typedef int16_t i16;
+typedef uint16_t u16;
 typedef std::vector<std::complex<float>> ComplexVectorF;
 
 
@@ -66,7 +67,7 @@ struct VolumeConfiguration
 struct CudaSession
 {
     bool init = false;
-    bool rx_cols = false;
+    uint channel_offset = 0;
 	uint2 input_dims;
 	uint3 decoded_dims;
 
@@ -87,7 +88,7 @@ struct CudaSession
 
 	VolumeConfiguration volume_configuration;
 	
-    uint* channel_mapping = nullptr;
+    u16* channel_mapping = nullptr;
 
     float pulse_delay;
 	float element_pitch;

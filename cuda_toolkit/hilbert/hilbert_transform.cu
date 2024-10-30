@@ -31,7 +31,6 @@ hilbert::f_domain_filter(cuComplex* input, uint cutoff_sample)
 	dim3 grid_dims = { grid_length, channel_count, 1 };
 	dim3 block_dims = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
-	std::cout << "Filtering" << std::endl;
 	kernels::filter << <grid_dims, block_dims >> > (input, sample_count, cutoff_sample);
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -86,9 +85,9 @@ hilbert::hilbert_transform_strided(float* d_input, cuComplex* d_output)
 
 	float* sample = (float*)d_output;
 	///std::cout << "First input value: Re:" << sample_value(d_input+ Session.decoded_dims.x) << " Im: " << sample_value(d_input+1+ Session.decoded_dims.x) << std::endl;
-	std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
+	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
 	hilbert::f_domain_filter(d_output, Session.decoded_dims.x/2);
-	std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
+	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
 	//hilbert::f_domain_filter(d_output, 1350);
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
 	return true;

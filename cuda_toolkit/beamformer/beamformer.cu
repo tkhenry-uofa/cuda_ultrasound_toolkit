@@ -173,7 +173,7 @@ beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_p
 	{
 		transmit_type = TX_PLANE;
 	}
-	else if (Session.rx_cols)
+	else if (Session.channel_offset > 0)
 	{
 		// TX on rows (x) axis so we have x focusing
 		transmit_type = TX_X_FOCUS;

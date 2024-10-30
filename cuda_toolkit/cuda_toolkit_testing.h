@@ -49,7 +49,7 @@ typedef struct {
 
 	// Mapping verasonics channels to row and column numbers
 	// First half are rows, second half are columns
-	uint channel_mapping[256];
+	u16 channel_mapping[256];
 } BeamformerParams;
 
 /**

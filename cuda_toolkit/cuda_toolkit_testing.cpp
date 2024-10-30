@@ -35,7 +35,7 @@ bool generate_hero_location_array(ArrayParams params, float2** d_location)
 	return true;
 }
 
-bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols )
+bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping, bool rx_cols )
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
@@ -68,7 +68,7 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 
 	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
 
-	i16_to_f::convert_data(Session.d_input, Session.d_converted, params.rx_cols);
+	i16_to_f::convert_data(Session.d_input, Session.d_converted);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
 	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, d_intermediate);
@@ -109,7 +109,7 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
 
 	
-	i16_to_f::convert_data(d_input, Session.d_converted, params.rx_cols);
+	i16_to_f::convert_data(d_input, Session.d_converted);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, Session.d_complex);
 
