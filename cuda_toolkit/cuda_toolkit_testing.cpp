@@ -35,13 +35,13 @@ bool generate_hero_location_array(ArrayParams params, float2** d_location)
 	return true;
 }
 
-bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping, bool rx_cols )
+bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping )
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 	if (!Session.init)
 	{
-		_init_session(input_dims, decoded_dims, channel_mapping, rx_cols);
+		_init_session(input_dims, decoded_dims, channel_mapping);
 	}
 	
 	size_t data_size = input_struct.x * input_struct.y * sizeof(int16_t);
@@ -50,7 +50,7 @@ bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* 
 	return true;
 }
 
-bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate)
+bool test_convert_and_decode(const int16_t* input, const PipelineParams params, complex_f** complex_out, complex_f** intermediate)
 {
 	const uint2 input_dims = *(uint2*)&(params.raw_dims); // lol
 	const uint3 output_dims = *(uint3*)&(params.decoded_dims);
@@ -66,8 +66,9 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 
 	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(d_intermediate), complex_size));
 
-	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
+	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping);
 
+	Session.channel_offset = params.channel_offset;
 	i16_to_f::convert_data(Session.d_input, Session.d_converted);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
@@ -81,7 +82,7 @@ bool test_convert_and_decode(const int16_t* input, const BeamformerParams params
 	return true;
 }
 
-bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float** volume)
+bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, float** volume)
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
@@ -89,13 +90,13 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 	size_t total_raw_count = raw_data_dims.x * raw_data_dims.y;
 
 
-	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
+	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);
 
 	VolumeConfiguration vol_config;
 	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
 	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
-	vol_config.axial_resolution = params.axial_resolution;
-	vol_config.lateral_resolution = params.lateral_resolution;
+	vol_config.axial_resolution = params.vol_resolutions[2];
+	vol_config.lateral_resolution = params.vol_resolutions[0];
 
 	beamformer::configure_volume(&vol_config);
 
@@ -107,6 +108,7 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
 
+	Session.channel_offset = params.channel_offset;
 	i16_to_f::convert_data(d_input, Session.d_converted);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, Session.d_complex);
@@ -133,7 +135,7 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 }
 
 bool 
-fully_sampled_beamform(const float* input, BeamformerParams params, float** volume)
+fully_sampled_beamform(const float* input, PipelineParams params, float** volume)
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
@@ -142,8 +144,8 @@ fully_sampled_beamform(const float* input, BeamformerParams params, float** volu
 	VolumeConfiguration vol_config;
 	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
 	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
-	vol_config.axial_resolution = params.axial_resolution;
-	vol_config.lateral_resolution = params.lateral_resolution;
+	vol_config.axial_resolution = params.vol_resolutions[2];
+	vol_config.lateral_resolution = params.vol_resolutions[0];
 
 	beamformer::configure_volume(&vol_config);
 
@@ -171,7 +173,7 @@ fully_sampled_beamform(const float* input, BeamformerParams params, float** volu
 
 
 
-bool readi_beamform_raw(const int16_t* input, BeamformerParams params, float** volume)
+bool readi_beamform_raw(const int16_t* input, PipelineParams params, float** volume)
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
@@ -179,13 +181,13 @@ bool readi_beamform_raw(const int16_t* input, BeamformerParams params, float** v
 	size_t total_raw_count = raw_data_dims.x * raw_data_dims.y;
 
 
-	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
+	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);
 
 	VolumeConfiguration vol_config;
 	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
 	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
-	vol_config.axial_resolution = params.axial_resolution;
-	vol_config.lateral_resolution = params.lateral_resolution;
+	vol_config.axial_resolution = params.vol_resolutions[2];
+	vol_config.lateral_resolution = params.vol_resolutions[0];
 
 	beamformer::configure_volume(&vol_config);
 

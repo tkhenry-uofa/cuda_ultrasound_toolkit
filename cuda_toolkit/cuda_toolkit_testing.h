@@ -26,8 +26,6 @@ typedef struct {
 
 
 typedef struct {
-	// Which half of channel mapping has the useful data
-	bool rx_cols;
 	float focus[3];
 	float pulse_delay; // Delay to the middle of the pulse(s)
 	// x: Sample count
@@ -42,21 +40,27 @@ typedef struct {
 	// Volume configuration ( all in meters)
 	float vol_mins[3];
 	float vol_maxes[3];
-	float axial_resolution;
-	float lateral_resolution;
+
+	uint vol_counts[3];
+
+	float vol_resolutions[3];
 
 	ArrayParams array_params;
 
 	// Mapping verasonics channels to row and column numbers
 	// First half are rows, second half are columns
 	u16 channel_mapping[256];
-} BeamformerParams;
+
+
+	// Where in the rf data to start reading
+	u16 channel_offset;
+} PipelineParams;
 
 /**
 * Test functions
 */
 
-EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping, bool rx_cols);
+EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const uint* channel_mapping);
 
 /**
 * Converts input to floats, hadamard decodes, and hilbert transforms via fft
@@ -67,14 +71,14 @@ EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, co
 * decoded_dims - [sample_count, rx_channel_count, tx_count]
 * rx_cols - TRUE|FALSE: The first|second half of the input channels are read
 */
-EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerParams params, complex_f** complex_out, complex_f** intermediate);
+EXPORT_FN bool test_convert_and_decode(const int16_t* input, const PipelineParams params, complex_f** complex_out, complex_f** intermediate);
 
 
-EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float** volume);
+EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, float** volume);
 
-EXPORT_FN bool readi_beamform_raw(const int16_t* input, BeamformerParams params, float** volume);
+EXPORT_FN bool readi_beamform_raw(const int16_t* input, PipelineParams params, float** volume);
 
-EXPORT_FN bool fully_sampled_beamform(const float* input, BeamformerParams params, float** volume);
+EXPORT_FN bool fully_sampled_beamform(const float* input, PipelineParams params, float** volume);
 
 
 

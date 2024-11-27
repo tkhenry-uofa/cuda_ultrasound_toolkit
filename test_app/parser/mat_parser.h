@@ -16,8 +16,8 @@ extern "C" {
 
 namespace parser
 {
-	bool load_f2_tx_config(std::string file_path, BeamformerParams* params);
-	bool parse_bp_struct(std::string file_path, BeamformerParams* params);
+	bool load_f2_tx_config(std::string file_path, PipelineParams* params);
+	bool parse_bp_struct(std::string file_path, PipelineParams* params);
 	bool load_int16_array(std::string file_path, std::vector<i16>** data_array, defs::RfDataDims* dims);
 
 	bool load_float_array(std::string file_path, std::vector<float>** data_array, uint3* dims);

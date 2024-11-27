@@ -108,7 +108,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="matlab_transfer.cpp" />
+    <ClCompile Include="matlab_transfer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

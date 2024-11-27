@@ -11,6 +11,8 @@
 #define SMEM_NAME "Local\\ogl_beamformer_parameters"
 
 
+typedef void* Handle;
+
 typedef unsigned int uint;
 
 typedef char      c8;
@@ -88,11 +90,6 @@ typedef union {
     struct { v2 xy, zw; };
     f32 E[4];
 } v4;
-
-typedef struct {
-    iptr  file;
-    char* name;
-} Pipe;
 
 enum compute_shaders {
     CS_CUDA_DECODE = 0,

@@ -59,7 +59,7 @@ _cleanup_session()
 }
 
 bool 
-_init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256], uint channel_offset)
+_init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256])
 {
 	if (!Session.init)
 	{
@@ -72,8 +72,6 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 ch
 		Session.decoded_dims.y = decoded_dims[1];
 		Session.decoded_dims.z = decoded_dims[2];
 
-
-		Session.channel_offset = channel_offset;
 
 		cublasStatus_t cublas_result = cublasCreate(&(Session.cublas_handle));
 		if (cublas_result != CUBLAS_STATUS_SUCCESS)
@@ -125,22 +123,22 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 ch
 *****************************************************************************************************************************/
 
 bool
-init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping, uint channel_offset)
+init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping)
 {
 	if (!Session.init)
 	{
-		return _init_session(input_dims, decoded_dims, channel_mapping, channel_offset);
+		return _init_session(input_dims, decoded_dims, channel_mapping);
 	}
 	else
 	{
 		bool changed = input_dims[0] != Session.input_dims.x || input_dims[1] != Session.input_dims.y ||
-					   decoded_dims[0] != Session.decoded_dims.x || decoded_dims[1] != Session.decoded_dims.y || 
-					   decoded_dims[2] != Session.decoded_dims.z || channel_offset != Session.channel_offset;
+			decoded_dims[0] != Session.decoded_dims.x || decoded_dims[1] != Session.decoded_dims.y ||
+			decoded_dims[2] != Session.decoded_dims.z;
 
 		if (changed)
 		{
 			_cleanup_session();
-			return _init_session(input_dims, decoded_dims, channel_mapping, channel_offset);
+			return _init_session(input_dims, decoded_dims, channel_mapping);
 		}
 		return true;
 	}
@@ -170,9 +168,9 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 }
 
 bool
-cuda_decode(size_t input_offset, uint output_buffer_idx)
+cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 {
-
+	Session.channel_offset = channel_offset;
 	std::cout << "Input offset: " << input_offset << std::endl;
 	if (!Session.init)
 	{

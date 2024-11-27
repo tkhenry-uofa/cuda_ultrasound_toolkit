@@ -32,7 +32,7 @@
 		* channel_mapping: VSX channels to row-column conversion
 		* channel_offset: Offset into the receiving channels in the rf data
 		*/
-		EXPORT_FN bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping, uint channel_offset);
+		EXPORT_FN bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping);
 		
 		/**
 		* rf_data_ssbos: List of opengl buffer ids for decoded rf data
@@ -45,7 +45,7 @@
 		* input_offset: Offset into raw_data_ssbo 
 		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
 		*/
-		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx);
+		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset);
 
 		/**
 		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
@@ -54,7 +54,7 @@
 		EXPORT_FN bool cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx);
 
 		// Internal init
-		bool _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256], uint channel_offset);
+		bool _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256]);
 
 #ifdef __cplusplus
 	}

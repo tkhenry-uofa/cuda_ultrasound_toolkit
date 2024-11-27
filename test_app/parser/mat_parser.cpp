@@ -3,7 +3,7 @@
 
 #include "mat_parser.h"
 
-bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
+bool parser::parse_bp_struct(std::string file_path, PipelineParams* params)
 {
     MATFile* file = matOpen(file_path.c_str(), "r");
 
@@ -249,7 +249,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
 }
 
 bool
-parser::load_f2_tx_config(std::string file_path, BeamformerParams* params)
+parser::load_f2_tx_config(std::string file_path, PipelineParams* params)
 {
     bool success = false;
 
