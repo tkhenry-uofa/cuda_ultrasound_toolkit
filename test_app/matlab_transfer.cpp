@@ -55,6 +55,8 @@ ptrdiff_t matlab_transfer::_read_pipe(iptr pipe, void* buf, size len)
 
 bool matlab_transfer::create_resources(void** bp_mem_h, void** input_pipe)
 {
+	BeamformerParametersFull* bp_full = _open_shared_memory_area(PIPE_INPUT_NAME, sizeof(BeamformerParametersFull));
+
 	return true;
 }
 bool matlab_transfer::wait_for_params(BeamformerParameters** bp, void* mem_h)
