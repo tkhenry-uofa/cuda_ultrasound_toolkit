@@ -72,6 +72,8 @@ EXPORT_FN bool test_convert_and_decode(const int16_t* input, const BeamformerPar
 
 EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float** volume);
 
+EXPORT_FN bool readi_beamform_raw(const int16_t* input, BeamformerParams params, float** volume);
+
 EXPORT_FN bool fully_sampled_beamform(const float* input, BeamformerParams params, float** volume);
 
 

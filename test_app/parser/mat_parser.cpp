@@ -294,9 +294,9 @@ parser::load_f2_tx_config(std::string file_path, BeamformerParams* params)
 
     field_p = mxGetField(struct_array, 0, defs::sims::focus_name.c_str());
     double* src_locs = (double*)mxGetDoubles(field_p);
-    params->focus[0] = src_locs[0];
-    params->focus[1] = src_locs[1];
-    params->focus[2] = src_locs[2];
+    params->focus[0] = (float)src_locs[0];
+    params->focus[1] = (float)src_locs[1];
+    params->focus[2] = (float)src_locs[2];
 
 
     success = true;

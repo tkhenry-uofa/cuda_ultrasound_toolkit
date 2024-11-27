@@ -13,6 +13,7 @@
 	extern "C" {
 #endif
 		typedef unsigned int uint;
+		typedef uint16_t u16;
 
 		/**
 		* API Usage:

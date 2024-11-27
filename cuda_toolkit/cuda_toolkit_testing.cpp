@@ -103,12 +103,10 @@ bool hero_raw_to_beamform(const int16_t* input, BeamformerParams params, float**
 
 	Session.element_pitch = params.array_params.pitch;
 
-
 	i16* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
 
-	
 	i16_to_f::convert_data(d_input, Session.d_converted);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, Session.d_complex);
@@ -167,6 +165,59 @@ fully_sampled_beamform(const float* input, BeamformerParams params, float** volu
 	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
 
+
+	return true;
+}
+
+
+
+bool readi_beamform_raw(const int16_t* input, BeamformerParams params, float** volume)
+{
+	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
+	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
+	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
+	size_t total_raw_count = raw_data_dims.x * raw_data_dims.y;
+
+
+	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping, params.rx_cols);
+
+	VolumeConfiguration vol_config;
+	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
+	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
+	vol_config.axial_resolution = params.axial_resolution;
+	vol_config.lateral_resolution = params.lateral_resolution;
+
+	beamformer::configure_volume(&vol_config);
+
+	Session.volume_configuration = vol_config;
+
+	Session.element_pitch = params.array_params.pitch;
+
+	i16* d_input;
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
+
+	i16_to_f::convert_data(d_input, Session.d_converted);
+	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
+	hilbert::hilbert_transform2(Session.d_decoded, Session.d_complex, Session.d_complex);
+
+	CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+
+
+	float* d_volume;
+
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
+
+	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
+	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
+
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
+
+	cudaFree(d_input);
 
 	return true;
 }

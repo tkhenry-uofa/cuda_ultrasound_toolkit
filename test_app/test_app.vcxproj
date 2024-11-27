@@ -94,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="defs.h" />
+    <ClInclude Include="matlab_transfer.h" />
     <ClInclude Include="parser\mat_parser.h" />
   </ItemGroup>
   <ItemGroup>
@@ -105,6 +106,9 @@
     <ProjectReference Include="..\cuda_toolkit\cuda_toolkit.vcxproj">
       <Project>{bdd780b4-c9fd-4d7f-b63d-06a49965263c}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="matlab_transfer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

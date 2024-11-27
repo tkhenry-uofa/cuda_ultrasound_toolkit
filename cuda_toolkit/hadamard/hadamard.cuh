@@ -18,6 +18,9 @@ namespace hadamard
 	__host__ bool
 	generate_hadamard(uint size, float** dev_ptr);
 
+	__host__ bool
+	readi_decode(const float* d_input, float* d_output, int group_number);
+
 	namespace _kernels
 	{
 		__global__ void
