@@ -7,7 +7,7 @@
 #include <cufft.h>
 
 #define PIPE_INPUT_NAME "\\\\.\\pipe\\beamformer_data_fifo"
-#define PIPE_INPUT_NAME "\\\\.\\pipe\\beamformer_output_fifo"
+#define PIPE_OUTPUT_NAME "\\\\.\\pipe\\beamformer_output_fifo"
 #define SMEM_NAME "Local\\ogl_beamformer_parameters"
 
 
@@ -109,6 +109,10 @@ enum compute_shaders {
 
 #define DAS_ID_UFORCES  0
 #define DAS_ID_HERCULES 1
+
+#define MEGABYTE (1024ULL * 1024ULL)
+#define GIGABYTE (1024ULL * 1024ULL * 1024ULL)
+
 
 #define MAX_BEAMFORMED_SAVED_FRAMES 16
 #define MAX_MULTI_XDC_COUNT         4
