@@ -21,7 +21,7 @@ namespace matlab_transfer
 
 
 	bool create_resources(void** bp_mem_h, void** input_pipe);
-	bool wait_for_params(BeamformerParameters** bp, void* mem_h);
+	bool wait_for_data(BeamformerParameters* bp, void* pipe, i16* data);
 
 
 
