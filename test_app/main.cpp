@@ -7,42 +7,69 @@
 #include "defs.h"
 #include "parser/mat_parser.h"
 
+#include "matlab_transfer.h"
 
-bool test_decoding()
+
+PipelineParams convert_params(BeamformerParametersFull* full_bp)
 {
-	std::string input_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\uforces_32_raw.mat)";
-	std::string params_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\uforces_32_bp.mat)";
-	std::string output_file_path = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\pipeline_output.mat)";
+	PipelineParams params;
+	BeamformerParameters bp = full_bp->raw;
 
-	defs::RfDataDims dims;
-	std::vector<i16>* data_array = nullptr;
+	params.focus[0] = 0.0f;
+	params.focus[1] = 0.0f;
+	params.focus[2] = bp.focal_depth;
 
-	parser::load_int16_array(input_file_path, &data_array, &dims);
+	params.pulse_delay = bp.time_offset;
 
-	BeamformerParams params;
+	params.decoded_dims[0] = bp.dec_data_dim.x;
+	params.decoded_dims[1] = bp.dec_data_dim.y;
+	params.decoded_dims[2] = bp.dec_data_dim.z;
 
-	parser::parse_bp_struct(params_file_path, &params);
+	params.raw_dims[0] = bp.rf_raw_dim.x;
+	params.raw_dims[1] = bp.rf_raw_dim.y;
 
-	uint input_dims[2] = { dims.sample_count, dims.channel_count };
-	size_t output_dims[3] = {
-		(size_t)params.decoded_dims[0],
-		(size_t)params.decoded_dims[1],
-		(size_t)params.decoded_dims[2] };
+	params.vol_mins[0] = bp.output_min_coordinate.x;
+	params.vol_mins[1] = bp.output_min_coordinate.y;
+	params.vol_mins[2] = bp.output_min_coordinate.z;
+
+	params.vol_maxes[0] = bp.output_max_coordinate.x;
+	params.vol_maxes[1] = bp.output_max_coordinate.y;
+	params.vol_maxes[2] = bp.output_max_coordinate.z;
+
+	params.vol_counts[0] = bp.output_points.x;
+	params.vol_counts[1] = bp.output_points.y;
+	params.vol_counts[2] = bp.output_points.z;
+
+	params.vol_resolutions[0] = (params.vol_maxes[0] - params.vol_mins[0]) / params.vol_counts[0];
+	params.vol_resolutions[1] = (params.vol_maxes[1] - params.vol_mins[1]) / params.vol_counts[1];
+	params.vol_resolutions[2] = (params.vol_maxes[2] - params.vol_mins[2]) / params.vol_counts[2];
+
+	for (int i = 0; i < 256; i++)
+	{
+		params.channel_mapping[i] = bp.channel_mapping[i];
+	}
+
+	params.channel_offset = bp.channel_offset;
+
+	params.array_params.c = bp.speed_of_sound;
+	params.array_params.center_freq = bp.center_frequency;
+	params.array_params.sample_freq = bp.sampling_frequency;
+
+	params.array_params.row_count = bp.dec_data_dim.y; // Assuming square arrays for now
+	params.array_params.col_count = bp.dec_data_dim.y;
+
+	params.array_params.xdc_mins[0] = bp.xdc_origin[0];
+	params.array_params.xdc_mins[1] = bp.xdc_origin[1];
 
 
-	complex_f* intermediate = nullptr;
-	complex_f* complex = nullptr;
-	std::cout << "Processing" << std::endl;
-	bool result = test_convert_and_decode(data_array->data(), params, &complex, &intermediate);
+	// Origin is at (-x,-y), corner 1 is (+x,-y), corner 2 is (-x,+y)
+	params.array_params.xdc_maxes[0] = bp.xdc_corner1[0];
+	params.array_params.xdc_maxes[1] = bp.xdc_corner2[1];
 
-	result = parser::save_float_array(intermediate, output_dims, output_file_path, "intermediate", true);
-	result = parser::save_float_array(complex, output_dims, output_file_path, "complex", true);
+	float width = params.array_params.xdc_maxes[0] - params.array_params.xdc_mins[0];
+	params.array_params.pitch = width / params.array_params.row_count;
 
-
-	free(complex);
-
-	delete data_array;
-	return true;
+	return params;
 }
 
 bool beamform_from_fieldii()
@@ -58,7 +85,7 @@ bool beamform_from_fieldii()
 	bool result = parser::load_complex_array(input_file_path, &data_array, &dims);
 	if (!result) return false;
 
-	BeamformerParams params;
+	PipelineParams params;
 	result = parser::load_f2_tx_config(input_file_path, &params);
 	if (!result) return false;
 
@@ -74,27 +101,31 @@ bool beamform_from_fieldii()
 		params.vol_mins[1] = -0.015f;
 		params.vol_maxes[1] = 0.015f;
 
-		params.vol_mins[2] = 0.065;
+		params.vol_mins[2] = 0.065f;
 		params.vol_maxes[2] = 0.095f;
 
-		params.lateral_resolution = 0.0001;
-		params.axial_resolution = 0.0001f;
+		float lateral_resolution = 0.0001f;
+		float axial_resolution = 0.0001f;
+
+		params.vol_resolutions[0] = lateral_resolution;
+		params.vol_resolutions[1] = lateral_resolution;
+		params.vol_resolutions[2] = axial_resolution;
 
 
 		params.array_params.c = 1452;
 
-		for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += params.lateral_resolution) {
+		for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += lateral_resolution) {
 			vol_dims[0]++;
 		}
-		for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += params.lateral_resolution) {
+		for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += lateral_resolution) {
 			vol_dims[1]++;
 		}
-		for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += params.axial_resolution) {
+		for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += axial_resolution) {
 			vol_dims[2]++;
 		}
 	}
 
-	float* volume = nullptr;
+	cuComplex* volume = nullptr;
 	std::cout << "Processing" << std::endl;
 
 	auto start = std::chrono::high_resolution_clock::now();
@@ -114,8 +145,6 @@ bool beamform_from_fieldii()
 	delete data_array;
 
 	return true;
-
-	return true;
 }
 
 bool test_beamforming()
@@ -131,7 +160,7 @@ bool test_beamforming()
 	bool result = parser::load_int16_array(input_file_path, &data_array, &dims);
 	if (!result) return false;
 
-	BeamformerParams params;
+	PipelineParams params;
 	result = parser::parse_bp_struct(input_file_path, &params);
 	if (!result) return false;
 
@@ -146,8 +175,12 @@ bool test_beamforming()
 	params.vol_mins[2] = 0.04f;
 	params.vol_maxes[2] = 0.06f;
 
-	params.lateral_resolution = 0.0001;
-	params.axial_resolution = 0.0001f;
+	float lateral_resolution = 0.0001f;
+	float axial_resolution = 0.0001f;
+
+	params.vol_resolutions[0] = lateral_resolution;
+	params.vol_resolutions[1] = lateral_resolution;
+	params.vol_resolutions[2] = axial_resolution;
 
 	params.array_params.c = 1454;
 	params.array_params.row_count = params.decoded_dims[1];
@@ -155,19 +188,20 @@ bool test_beamforming()
 
 	params.array_params.pitch = (params.array_params.xdc_maxes[0] - params.array_params.xdc_mins[0]) / params.array_params.col_count;
 
+
 	uint x_count, y_count, z_count;
 	x_count = y_count = z_count = 0;
-	for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += params.lateral_resolution) {
+	for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += lateral_resolution) {
 		x_count++;
 	}
-	for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += params.lateral_resolution) {
+	for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += lateral_resolution) {
 		y_count++;
 	}
-	for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += params.axial_resolution) {
+	for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += axial_resolution) {
 		z_count++;
 	}
 
-	float* volume = nullptr;
+	cuComplex* volume = nullptr;
 	std::cout << "Processing" << std::endl;
 
 	size_t vol_dims[3] = { x_count, y_count, z_count };
@@ -191,8 +225,54 @@ bool test_beamforming()
 	return true;
 }
 
+
+bool readi_beamform()
+{
+	BeamformerParametersFull* full_bp = nullptr;
+	Handle input_pipe = nullptr;
+
+	std::cout << "Main: Creating smem and input pipe." << std::endl;
+	bool result = matlab_transfer::create_resources(&full_bp, &input_pipe);
+	
+	if (!result)
+	{
+		std::cout << "Main: Failed to create pipe and smem." << std::endl;
+		return false;
+	}
+
+	i16* data_buffer = nullptr;
+	uint bytes_read = 0;
+
+	uint timeout = 20000; // 20s
+	result = matlab_transfer::wait_for_data(input_pipe, (void**)&data_buffer, &bytes_read, timeout);
+
+	std::cout << "Received data, transmit count: " << full_bp->raw.dec_data_dim.z << std::endl;
+
+	if (!result)
+	{
+		std::cout << "Error reading data from matlab." << std::endl;
+		return false;
+	}
+
+	// TODO: Unify structs and types so I don't have to deal with this 
+	PipelineParams params = convert_params(full_bp);
+
+	cuComplex* volume = nullptr;
+	size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
+
+	hero_raw_to_beamform(data_buffer, params, &volume);
+
+	volume[0].x = 54.0f;
+
+	matlab_transfer::_write_to_pipe(PIPE_OUTPUT_NAME, volume, output_size);
+
+	std::cout << "Beamforming done." << std::endl;
+
+	return true;
+}
+
 int main()
 {
-	bool result = beamform_from_fieldii();
+	bool result = readi_beamform();
 	return !result;
 }

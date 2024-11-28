@@ -40,7 +40,7 @@ offset_mixes(int transmit, int element, int mixes_number, int offset, int pivot)
 }
 
 __global__ void
-beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float samples_per_meter, uint64* times)
+beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint64* times)
 {
 	int tid = threadIdx.x;
 	uint64 start_time;
@@ -112,17 +112,16 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 	int mixes_number = 128/8;
 	//int mixes_offset = 0;
 	int mixes_offset = mixes_number / 2;
-	int mixes_pivot = Constants.channel_count / 2;
 	for (int t = 0; t < 128; t++)
 	{
 		for (int e = 0; e < 128; e++)
 		{
-			if (!offset_mixes(t, e, mixes_number, mixes_offset, 64))
-			{
-				rx_vec.y += element_pitch;
-				channel_offset += sample_count;
-				continue;
-			}
+			//if (!offset_mixes(t, e, mixes_number, mixes_offset, 64))
+			//{
+			//	rx_vec.y += element_pitch;
+			//	channel_offset += sample_count;
+			//	continue;
+			//}
 
 			float2 lateral_ratios;
 			if (diverging)
@@ -140,7 +139,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 
 			apro_argument = NORM_F2(lateral_ratios);
 			apro = f_num_aprodization(apro_argument, apro_depth, 1.5);
-			value = SCALE_F2(value, apro);
+			//value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
 
@@ -153,7 +152,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 	}
 
 	float result = sqrtf(total.x * total.x + total.y * total.y);
-	volume[volume_offset] = result;
+	volume[volume_offset] = total;
 
 	if (tid == 0)
 	{
@@ -164,7 +163,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 }
 
 bool
-beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
+beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
 {
 
 	TransmitType transmit_type;
@@ -226,7 +225,7 @@ beamformer::beamform(float* d_volume, const cuComplex* d_rf_data, float3 focus_p
 	std::chrono::duration<double> elapsed = end - start;
 	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
 
-	std::cout << "First volume value: " << sample_value(d_volume) << std::endl;
+	std::cout << "First volume value: " << sample_value((float*)d_volume) << std::endl;
 
 	return true;
 

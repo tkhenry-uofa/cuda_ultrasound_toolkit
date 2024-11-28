@@ -3,7 +3,7 @@
 
 #include "mat_parser.h"
 
-bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
+bool parser::parse_bp_struct(std::string file_path, PipelineParams* params)
 {
     MATFile* file = matOpen(file_path.c_str(), "r");
 
@@ -92,7 +92,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
     if (field_p)
     {
         double_mx = (double*)mxGetDoubles(field_p);
-        params->rx_cols = (*double_mx > 0);
+        params->channel_offset = (uint)*double_mx;
     }
     else
     {
@@ -249,7 +249,7 @@ bool parser::parse_bp_struct(std::string file_path, BeamformerParams* params)
 }
 
 bool
-parser::load_f2_tx_config(std::string file_path, BeamformerParams* params)
+parser::load_f2_tx_config(std::string file_path, PipelineParams* params)
 {
     bool success = false;
 
@@ -294,9 +294,9 @@ parser::load_f2_tx_config(std::string file_path, BeamformerParams* params)
 
     field_p = mxGetField(struct_array, 0, defs::sims::focus_name.c_str());
     double* src_locs = (double*)mxGetDoubles(field_p);
-    params->focus[0] = src_locs[0];
-    params->focus[1] = src_locs[1];
-    params->focus[2] = src_locs[2];
+    params->focus[0] = (float)src_locs[0];
+    params->focus[1] = (float)src_locs[1];
+    params->focus[2] = (float)src_locs[2];
 
 
     success = true;

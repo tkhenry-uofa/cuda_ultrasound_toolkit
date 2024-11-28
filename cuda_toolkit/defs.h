@@ -33,18 +33,15 @@
 #define SCALAR_ABS(x)         ((x) < 0 ? -(x) : (x))
 #define SCALE_F2(v, a) {v.x * a, v.y * a};
 
-
 #define NORM_F2(v) (sqrtf( v.x * v.x + v.y * v.y))
 #define NORM_F3(v) (sqrtf( v.x * v.x + v.y * v.y + v.z * v.z))
 #define ADD_F2(v,u) {(v).x + (u).x, (v).y + (u).y}
-
 
 typedef unsigned long long int uint64;
 typedef unsigned int uint;
 typedef int16_t i16;
 typedef uint16_t u16;
 typedef std::vector<std::complex<float>> ComplexVectorF;
-
 
 struct BufferMapping
 {
