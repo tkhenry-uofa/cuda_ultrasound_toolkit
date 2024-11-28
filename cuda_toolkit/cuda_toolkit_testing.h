@@ -2,6 +2,7 @@
 #define CUDA_TOOLKIT_TESTING_H
 
 #include <stdint.h>
+#include <cuComplex.h>
 
 #include "cuda_toolkit.h"
 
@@ -74,11 +75,11 @@ EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, co
 EXPORT_FN bool test_convert_and_decode(const int16_t* input, const PipelineParams params, complex_f** complex_out, complex_f** intermediate);
 
 
-EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, float** volume);
+EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, cuComplex** volume);
 
-EXPORT_FN bool readi_beamform_raw(const int16_t* input, PipelineParams params, float** volume);
+EXPORT_FN bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex** volume);
 
-EXPORT_FN bool fully_sampled_beamform(const float* input, PipelineParams params, float** volume);
+EXPORT_FN bool fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** volume);
 
 
 

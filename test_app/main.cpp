@@ -125,7 +125,7 @@ bool beamform_from_fieldii()
 		}
 	}
 
-	float* volume = nullptr;
+	cuComplex* volume = nullptr;
 	std::cout << "Processing" << std::endl;
 
 	auto start = std::chrono::high_resolution_clock::now();
@@ -201,7 +201,7 @@ bool test_beamforming()
 		z_count++;
 	}
 
-	float* volume = nullptr;
+	cuComplex* volume = nullptr;
 	std::cout << "Processing" << std::endl;
 
 	size_t vol_dims[3] = { x_count, y_count, z_count };
@@ -231,6 +231,7 @@ bool readi_beamform()
 	BeamformerParametersFull* full_bp = nullptr;
 	Handle input_pipe = nullptr;
 
+	std::cout << "Main: Creating smem and input pipe." << std::endl;
 	bool result = matlab_transfer::create_resources(&full_bp, &input_pipe);
 	
 	if (!result)
@@ -256,12 +257,12 @@ bool readi_beamform()
 	// TODO: Unify structs and types so I don't have to deal with this 
 	PipelineParams params = convert_params(full_bp);
 
-	float* volume = nullptr;
-	size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(float);
+	cuComplex* volume = nullptr;
+	size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
 
 	hero_raw_to_beamform(data_buffer, params, &volume);
 
-	volume[0] = 54.0f;
+	volume[0].x = 54.0f;
 
 	matlab_transfer::_write_to_pipe(PIPE_OUTPUT_NAME, volume, output_size);
 

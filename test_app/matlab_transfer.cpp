@@ -18,7 +18,8 @@ matlab_transfer::_write_to_pipe(char* name, void* data, uint len)
 	HANDLE pipe = CreateFileA(name, GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
 
 	DWORD bytes_written;
-	WriteFile(pipe, data, len, &bytes_written, 0);
+	BOOL result = WriteFile(pipe, data, len, &bytes_written, 0);
+
 	return (uint)bytes_written;
 }
 

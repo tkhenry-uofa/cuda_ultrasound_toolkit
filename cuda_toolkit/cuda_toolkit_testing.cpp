@@ -82,7 +82,7 @@ bool test_convert_and_decode(const int16_t* input, const PipelineParams params, 
 	return true;
 }
 
-bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, float** volume)
+bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, cuComplex** volume)
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
@@ -117,17 +117,17 @@ bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, float** v
 	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 
 	
-	float* d_volume;
+	cuComplex* d_volume;
 
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float) * 2));
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
-	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
+	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(float)*2);
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float) * 2, cudaMemcpyDefault));
 
 	cudaFree(d_input);
 
@@ -135,7 +135,7 @@ bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, float** v
 }
 
 bool 
-fully_sampled_beamform(const float* input, PipelineParams params, float** volume)
+fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** volume)
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
@@ -158,14 +158,14 @@ fully_sampled_beamform(const float* input, PipelineParams params, float** volume
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_count * sizeof(cuComplex)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input_c, total_count * sizeof(cuComplex), cudaMemcpyDefault));
 
-	float* d_volume;
+	cuComplex* d_volume;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	beamformer::beamform(d_volume, d_input, *(float3*)params.focus, samples_per_meter);
 
-	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
+	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(float));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
 
 
 	return true;
@@ -173,7 +173,7 @@ fully_sampled_beamform(const float* input, PipelineParams params, float** volume
 
 
 
-bool readi_beamform_raw(const int16_t* input, PipelineParams params, float** volume)
+bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex** volume)
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
@@ -207,7 +207,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, float** vol
 	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 
 
-	float* d_volume;
+	cuComplex* d_volume;
 
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(float)));
 
@@ -216,8 +216,8 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, float** vol
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
-	*volume = (float*)malloc(vol_config.total_voxels * sizeof(float));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(float), cudaMemcpyDefault));
+	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
 
 	cudaFree(d_input);
 

@@ -15,11 +15,11 @@ namespace beamformer
 			f_num_aprodization(float lateral_dist_ratio, float depth, float f_num);
 
 		__global__ void
-			double_loop(const cuComplex* rfData, float* volume, float samples_per_meter, uint64* times);
+			double_loop(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint64* times);
 	}
 
 	bool configure_volume(VolumeConfiguration* config);
-	bool beamform(float* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter);
+	bool beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter);
 }
 
 #endif // !BEAMFORMER_CUH
