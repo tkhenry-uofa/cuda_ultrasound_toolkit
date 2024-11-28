@@ -138,7 +138,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 			if (t == 0) value = SCALE_F2(value, I_SQRT_128);
 
 			apro_argument = NORM_F2(lateral_ratios);
-			apro = f_num_aprodization(apro_argument, apro_depth, 1.5);
+			//apro = f_num_aprodization(apro_argument, apro_depth, 1.5);
 			//value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
@@ -184,6 +184,8 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 
 	VolumeConfiguration vol_config = Session.volume_configuration;
 
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	KernelConstants consts =
 	{
@@ -224,8 +226,6 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
-
-	std::cout << "First volume value: " << sample_value((float*)d_volume) << std::endl;
 
 	return true;
 

@@ -243,10 +243,8 @@ bool readi_beamform()
 	i16* data_buffer = nullptr;
 	uint bytes_read = 0;
 
-	uint timeout = 20000; // 20s
+	uint timeout = 120000; // 2 mins
 	result = matlab_transfer::wait_for_data(input_pipe, (void**)&data_buffer, &bytes_read, timeout);
-
-	std::cout << "Received data, transmit count: " << full_bp->raw.dec_data_dim.z << std::endl;
 
 	if (!result)
 	{
@@ -260,7 +258,8 @@ bool readi_beamform()
 	cuComplex* volume = nullptr;
 	size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
 
-	hero_raw_to_beamform(data_buffer, params, &volume);
+	std::cout << "Starting pipeline" << std::endl;
+	readi_beamform_raw(data_buffer, params, &volume);
 
 	volume[0].x = 54.0f;
 

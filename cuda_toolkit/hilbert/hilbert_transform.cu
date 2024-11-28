@@ -65,8 +65,14 @@ hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
 	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_output));
+
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	//hilbert::f_domain_filter(d_output, 1350);
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
+
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	return true;
 }
 
@@ -77,8 +83,6 @@ hilbert::hilbert_transform_strided(float* d_input, cuComplex* d_output)
 
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
-
-
 	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.strided_plan, d_input, d_output));
 
 	float scale = 1 / ((float)Session.decoded_dims.x / 2);
@@ -86,7 +90,7 @@ hilbert::hilbert_transform_strided(float* d_input, cuComplex* d_output)
 	float* sample = (float*)d_output;
 	///std::cout << "First input value: Re:" << sample_value(d_input+ Session.decoded_dims.x) << " Im: " << sample_value(d_input+1+ Session.decoded_dims.x) << std::endl;
 	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
-	hilbert::f_domain_filter(d_output, Session.decoded_dims.x/2);
+	//hilbert::f_domain_filter(d_output, Session.decoded_dims.x/2);
 	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
 	//hilbert::f_domain_filter(d_output, 1350);
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
@@ -100,7 +104,7 @@ hilbert::hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_in
 	float* sample = (float*)d_intermediate;
 	hilbert::f_domain_filter(d_intermediate, Session.decoded_dims.x / 2-1);
 	///std::cout << "First input value: Re:" << sample_value(d_input+ Session.decoded_dims.x) << " Im: " << sample_value(d_input+1+ Session.decoded_dims.x) << std::endl;
-	std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) << std::endl;
+	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) << std::endl;
 	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_intermediate, d_output, CUFFT_INVERSE));
 	return true;
 }
