@@ -20,6 +20,11 @@ matlab_transfer::_write_to_pipe(char* name, void* data, uint len)
 	DWORD bytes_written;
 	BOOL result = WriteFile(pipe, data, len, &bytes_written, 0);
 
+	if (!result)
+	{
+		std::cout << "Write error: " << GetLastError() << std::endl;
+	}
+
 	return (uint)bytes_written;
 }
 
@@ -77,7 +82,7 @@ matlab_transfer::create_resources(BeamformerParametersFull** bp_full, Handle* in
 	return true;
 }
 bool 
-matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes, uint timeout)
+matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes_read, uint timeout)
 {
 
 	uint elapsed = 0;
@@ -95,7 +100,7 @@ matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes, uint timeo
 		if (pipe_ready && bytes_available > 0)
 		{
 			*data = malloc(bytes_available);
-			*bytes = _read_pipe(pipe, *data, bytes_available);
+			*bytes_read = _read_pipe(pipe, *data, bytes_available);
 			return true;
 		}
 		else

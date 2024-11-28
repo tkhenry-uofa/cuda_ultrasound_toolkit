@@ -153,12 +153,12 @@ hadamard::readi_decode(const float* d_input, float* d_output, int group_number)
 	int group_size = 8;
 	int group_count = 16;
 
-	float* hadamard_slice;
-	cudaMalloc(&hadamard_slice, row_count * group_size * sizeof(float));
+	float* d_hadamard_slice;
+	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));
 
 	int hadamard_offset = group_number * group_size; 
 
-	cudaMemcpy(hadamard_slice, d_input + hadamard_offset, group_size * sizeof(float), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(d_hadamard_slice, Session.d_hadamard + hadamard_offset, group_size * sizeof(float), cudaMemcpyDeviceToDevice);
 
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;
@@ -167,7 +167,7 @@ hadamard::readi_decode(const float* d_input, float* d_output, int group_number)
 	//float alpha = 1/((float)dims.x/2);
 	float beta = 0.0f;
 
-	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, row_count, group_size, &alpha, d_input, tx_size, Session.d_hadamard, dims.z, &beta, d_output, tx_size));
+	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, row_count, group_size, &alpha, d_input, tx_size, d_hadamard_slice, group_size, &beta, d_output, tx_size));
 
 
 	return true;
