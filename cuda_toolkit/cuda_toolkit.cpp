@@ -171,7 +171,6 @@ bool
 cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 {
 	Session.channel_offset = channel_offset;
-	std::cout << "Input offset: " << input_offset << std::endl;
 	if (!Session.init)
 	{
 		std::cout << "Session not initialized" << std::endl;
@@ -199,17 +198,8 @@ cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 
 	d_input = d_input + input_offset / sizeof(i16);
 
-	std::cout << "Channel offset: " << Session.channel_offset << std::endl;
-
-	std::cout << "First input value: " << sample_value_i16(d_input) << std::endl;
-
-
 	i16_to_f::convert_data(d_input, Session.d_converted);
-
-	std::cout << "First converted value: " << sample_value(Session.d_converted) << std::endl;
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
-
-	std::cout << "First decoded value: " << sample_value(Session.d_decoded) << std::endl;
 
 	// Insert 0s between each value for their imaginary components
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, total_count * sizeof(cuComplex)));

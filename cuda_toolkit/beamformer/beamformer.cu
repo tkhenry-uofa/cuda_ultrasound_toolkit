@@ -112,17 +112,16 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, float* volume, float 
 	int mixes_number = 128/8;
 	//int mixes_offset = 0;
 	int mixes_offset = mixes_number / 2;
-	int mixes_pivot = Constants.channel_count / 2;
 	for (int t = 0; t < 128; t++)
 	{
 		for (int e = 0; e < 128; e++)
 		{
-			if (!offset_mixes(t, e, mixes_number, mixes_offset, 64))
-			{
-				rx_vec.y += element_pitch;
-				channel_offset += sample_count;
-				continue;
-			}
+			//if (!offset_mixes(t, e, mixes_number, mixes_offset, 64))
+			//{
+			//	rx_vec.y += element_pitch;
+			//	channel_offset += sample_count;
+			//	continue;
+			//}
 
 			float2 lateral_ratios;
 			if (diverging)

@@ -14,6 +14,9 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 {
 	PipelineParams params;
 	BeamformerParameters bp = full_bp->raw;
+
+	params.focus[0] = 0.0f;
+	params.focus[1] = 0.0f;
 	params.focus[2] = bp.focal_depth;
 
 	params.pulse_delay = bp.time_offset;
@@ -64,7 +67,7 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	params.array_params.xdc_maxes[1] = bp.xdc_corner2[1];
 
 	float width = params.array_params.xdc_maxes[0] - params.array_params.xdc_mins[0];
-	params.array_params.pitch = params.array_params.row_count / width;
+	params.array_params.pitch = width / params.array_params.row_count;
 
 	return params;
 }
@@ -239,8 +242,10 @@ bool readi_beamform()
 	i16* data_buffer = nullptr;
 	uint bytes_read = 0;
 
-	uint timeout = 10000; // 10s
+	uint timeout = 20000; // 20s
 	result = matlab_transfer::wait_for_data(input_pipe, (void**)&data_buffer, &bytes_read, timeout);
+
+	std::cout << "Received data, transmit count: " << full_bp->raw.dec_data_dim.z << std::endl;
 
 	if (!result)
 	{
@@ -252,12 +257,17 @@ bool readi_beamform()
 	PipelineParams params = convert_params(full_bp);
 
 	float* volume = nullptr;
+	size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(float);
 
 	hero_raw_to_beamform(data_buffer, params, &volume);
 
+	volume[0] = 54.0f;
+
+	matlab_transfer::_write_to_pipe(PIPE_OUTPUT_NAME, volume, output_size);
+
 	std::cout << "Beamforming done." << std::endl;
 
-	
+	return true;
 }
 
 int main()

@@ -92,7 +92,7 @@ bool parser::parse_bp_struct(std::string file_path, PipelineParams* params)
     if (field_p)
     {
         double_mx = (double*)mxGetDoubles(field_p);
-        params->rx_cols = (*double_mx > 0);
+        params->channel_offset = (uint)*double_mx;
     }
     else
     {
