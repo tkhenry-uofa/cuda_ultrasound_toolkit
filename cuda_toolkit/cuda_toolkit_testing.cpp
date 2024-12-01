@@ -199,8 +199,16 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
 
+	// Recreate the fft plans for readi subgroup sized batches
+	// TODO: Do this in a better way
+	cufftDestroy(Session.forward_plan);
+	cufftDestroy(Session.inverse_plan);
+	cufftDestroy(Session.strided_plan);
+
+	hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
+
 	i16_to_f::convert_data(d_input, Session.d_converted);
-	hadamard::readi_decode(Session.d_converted, Session.d_decoded, 1);
+	hadamard::readi_decode(Session.d_converted, Session.d_decoded, params.readi_group_id, params.readi_group_size);
 	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
 
 	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));

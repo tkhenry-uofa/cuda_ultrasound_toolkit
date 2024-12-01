@@ -13,10 +13,8 @@ matlab_transfer::_nack_response()
 }
 
 uint
-matlab_transfer::_write_to_pipe(char* name, void* data, uint len)
+matlab_transfer::write_to_pipe(Handle pipe, void* data, uint len)
 {
-	HANDLE pipe = CreateFileA(name, GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
-
 	DWORD bytes_written;
 	BOOL result = WriteFile(pipe, data, len, &bytes_written, 0);
 
@@ -27,6 +25,7 @@ matlab_transfer::_write_to_pipe(char* name, void* data, uint len)
 
 	return (uint)bytes_written;
 }
+
 
 
 void*
@@ -41,18 +40,11 @@ matlab_transfer::_open_shared_memory_area(char* name, size cap)
 
 
 Handle
-matlab_transfer::_open_named_pipe(char* name)
+matlab_transfer::open_output_pipe(char* name)
 {
-	return (HANDLE)CreateNamedPipeA(name, PIPE_ACCESS_INBOUND, PIPE_TYPE_BYTE, 1,
-		0, 1 * MEGABYTE, 0, 0);
+	return CreateFileA(name, GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
 }
 
-int 
-matlab_transfer::_poll_pipe(Handle p)
-{
-	DWORD bytes_available = 0;
-	return (int)(PeekNamedPipe(p, 0, 1 * MEGABYTE, 0, &bytes_available, 0) && bytes_available);
-}
 
 uint 
 matlab_transfer::_read_pipe(Handle pipe, void* buf, size len)
@@ -101,6 +93,8 @@ matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes_read, uint 
 		{
 			*data = malloc(bytes_available);
 			*bytes_read = _read_pipe(pipe, *data, bytes_available);
+
+
 			return true;
 		}
 		else

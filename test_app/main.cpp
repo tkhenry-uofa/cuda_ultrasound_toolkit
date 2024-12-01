@@ -69,6 +69,9 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	float width = params.array_params.xdc_maxes[0] - params.array_params.xdc_mins[0];
 	params.array_params.pitch = width / params.array_params.row_count;
 
+	params.readi_group_id = bp.readi_group_id;
+	params.readi_group_size = bp.readi_group_size;
+
 	return params;
 }
 
@@ -230,6 +233,7 @@ bool readi_beamform()
 {
 	BeamformerParametersFull* full_bp = nullptr;
 	Handle input_pipe = nullptr;
+	Handle output_pipe = nullptr;
 
 	std::cout << "Main: Creating smem and input pipe." << std::endl;
 	bool result = matlab_transfer::create_resources(&full_bp, &input_pipe);
@@ -252,6 +256,14 @@ bool readi_beamform()
 		return false;
 	}
 
+	// Now that we know matlab is up we can connect to the output pipe
+	output_pipe = matlab_transfer::open_output_pipe(PIPE_OUTPUT_NAME);
+	if (output_pipe == nullptr)
+	{
+		std::cout << "Error opening export pipe to matlab." << std::endl;
+		return false;
+	}
+
 	// TODO: Unify structs and types so I don't have to deal with this 
 	PipelineParams params = convert_params(full_bp);
 
@@ -263,7 +275,7 @@ bool readi_beamform()
 
 	volume[0].x = 54.0f;
 
-	matlab_transfer::_write_to_pipe(PIPE_OUTPUT_NAME, volume, output_size);
+	matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
 
 	std::cout << "Beamforming done." << std::endl;
 

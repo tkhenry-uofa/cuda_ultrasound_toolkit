@@ -52,6 +52,9 @@ typedef struct {
 	// First half are rows, second half are columns
 	u16 channel_mapping[256];
 
+	uint readi_group_id;
+	uint readi_group_size;
+
 
 	// Where in the rf data to start reading
 	u16 channel_offset;

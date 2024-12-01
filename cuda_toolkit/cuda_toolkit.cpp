@@ -48,6 +48,7 @@ _cleanup_session()
 	cublasDestroy(Session.cublas_handle);
 	cufftDestroy(Session.forward_plan);
 	cufftDestroy(Session.inverse_plan);
+	cufftDestroy(Session.strided_plan);
 
 	if (Session.channel_mapping)
 	{
@@ -103,8 +104,7 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 ch
 		CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(Session.d_decoded), decoded_size * sizeof(float)));
 		CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(Session.d_complex), decoded_size * sizeof(cuComplex)));
 
-		// TODO: Get full transmit count from somewhere else because decoded_dims[2] will be the group size for readi
-		bool success = hadamard::generate_hadamard(128, &(Session.d_hadamard));
+		bool success = hadamard::generate_hadamard(Session.decoded_dims.z, &(Session.d_hadamard));
 
 		Session.hadamard_generated = success;
 

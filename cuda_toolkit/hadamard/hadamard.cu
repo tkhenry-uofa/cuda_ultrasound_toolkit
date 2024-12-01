@@ -146,12 +146,10 @@ hadamard::hadamard_decode(const float* d_input, float* d_output)
 }
 
 __host__ bool
-hadamard::readi_decode(const float* d_input, float* d_output, int group_number)
+hadamard::readi_decode(const float* d_input, float* d_output, uint group_number, uint group_size)
 {
 
-	int row_count = 128;
-	int group_size = 8;
-	int group_count = 16;
+	uint row_count = Session.decoded_dims.z;
 
 	float* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));

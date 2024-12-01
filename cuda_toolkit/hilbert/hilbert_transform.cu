@@ -48,7 +48,7 @@ hilbert::plan_hilbert(int sample_count, int channel_count)
 	int data_length = sample_count * channel_count;
 	int double_l = data_length * 2;
 
-	CUFFT_THROW_IF_ERR(cufftEstimateMany(1, &sample_count, &sample_count, 1, sample_count, &sample_count, 1, sample_count, CUFFT_R2C, channel_count, &work_size));
+	//CUFFT_THROW_IF_ERR(cufftEstimateMany(1, &sample_count, &sample_count, 1, sample_count, &sample_count, 1, sample_count, CUFFT_R2C, channel_count, &work_size));
 
 	CUFFT_THROW_IF_ERR(cufftPlanMany(&(Session.forward_plan), 1, &sample_count, &data_length, 1, sample_count, &data_length, 1, sample_count, CUFFT_R2C, channel_count));
 	CUFFT_THROW_IF_ERR(cufftPlanMany(&(Session.inverse_plan), 1, &sample_count, NULL, 1, 0, NULL, 1, 0, CUFFT_C2C, channel_count));
