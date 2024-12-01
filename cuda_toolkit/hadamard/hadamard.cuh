@@ -19,7 +19,7 @@ namespace hadamard
 	generate_hadamard(uint size, float** dev_ptr);
 
 	__host__ bool
-	readi_decode(const float* d_input, float* d_output, int group_number);
+	readi_decode(const float* d_input, float* d_output, uint group_number, uint group_size);
 
 	namespace _kernels
 	{
