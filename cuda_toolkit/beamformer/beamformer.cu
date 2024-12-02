@@ -203,7 +203,6 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	};
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
-
 	uint64 *times, *d_times;
 
 	times = (uint64*)malloc(2 * sizeof(uint64));
@@ -212,14 +211,12 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	uint3 vox_counts = vol_config.voxel_counts;
 	uint xy_count = vox_counts.x * vox_counts.y;
 	dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
-
 	dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
 	auto start = std::chrono::high_resolution_clock::now();
 
 	_kernels::double_loop << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
 	
-
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
@@ -228,6 +225,4 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
 
 	return true;
-
 }
-
