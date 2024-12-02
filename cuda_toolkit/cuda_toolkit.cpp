@@ -138,6 +138,7 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const 
 
 		if (changed)
 		{
+			std::cout << "configuration changed" << std::endl;
 			_cleanup_session();
 			return _init_session(input_dims, decoded_dims, channel_mapping);
 		}
