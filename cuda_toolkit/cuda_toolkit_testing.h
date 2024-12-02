@@ -82,6 +82,8 @@ EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, PipelineParams params,
 
 EXPORT_FN bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex** volume);
 
+EXPORT_FN bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** volume);
+
 EXPORT_FN bool fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** volume);
 
 

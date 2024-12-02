@@ -208,7 +208,11 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
 
 	i16_to_f::convert_data(d_input, Session.d_converted);
+
 	hadamard::readi_decode(Session.d_converted, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+
+	//hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
+
 	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
 
 	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
@@ -219,7 +223,73 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(cuComplex)));
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
+	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
 
+	std::cout << "Starting beamform" << std::endl;
+	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
+
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
+
+	cudaFree(d_input);
+
+	return true;
+}
+
+bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** volume)
+{
+	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
+	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
+	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
+	size_t total_raw_count = raw_data_dims.x * raw_data_dims.y;
+
+
+	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);
+
+	VolumeConfiguration vol_config;
+	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
+	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
+	vol_config.axial_resolution = params.vol_resolutions[2];
+	vol_config.lateral_resolution = params.vol_resolutions[0];
+
+	beamformer::configure_volume(&vol_config);
+
+	Session.volume_configuration = vol_config;
+
+	Session.element_pitch = params.array_params.pitch;
+
+	float *d_input;
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(float), cudaMemcpyHostToDevice));
+
+	// Recreate the fft plans for readi subgroup sized batches
+	// TODO: Do this in a better way
+	cufftDestroy(Session.forward_plan);
+	cufftDestroy(Session.inverse_plan);
+	cufftDestroy(Session.strided_plan);
+
+	hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
+
+	std::cout << "2855th input value: " << sample_value(d_input + 2854) << std::endl;
+
+	std::cout << "2855th second input value: " << sample_value(d_input + 2854 + 490368) << std::endl;
+
+	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+
+	std::cout << "2855th decoded value: " << sample_value(Session.d_decoded + 2854) << std::endl;
+
+	//hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
+
+	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+
+	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
+	//CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+
+	cuComplex* d_volume;
+
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(cuComplex)));
+
+	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
 
 	std::cout << "Starting beamform" << std::endl;

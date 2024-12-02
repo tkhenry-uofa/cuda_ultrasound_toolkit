@@ -127,7 +127,7 @@ struct MappedFileHandle {
 	void* file_view;
 };
 
-inline float sample_value(float* d_value)
+inline float sample_value(const float* d_value)
 {
     float sample = 0;
     cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(float), cudaMemcpyDeviceToHost);

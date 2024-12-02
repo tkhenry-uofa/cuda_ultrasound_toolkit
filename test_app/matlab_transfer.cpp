@@ -5,6 +5,13 @@
 #include "matlab_transfer.h"
 
 
+bool
+matlab_transfer::close_pipe(Handle pipe)
+{
+	BOOL result = CloseHandle(pipe);
+
+	return result;
+}
 
 bool
 matlab_transfer::_nack_response()
@@ -54,24 +61,21 @@ matlab_transfer::_read_pipe(Handle pipe, void* buf, size len)
 	return total_read;
 }
 
+bool
+matlab_transfer::create_input_pipe(Handle* pipe)
+{
+	*pipe = CreateNamedPipeA(PIPE_INPUT_NAME, PIPE_ACCESS_INBOUND, PIPE_TYPE_BYTE, 1, 0, 1 * MEGABYTE, 0, 0);
+
+	return *pipe != nullptr;
+}
+
 bool 
-matlab_transfer::create_resources(BeamformerParametersFull** bp_full, Handle* input_pipe)
+matlab_transfer::create_smem(BeamformerParametersFull** bp_full)
 {
 	// Gives a pointer directly to the shared memory 
 	*bp_full = (BeamformerParametersFull*)_open_shared_memory_area(SMEM_NAME, sizeof(BeamformerParametersFull));
-	
-	// Open the pipe so that it can be written to
-	*input_pipe = CreateNamedPipeA(PIPE_INPUT_NAME, PIPE_ACCESS_INBOUND, PIPE_TYPE_BYTE, 1, 0, 1 * MEGABYTE, 0, 0);
 
-	// TODO: Check individually and use GetLastError()
-
-	if (*input_pipe == nullptr || *bp_full == nullptr)
-	{
-		std::cout << "Matlab Transfer: Failed to create pipe and shared memory." << std::endl;
-
-		return false;
-	}
-	return true;
+	return *bp_full != nullptr;
 }
 bool 
 matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes_read, uint timeout)
@@ -93,7 +97,6 @@ matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes_read, uint 
 		{
 			*data = malloc(bytes_available);
 			*bytes_read = _read_pipe(pipe, *data, bytes_available);
-
 
 			return true;
 		}

@@ -229,6 +229,77 @@ bool test_beamforming()
 }
 
 
+bool readi_beamform_fii()
+{
+	BeamformerParametersFull* full_bp = nullptr;
+	Handle input_pipe = nullptr;
+	Handle output_pipe = nullptr;
+
+	std::cout << "Main: Creating smem and input pipe." << std::endl;
+	bool result = matlab_transfer::create_smem(&full_bp);
+
+	if (!result)
+	{
+		std::cout << "Main: Failed to create smem." << std::endl;
+		return false;
+	}
+
+	float* data_buffer = nullptr;
+	uint bytes_read = 0;
+
+	for (int g = 0; g < 16; g++)
+	{
+
+		std::cout << "Starting volume " << g + 1 << std::endl;
+		uint timeout = 120000; // 2 mins
+
+		result = matlab_transfer::create_input_pipe(&input_pipe);
+
+		if (!result)
+		{
+			std::cout << "Main: Failed to create input pipe." << std::endl;
+			return false;
+		}
+
+		result = matlab_transfer::wait_for_data(input_pipe, (void**)&data_buffer, &bytes_read, timeout);
+
+		if (!result)
+		{
+			std::cout << "Error reading data from matlab." << std::endl;
+			return false;
+		}
+
+		matlab_transfer::close_pipe(input_pipe);
+
+		// Now that we know matlab is up we can connect to the output pipe
+		output_pipe = matlab_transfer::open_output_pipe(PIPE_OUTPUT_NAME);
+		if (output_pipe == nullptr)
+		{
+			std::cout << "Error opening export pipe to matlab." << std::endl;
+			return false;
+		}
+
+		// TODO: Unify structs and types so I don't have to deal with this 
+		PipelineParams params = convert_params(full_bp);
+
+		cuComplex* volume = nullptr;
+		size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
+
+		std::cout << "Starting pipeline " << g + 1 << std::endl;
+		readi_beamform_fii(data_buffer, params, &volume);
+
+		free(data_buffer);
+
+		matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
+		matlab_transfer::close_pipe(output_pipe);
+
+		std::cout << "Volume " << g + 1 << " done." << std::endl;
+	}
+
+
+	return true;
+}
+
 bool readi_beamform()
 {
 	BeamformerParametersFull* full_bp = nullptr;
@@ -236,54 +307,72 @@ bool readi_beamform()
 	Handle output_pipe = nullptr;
 
 	std::cout << "Main: Creating smem and input pipe." << std::endl;
-	bool result = matlab_transfer::create_resources(&full_bp, &input_pipe);
+	bool result = matlab_transfer::create_smem(&full_bp);
 	
 	if (!result)
 	{
-		std::cout << "Main: Failed to create pipe and smem." << std::endl;
+		std::cout << "Main: Failed to create smem." << std::endl;
 		return false;
 	}
 
 	i16* data_buffer = nullptr;
 	uint bytes_read = 0;
 
-	uint timeout = 120000; // 2 mins
-	result = matlab_transfer::wait_for_data(input_pipe, (void**)&data_buffer, &bytes_read, timeout);
-
-	if (!result)
+	for (int g = 0; g < 16; g++)
 	{
-		std::cout << "Error reading data from matlab." << std::endl;
-		return false;
+
+		std::cout << "Starting volume " << g + 1 << std::endl;
+		uint timeout = 120000; // 2 mins
+
+		result = matlab_transfer::create_input_pipe(&input_pipe);
+
+		if (!result)
+		{
+			std::cout << "Main: Failed to create input pipe." << std::endl;
+			return false;
+		}
+
+		result = matlab_transfer::wait_for_data(input_pipe, (void**)&data_buffer, &bytes_read, timeout);
+
+		if (!result)
+		{
+			std::cout << "Error reading data from matlab." << std::endl;
+			return false;
+		}
+
+		matlab_transfer::close_pipe(input_pipe);
+
+		// Now that we know matlab is up we can connect to the output pipe
+		output_pipe = matlab_transfer::open_output_pipe(PIPE_OUTPUT_NAME);
+		if (output_pipe == nullptr)
+		{
+			std::cout << "Error opening export pipe to matlab." << std::endl;
+			return false;
+		}
+
+		// TODO: Unify structs and types so I don't have to deal with this 
+		PipelineParams params = convert_params(full_bp);
+
+		cuComplex* volume = nullptr;
+		size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
+
+		std::cout << "Starting pipeline " << g + 1 << std::endl;
+		readi_beamform_raw(data_buffer, params, &volume);
+
+		free(data_buffer);
+
+		matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
+		matlab_transfer::close_pipe(output_pipe);
+
+		std::cout << "Volume " << g + 1 << " done." << std::endl;
 	}
 
-	// Now that we know matlab is up we can connect to the output pipe
-	output_pipe = matlab_transfer::open_output_pipe(PIPE_OUTPUT_NAME);
-	if (output_pipe == nullptr)
-	{
-		std::cout << "Error opening export pipe to matlab." << std::endl;
-		return false;
-	}
-
-	// TODO: Unify structs and types so I don't have to deal with this 
-	PipelineParams params = convert_params(full_bp);
-
-	cuComplex* volume = nullptr;
-	size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
-
-	std::cout << "Starting pipeline" << std::endl;
-	readi_beamform_raw(data_buffer, params, &volume);
-
-	volume[0].x = 54.0f;
-
-	matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
-
-	std::cout << "Beamforming done." << std::endl;
-
+	
 	return true;
 }
 
 int main()
 {
-	bool result = readi_beamform();
+	bool result = readi_beamform_fii();
 	return !result;
 }

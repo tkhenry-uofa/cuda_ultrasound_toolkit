@@ -154,27 +154,37 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 	float* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));
 
-	int hadamard_offset = group_number * group_size; 
-
-	cudaMemcpy(d_hadamard_slice, Session.d_hadamard + hadamard_offset, group_size * sizeof(float), cudaMemcpyDeviceToDevice);
+	int hadamard_offset = (group_number-1) * group_size * row_count; 
 
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;
+
+	cudaMemcpy(d_hadamard_slice, Session.d_hadamard + hadamard_offset, group_size * row_count * sizeof(float), cudaMemcpyDeviceToDevice);
+
+	//std::cout << "First input value : " << sample_value(d_input) << std::endl;
+	//std::cout << "Second channel input value : " << sample_value(d_input + dims.x) << std::endl;
+	//std::cout << "Second Tx input value : " << sample_value(d_input + tx_size) << std::endl;
 
 	float alpha = 1.0f;
 	//float alpha = 1/((float)dims.x/2);
 	float beta = 0.0f;
 
-	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, row_count, group_size, &alpha, d_input, tx_size, d_hadamard_slice, group_size, &beta, d_output, tx_size));
+	//std::cout << "HADAMARD SLICE" << std::endl;
+	//for (int i = 0; i < group_size; i++)
+	//{
+	//	for (int j = 0; j < dims.y; j++)
+	//	{
+	//		std::cout << sample_value(d_hadamard_slice + i * dims.y + j);
+	//	}
+	//	std::cout << std::endl;
+	//}
 
+	//std::cout << std::endl << std::endl;
+
+	//CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, group_size, &beta, d_output, tx_size));
+
+	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
 
 	return true;
 }
-
-
-
-
-
-
-
 
