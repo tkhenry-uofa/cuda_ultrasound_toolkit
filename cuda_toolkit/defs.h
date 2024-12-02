@@ -37,6 +37,8 @@
 #define NORM_F3(v) (sqrtf( v.x * v.x + v.y * v.y + v.z * v.z))
 #define ADD_F2(v,u) {(v).x + (u).x, (v).y + (u).y}
 
+
+
 typedef unsigned long long int uint64;
 typedef unsigned int uint;
 typedef int16_t i16;
@@ -76,7 +78,7 @@ struct CudaSession
     int16_t* d_input = nullptr;
     float* d_converted = nullptr;
     float* d_decoded = nullptr;
-    cufftComplex* d_complex = nullptr;
+    cuComplex* d_complex = nullptr;
     float* d_hadamard = nullptr;
 
     bool hadamard_generated = false;
@@ -151,6 +153,25 @@ inline i16 sample_value_i16(i16* d_value)
     return sample;
 }
 
+inline cuComplex sample_value_cplx(cuComplex* d_value)
+{
+    cuComplex sample;
+    cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(cuComplex), cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+    {
+        return { -1,-1 };
+    }
+    return sample;
+}
+
+inline std::string format_cplx(const cuComplex& value)
+{
+    char buffer[128];
+    std::snprintf(buffer, sizeof(buffer), "Re: %e, Im: %e", value.x, value.y);
+    return std::string(buffer);
+}
+
+#define PRINT_CPLX(value) format_cplx(value).c_str()
 
 
 

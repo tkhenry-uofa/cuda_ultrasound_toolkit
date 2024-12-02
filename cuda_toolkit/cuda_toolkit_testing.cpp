@@ -268,22 +268,32 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	cufftDestroy(Session.inverse_plan);
 	cufftDestroy(Session.strided_plan);
 
+	int first_nonzero_index = 2854;
+	int second_ch_nonzero = 6682;
+	int second_transmit_nonzero = 490368 + first_nonzero_index;
+
 	hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
-
-	std::cout << "2855th input value: " << sample_value(d_input + 2854) << std::endl;
-
-	std::cout << "2855th second input value: " << sample_value(d_input + 2854 + 490368) << std::endl;
-
 	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
-
-	std::cout << "2855th decoded value: " << sample_value(Session.d_decoded + 2854) << std::endl;
-
+	
 	//hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
-
 	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+	// 
+	// 
+	//std::cout << std::endl;
+
+	//std::cout << "Ch1 Tx1 decoded: " << sample_value(Session.d_decoded + first_nonzero_index) << std::endl;
+	//std::cout << "Ch2 Tx1 decoded: " << sample_value(Session.d_decoded + second_ch_nonzero) << std::endl;
+	//std::cout << "Ch1 Tx2 decoded: " << sample_value(Session.d_decoded + second_transmit_nonzero) << std::endl;
+
+	//std::cout << std::endl;
 
 	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
 	//CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+
+	//std::cout << "Ch1 Tx1 hilbert: " << PRINT_CPLX(sample_value_cplx(Session.d_complex + first_nonzero_index)) << std::endl;
+	//std::cout << "Ch2 Tx1 hilbert: " << PRINT_CPLX(sample_value_cplx(Session.d_complex + second_ch_nonzero)) << std::endl;
+	//std::cout << "Ch1 Tx2 hilbert: " << PRINT_CPLX(sample_value_cplx(Session.d_complex + second_transmit_nonzero)) << std::endl;
+	//std::cout << std::endl;
 
 	cuComplex* d_volume;
 
@@ -294,6 +304,8 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	std::cout << "Starting beamform" << std::endl;
 	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
+
+	std::cout << "Volume value 335050: " << PRINT_CPLX(sample_value_cplx(d_volume + 335050)) << std::endl;
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));

@@ -293,7 +293,7 @@ bool readi_beamform_fii()
 		matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
 		matlab_transfer::close_pipe(output_pipe);
 
-		std::cout << "Volume " << g + 1 << " done." << std::endl;
+		std::cout << "Volume " << g + 1 << " done." << std::endl << std::endl;
 	}
 
 
@@ -373,6 +373,9 @@ bool readi_beamform()
 
 int main()
 {
-	bool result = readi_beamform_fii();
+	bool result = false;
+	//result = readi_beamform_fii();
+
+	result = readi_beamform();
 	return !result;
 }
