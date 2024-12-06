@@ -213,10 +213,10 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	//hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
-	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+	//hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
 
-	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
-	//CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 
 	cuComplex* d_volume;
 
@@ -248,12 +248,12 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	VolumeConfiguration vol_config;
 	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
-	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[2] };
+	vol_config.maximums = { params.vol_maxes[0], params.vol_maxes[1], params.vol_maxes[ 2] };
 	vol_config.axial_resolution = params.vol_resolutions[2];
 	vol_config.lateral_resolution = params.vol_resolutions[0];
 
 	beamformer::configure_volume(&vol_config);
-
+	vol_config.voxel_counts = *(uint3*) & params.vol_counts;
 	Session.volume_configuration = vol_config;
 
 	Session.element_pitch = params.array_params.pitch;
