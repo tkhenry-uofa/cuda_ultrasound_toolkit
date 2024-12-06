@@ -247,12 +247,16 @@ bool readi_beamform_fii()
 	float* data_buffer = nullptr;
 	uint bytes_read = 0;
 
-	for (int g = 0; g < 16; g++)
+
+
+	uint timeout = 2 * 60 * 60 * 1000; // 2 hours (for long simulations)
+
+	int max_beamforms = 1000; 
+	// No state is carried over between iterations so this can handle multiple runs
+	// All beasmforming settings come from the state of the shared memory
+	for (int g = 0; g < max_beamforms; g++)
 	{
-
 		std::cout << "Starting volume " << g + 1 << std::endl;
-		uint timeout = 120000; // 2 mins
-
 		result = matlab_transfer::create_input_pipe(&input_pipe);
 
 		if (!result)
@@ -374,8 +378,8 @@ bool readi_beamform()
 int main()
 {
 	bool result = false;
-	//result = readi_beamform_fii();
+	result = readi_beamform_fii();
 
-	result = readi_beamform();
+	//result = readi_beamform();
 	return !result;
 }
