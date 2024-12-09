@@ -6,6 +6,15 @@
 
 
 bool
+matlab_transfer::disconnect_pipe(Handle pipe)
+{
+	BOOL result = DisconnectNamedPipe(pipe);
+
+	return result;
+}
+
+
+bool
 matlab_transfer::close_pipe(Handle pipe)
 {
 	BOOL result = CloseHandle(pipe);
@@ -64,9 +73,15 @@ matlab_transfer::_read_pipe(Handle pipe, void* buf, size len)
 bool
 matlab_transfer::create_input_pipe(Handle* pipe)
 {
-	*pipe = CreateNamedPipeA(PIPE_INPUT_NAME, PIPE_ACCESS_INBOUND, PIPE_TYPE_BYTE, 1, 0, 1 * MEGABYTE, 0, 0);
+	*pipe = CreateNamedPipeA(PIPE_INPUT_NAME, PIPE_ACCESS_INBOUND, PIPE_TYPE_BYTE | PIPE_NOWAIT, 1, 0, 1 * MEGABYTE, 0, 0);
 
 	return *pipe != nullptr;
+}
+
+int
+matlab_transfer::last_error()
+{
+	return GetLastError();
 }
 
 bool 
@@ -78,7 +93,7 @@ matlab_transfer::create_smem(BeamformerParametersFull** bp_full)
 	return *bp_full != nullptr;
 }
 bool 
-matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes_read, uint timeout)
+matlab_transfer::wait_for_data(Handle pipe, void* data, uint* bytes_read, uint timeout)
 {
 
 	uint elapsed = 0;
@@ -91,20 +106,26 @@ matlab_transfer::wait_for_data(Handle pipe, void** data, uint* bytes_read, uint 
 
 	while (elapsed <= timeout)
 	{
-		pipe_ready = PeekNamedPipe(pipe, NULL, NULL, 0, &bytes_available, 0);
+		DWORD total_read = 0;
+		bool result = ReadFile(pipe, data, INPUT_MAX_BUFFER, &total_read, 0);
+		DWORD error = GetLastError();
 
-		if (pipe_ready && bytes_available > 0)
+		if (result && total_read > 0) 
 		{
-			*data = malloc(bytes_available);
-			*bytes_read = _read_pipe(pipe, *data, bytes_available);
-
+			*bytes_read = (uint)total_read;
 			return true;
 		}
-		else
+		else if (!result) 
 		{
-			Sleep(poll_period);
-			elapsed += poll_period;
+			if (error != ERROR_NO_DATA && error != ERROR_PIPE_LISTENING)
+			{
+				std::cout << "Input pipe error: " << error << " Message: " << ERROR_MSG(error);
+				return false;
+			}
 		}
+
+		Sleep(poll_period);
+		elapsed += poll_period;
 	}
 
 	std::cout << "Matlab Transfer: Timed out waiting for data from matlab." << std::endl;
