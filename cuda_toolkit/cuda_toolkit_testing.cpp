@@ -262,21 +262,33 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(float), cudaMemcpyHostToDevice));
 
-	// Recreate the fft plans for readi subgroup sized batches
-	// TODO: Do this in a better way
-	cufftDestroy(Session.forward_plan);
-	cufftDestroy(Session.inverse_plan);
-	cufftDestroy(Session.strided_plan);
+	//// Recreate the fft plans for readi subgroup sized batches
+	//// TODO: Do this in a better way
+	//cufftDestroy(Session.forward_plan);
+	//cufftDestroy(Session.inverse_plan);
+	//cufftDestroy(Session.strided_plan);
 
 	int first_nonzero_index = 2854;
 	int second_ch_nonzero = 6682;
 	int second_transmit_nonzero = 490368 + first_nonzero_index;
 
-	hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
+	//hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
+
 	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+	bool do_hilbert = true;
+	if (do_hilbert)
+	{
+		hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+	}
+	else
+	{
+		CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
+		CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+	}
 	
-	//hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
-	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+
+	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
+	//CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 	// 
 	// 
 	//std::cout << std::endl;
@@ -287,8 +299,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	//std::cout << std::endl;
 
-	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
-	//CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+	
 
 	//std::cout << "Ch1 Tx1 hilbert: " << PRINT_CPLX(sample_value_cplx(Session.d_complex + first_nonzero_index)) << std::endl;
 	//std::cout << "Ch2 Tx1 hilbert: " << PRINT_CPLX(sample_value_cplx(Session.d_complex + second_ch_nonzero)) << std::endl;

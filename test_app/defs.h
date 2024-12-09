@@ -10,6 +10,8 @@
 #define PIPE_OUTPUT_NAME "\\\\.\\pipe\\beamformer_output_fifo"
 #define SMEM_NAME "Local\\ogl_beamformer_parameters"
 
+#define INPUT_MAX_BUFFER 1000000000 // 1 Gb
+
 
 typedef void* Handle;
 
@@ -107,6 +109,25 @@ enum compute_shaders {
 
 #define MEGABYTE (1024ULL * 1024ULL)
 #define GIGABYTE (1024ULL * 1024ULL * 1024ULL)
+
+
+#define ERROR_MSG(err_code) \
+    ([](DWORD code) { \
+        LPSTR messageBuffer = nullptr; \
+        size_t size = FormatMessageA( \
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
+            NULL, \
+            code, \
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), \
+            (LPSTR)&messageBuffer, \
+            0, \
+            NULL \
+        ); \
+        if (size == 0) return std::string("Unknown error code: ") + std::to_string(code); \
+        std::string message(messageBuffer, size); \
+        LocalFree(messageBuffer); \
+        return message; \
+    })(err_code)
 
 
 #define MAX_BEAMFORMED_SAVED_FRAMES 16
