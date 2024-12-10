@@ -105,7 +105,7 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 ch
 
 		bool success = hadamard::generate_hadamard(decoded_dims[2], &(Session.d_hadamard));
 
-		assert(success);
+		Session.hadamard_generated = success;
 
 		uint fft_channel_count = decoded_dims[1] * decoded_dims[2];
 		uint sample_count = decoded_dims[0];
@@ -198,8 +198,10 @@ cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 
 	d_input = d_input + input_offset / sizeof(i16);
 
-	i16_to_f::convert_data(d_input, Session.d_converted);
-	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
+	bool result = i16_to_f::convert_data(d_input, Session.d_converted);
+	result = hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
+
+
 
 	// Insert 0s between each value for their imaginary components
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, total_count * sizeof(cuComplex)));
@@ -209,7 +211,7 @@ cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
-	return true;
+	return result;
 }
 
 bool

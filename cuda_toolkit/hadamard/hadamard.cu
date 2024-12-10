@@ -67,7 +67,10 @@ hadamard::_kernels::init_hadamard_matrix(float* matrix, int size)
 __host__ bool
 hadamard::generate_hadamard(uint size, float** dev_ptr)
 {
-	assert(ISPOWEROF2(size));
+	if (!(ISPOWEROF2(size)))
+	{
+		return false;
+	}
 
 	CUDA_NULL_FREE(*dev_ptr);
 
@@ -123,6 +126,13 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 __host__ bool 
 hadamard::hadamard_decode(const float* d_input, float* d_output)
 {
+
+	if (!Session.hadamard_generated)
+	{
+		std::cerr << "Hadamard: Attempted to decode without a valid hadamard matrix" << std::endl;
+		return false;
+	}
+
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;
 

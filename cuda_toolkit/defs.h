@@ -79,6 +79,8 @@ struct CudaSession
     cufftComplex* d_complex = nullptr;
     float* d_hadamard = nullptr;
 
+    bool hadamard_generated = false;
+
     BufferMapping raw_data_ssbo;
     BufferMapping* rf_data_ssbos = nullptr;
     uint rf_buffer_count;
