@@ -42,6 +42,7 @@ _cleanup_session()
 {
 	CUDA_NULL_FREE(Session.d_complex);
 	CUDA_NULL_FREE(Session.d_hadamard);
+	CUDA_NULL_FREE(Session.d_c_hadamard);
 	CUDA_NULL_FREE(Session.d_converted);
 	CUDA_NULL_FREE(Session.d_decoded);
 	CUDA_NULL_FREE(Session.d_input);

@@ -97,14 +97,4 @@ hilbert::hilbert_transform_strided(float* d_input, cuComplex* d_output)
 	return true;
 }
 
-__host__ bool
-hilbert::hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate)
-{
-	CUFFT_THROW_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_intermediate));
-	float* sample = (float*)d_intermediate;
-	hilbert::f_domain_filter(d_intermediate, Session.decoded_dims.x / 2-1);
-	///std::cout << "First input value: Re:" << sample_value(d_input+ Session.decoded_dims.x) << " Im: " << sample_value(d_input+1+ Session.decoded_dims.x) << std::endl;
-	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) << std::endl;
-	CUFFT_THROW_IF_ERR(cufftExecC2C(Session.inverse_plan, d_intermediate, d_output, CUFFT_INVERSE));
-	return true;
-}
+

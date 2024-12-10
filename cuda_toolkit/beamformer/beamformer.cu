@@ -184,9 +184,6 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 
 	VolumeConfiguration vol_config = Session.volume_configuration;
 
-	CUDA_RETURN_IF_ERROR(cudaGetLastError());
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
-
 	KernelConstants consts =
 	{
 		Session.decoded_dims.x,
