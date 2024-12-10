@@ -21,6 +21,9 @@ namespace hadamard
 	__host__ bool
 	readi_decode(const float* d_input, float* d_output, uint group_number, uint group_size);
 
+	__host__ bool
+	c_readi_decode(const cuComplex* d_input, cuComplex* d_output, uint group_number, uint group_size);
+
 	namespace _kernels
 	{
 		__global__ void

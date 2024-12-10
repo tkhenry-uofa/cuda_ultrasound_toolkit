@@ -95,7 +95,6 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 
 	_kernels::init_hadamard_matrix << <grid_dim, block_dim >> > (*dev_ptr, size);
 
-
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
@@ -161,29 +160,40 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 
 	cudaMemcpy(d_hadamard_slice, Session.d_hadamard + hadamard_offset, group_size * row_count * sizeof(float), cudaMemcpyDeviceToDevice);
 
-	//std::cout << "First input value : " << sample_value(d_input) << std::endl;
-	//std::cout << "Second channel input value : " << sample_value(d_input + dims.x) << std::endl;
-	//std::cout << "Second Tx input value : " << sample_value(d_input + tx_size) << std::endl;
-
 	float alpha = 1.0f;
 	//float alpha = 1/((float)dims.x/2);
 	float beta = 0.0f;
 
-	//std::cout << "HADAMARD SLICE" << std::endl;
-	//for (int i = 0; i < group_size; i++)
-	//{
-	//	for (int j = 0; j < dims.y; j++)
-	//	{
-	//		std::cout << sample_value(d_hadamard_slice + i * dims.y + j);
-	//	}
-	//	std::cout << std::endl;
-	//}
-
-	//std::cout << std::endl << std::endl;
-
-	//CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, group_size, &beta, d_output, tx_size));
-
 	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
+
+	return true;
+}
+
+__host__ bool
+hadamard::c_readi_decode(const cuComplex* d_input, cuComplex* d_output, uint group_number, uint group_size)
+{
+	uint row_count = Session.decoded_dims.z;
+
+	cuComplex* d_hadamard_slice;
+	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(cuComplex));
+
+	int hadamard_offset = (group_number - 1) * group_size * row_count;
+
+	std::cout << "Hadamard offset " << hadamard_offset << std::endl;
+
+	uint3 dims = Session.decoded_dims;
+	uint tx_size = dims.x * dims.y;
+
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_hadamard_slice, Session.d_c_hadamard + hadamard_offset, group_size * row_count * sizeof(cuComplex), cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+	cuComplex alpha = { 1.0f, 0.0f };
+	cuComplex beta = { 0.0f, 0.0f };
+
+	CUBLAS_THROW_IF_ERR(cublasCgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	return true;
 }

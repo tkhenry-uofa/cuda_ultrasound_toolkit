@@ -30,8 +30,6 @@ namespace hilbert
 	__host__ bool
 	hilbert_transform_strided(float* d_input, cuComplex* d_output);
 
-	__host__ bool
-	hilbert_transform2(float* d_input, cuComplex* d_output, cuComplex* d_intermediate);
 }
 
 

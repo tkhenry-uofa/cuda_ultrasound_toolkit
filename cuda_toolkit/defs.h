@@ -75,11 +75,17 @@ struct CudaSession
     cufftHandle inverse_plan;
     cufftHandle strided_plan;
 
+    cufftHandle readi_fwd_plan;
+    cufftHandle readi_inv_plan;
+
     int16_t* d_input = nullptr;
     float* d_converted = nullptr;
     float* d_decoded = nullptr;
     cuComplex* d_complex = nullptr;
     float* d_hadamard = nullptr;
+
+    cuComplex* d_cplx_encoded;
+    cuComplex* d_c_hadamard = nullptr;
 
     bool hadamard_generated = false;
 
