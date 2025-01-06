@@ -195,6 +195,8 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	Session.element_pitch = params.array_params.pitch;
 
+	Session.channel_offset = params.channel_offset;
+
 	i16* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
@@ -213,10 +215,10 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	//hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
-	//hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
 
-	CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+	/*CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));*/
 
 	cuComplex* d_volume;
 
@@ -226,7 +228,16 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
 
 	std::cout << "Starting beamform" << std::endl;
+	std::cout << "First value: " << sample_value_i16(d_input) << std::endl;
+	std::cout << "First converted value: " << sample_value(Session.d_converted) << std::endl;
+	std::cout << "First decoded value: " << sample_value(Session.d_decoded) << std::endl;
+	std::cout << "First complex value: " << sample_value((float*)Session.d_complex) << std::endl;
+
+
 	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
+
+	std::cout << "First volume value: " << sample_value((float*)d_volume) << std::endl;
+
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));

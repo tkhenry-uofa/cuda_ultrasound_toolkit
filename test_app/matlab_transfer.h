@@ -9,7 +9,7 @@ namespace matlab_transfer
 
 	bool _nack_response();
 
-	uint write_to_pipe(Handle pipe, void* data, uint len);
+	bool write_to_pipe(Handle pipe, void* data, uint len);
 
 	void* _open_shared_memory_area(char* name, size cap);
 
