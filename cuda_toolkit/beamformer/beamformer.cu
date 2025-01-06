@@ -138,8 +138,8 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 			if (t == 0) value = SCALE_F2(value, I_SQRT_128);
 
 			apro_argument = NORM_F2(lateral_ratios);
-			//apro = f_num_aprodization(apro_argument, apro_depth, 1.5);
-			//value = SCALE_F2(value, apro);
+			apro = f_num_aprodization(apro_argument, apro_depth, 1.0);
+			value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
 

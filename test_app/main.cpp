@@ -321,31 +321,32 @@ bool readi_beamform()
 
 	std::cout << "Main: Creating smem and input pipe." << std::endl;
 	bool result = matlab_transfer::create_smem(&full_bp);
-	
+
 	if (!result)
 	{
 		std::cout << "Main: Failed to create smem." << std::endl;
 		return false;
 	}
 
-	i16* data_buffer = nullptr;
+	i16* data_buffer = (i16*)malloc(INPUT_MAX_BUFFER);
 	uint bytes_read = 0;
+	uint timeout = 2 * 60 * 60 * 1000; // 2 hours (for long simulations)
 
-	for (int g = 0; g < 16; g++)
+	result = matlab_transfer::create_input_pipe(&input_pipe);
+
+	int max_beamforms = 1000;
+	// No state is carried over between iterations so this can handle multiple runs
+	// All beamforming settings come from the state of the shared memory
+	for (int g = 0; g < max_beamforms; g++)
 	{
-
 		std::cout << "Starting volume " << g + 1 << std::endl;
-		uint timeout = 120000; // 2 mins
-
-		result = matlab_transfer::create_input_pipe(&input_pipe);
-
 		if (!result)
 		{
 			std::cout << "Main: Failed to create input pipe." << std::endl;
 			return false;
 		}
 
-		result = matlab_transfer::wait_for_data(input_pipe, (void**)&data_buffer, &bytes_read, timeout);
+		result = matlab_transfer::wait_for_data(input_pipe, data_buffer, &bytes_read, timeout);
 
 		if (!result)
 		{
@@ -353,7 +354,20 @@ bool readi_beamform()
 			return false;
 		}
 
+		std::cout << "Restarting pipe" << std::endl;
+
+		matlab_transfer::disconnect_pipe(input_pipe);
 		matlab_transfer::close_pipe(input_pipe);
+		input_pipe = nullptr;
+		result = matlab_transfer::create_input_pipe(&input_pipe);
+
+		std::cout << "Created input pipe, last error: " << matlab_transfer::last_error() << std::endl;
+
+		if (!result)
+		{
+			std::cout << "Main: Failed to restart input pipe." << std::endl;
+			return false;
+		}
 
 		// Now that we know matlab is up we can connect to the output pipe
 		output_pipe = matlab_transfer::open_output_pipe(PIPE_OUTPUT_NAME);
@@ -372,23 +386,23 @@ bool readi_beamform()
 		std::cout << "Starting pipeline " << g + 1 << std::endl;
 		readi_beamform_raw(data_buffer, params, &volume);
 
-		free(data_buffer);
-
 		matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
+
 		matlab_transfer::close_pipe(output_pipe);
 
-		std::cout << "Volume " << g + 1 << " done." << std::endl;
+		std::cout << "Volume " << g + 1 << " done." << std::endl << std::endl;
 	}
 
-	
+	free(data_buffer);
+
 	return true;
 }
 
 int main()
 {
 	bool result = false;
-	result = readi_beamform_fii();
+	//result = readi_beamform_fii();
 
-	//result = readi_beamform();
+	result = readi_beamform();
 	return !result;
 }

@@ -13,18 +13,40 @@ beamformer::configure_volume(VolumeConfiguration* config)
 
 	uint x_count, y_count, z_count;
 	x_count = y_count = z_count = 0;
-	for (float x = config->minimums.x; x < config->maximums.x; x += config->lateral_resolution) {
+
+	float x_diff = abs(config->maximums.x - config->minimums.x);
+	float y_diff = abs(config->maximums.y - config->minimums.y);
+	float z_diff = abs(config->maximums.z - config->minimums.z);
+
+	x_count = (uint)floorf(x_diff/config->lateral_resolution);
+	y_count = (uint)floorf(y_diff/config->lateral_resolution);
+	z_count = (uint)floorf(z_diff/config->axial_resolution);
+
+	float dx = x_diff / x_count;
+	float dy = y_diff / y_count;
+	float dz = z_diff / z_count;
+
+	float x = config->minimums.x;
+	for (int i = 0; i < x_count; i++) 
+	{
 		x_range.push_back(x);
-		x_count++;
+		x += dx;
 	}
-	for (float y = config->minimums.y; y < config->maximums.y; y += config->lateral_resolution) {
+
+	float y = config->minimums.y;
+	for (int i = 0; i < y_count; i++) 
+	{
 		y_range.push_back(y);
-		y_count++;
+		y += dy;
 	}
-	for (float z = config->minimums.z; z < config->maximums.z; z += config->axial_resolution) {
+
+	float z = config->minimums.z;
+	for (int i = 0; i < z_count; i++) 
+	{
 		z_range.push_back(z);
-		z_count++;
+		z += dz;
 	}
+	
 
 	config->voxel_counts = { x_count, y_count, z_count };
 	config->total_voxels = x_count * y_count * z_count;
