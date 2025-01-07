@@ -102,7 +102,8 @@ bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, cuComplex
 
 	Session.volume_configuration = vol_config;
 
-	Session.element_pitch = params.array_params.pitch;
+	Session.pitches.x = params.array_params.pitch;
+	Session.pitches.y = params.array_params.pitch;
 
 	i16* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
@@ -150,7 +151,10 @@ fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** vo
 	beamformer::configure_volume(&vol_config);
 
 	Session.volume_configuration = vol_config;
-	Session.element_pitch = params.array_params.pitch;
+	
+	Session.pitches.x = params.array_params.pitch;
+	Session.pitches.y = params.array_params.pitch;
+
 	Session.pulse_delay = params.pulse_delay;
 	Session.decoded_dims = { params.decoded_dims[0] ,params.decoded_dims[1], params.decoded_dims[2] };
 
@@ -190,10 +194,22 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	vol_config.lateral_resolution = params.vol_resolutions[0];
 
 	beamformer::configure_volume(&vol_config);
+	vol_config.voxel_counts.x = params.vol_counts[0];
+	vol_config.voxel_counts.y = params.vol_counts[1];
+	vol_config.voxel_counts.z = params.vol_counts[2];
+
+	vol_config.total_voxels = vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
 
 	Session.volume_configuration = vol_config;
 
-	Session.element_pitch = params.array_params.pitch;
+	Session.pitches.x = params.array_params.pitch;
+	Session.pitches.y = params.array_params.pitch;
+
+	Session.xdc_mins.x = params.array_params.xdc_mins[0];
+	Session.xdc_mins.y = params.array_params.xdc_mins[1];
+
+	Session.xdc_maxes.x = params.array_params.xdc_maxes[0];
+	Session.xdc_maxes.y = params.array_params.xdc_maxes[1];
 
 	Session.channel_offset = params.channel_offset;
 
@@ -267,7 +283,14 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	vol_config.voxel_counts = *(uint3*) & params.vol_counts;
 	Session.volume_configuration = vol_config;
 
-	Session.element_pitch = params.array_params.pitch;
+	Session.pitches.x = params.array_params.pitch;
+	Session.pitches.y = params.array_params.pitch;
+
+	Session.xdc_mins.x = params.array_params.xdc_mins[0];
+	Session.xdc_mins.y = params.array_params.xdc_mins[1];	
+	
+	Session.xdc_maxes.x = params.array_params.xdc_maxes[0];
+	Session.xdc_maxes.y = params.array_params.xdc_maxes[1];
 
 	float *d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
