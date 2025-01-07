@@ -44,7 +44,7 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	params.vol_resolutions[1] = (params.vol_maxes[1] - params.vol_mins[1]) / params.vol_counts[1];
 	params.vol_resolutions[2] = (params.vol_maxes[2] - params.vol_mins[2]) / params.vol_counts[2];
 
-	for (int i = 0; i < 256; i++)
+	for (int i = 0; i < 512; i++)
 	{
 		params.channel_mapping[i] = bp.channel_mapping[i];
 	}

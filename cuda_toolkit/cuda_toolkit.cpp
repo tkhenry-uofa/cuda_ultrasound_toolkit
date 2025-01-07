@@ -127,6 +127,7 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 ch
 bool
 init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping)
 {
+	std::cout << "Init config" << std::endl;
 	if (!Session.init)
 	{
 		return _init_session(input_dims, decoded_dims, channel_mapping);
@@ -150,6 +151,7 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const 
 bool 
 register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
 {
+	std::cout << "Register buffers" << std::endl;
 	if (Session.rf_buffer_count != 0)
 	{
 		_unregister_cuda_buffers();
@@ -173,6 +175,7 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 bool
 cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 {
+	std::cout << "Decoding" << std::endl;
 	Session.channel_offset = channel_offset;
 	if (!Session.init)
 	{
@@ -220,6 +223,7 @@ cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 bool
 cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
 {
+	std::cout << "Hilbert" << std::endl;
 	if (!Session.init)
 	{
 		std::cout << "Session not initialized" << std::endl;

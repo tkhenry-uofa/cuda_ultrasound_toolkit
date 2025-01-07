@@ -50,7 +50,7 @@ typedef struct {
 
 	// Mapping verasonics channels to row and column numbers
 	// First half are rows, second half are columns
-	u16 channel_mapping[256];
+	u16 channel_mapping[512];
 
 	uint readi_group_id;
 	uint readi_group_size;

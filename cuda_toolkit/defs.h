@@ -98,7 +98,10 @@ struct CudaSession
     u16* channel_mapping = nullptr;
 
     float pulse_delay;
-	float element_pitch;
+    float2 pitches;
+
+    float2 xdc_mins;
+    float2 xdc_maxes;
 };
 
 extern CudaSession Session;
@@ -124,9 +127,11 @@ struct KernelConstants
 	float3 resolutions;
 	float3 src_pos;
 	TransmitType tx_type;
-	float element_pitch;
+    float2 pitches;
     float pulse_delay;
     float z_max;
+    float2 xdc_mins;
+    float2 xdc_maxes;
 };
 
 

@@ -68,7 +68,8 @@ matlab_transfer::write_to_pipe(Handle pipe, void* data, uint len)
 
 			if (pipe == INVALID_HANDLE_VALUE)
 			{
-				std::cout << "Failed to reopen output pipe after error." << std::endl;
+				error = GetLastError();
+				std::cout << "Failed to reopen output pipe after error: " << error << std::endl;
 
 			}
 

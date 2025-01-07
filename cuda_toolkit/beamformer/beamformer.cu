@@ -60,8 +60,6 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	uint y_voxel = xy_voxel / Constants.voxel_dims.x;
 	uint z_voxel = blockIdx.y;
 
-	float element_pitch = Constants.element_pitch;
-
 	size_t volume_offset = z_voxel * Constants.voxel_dims.x * Constants.voxel_dims.y + y_voxel * Constants.voxel_dims.x + x_voxel;
 
 	const float3 vox_loc =
@@ -71,29 +69,46 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 		Constants.volume_mins.z + z_voxel * Constants.resolutions.z,
 	};
 
-	float xdc_edge = 63.5f * element_pitch;
-
 	float apro_argument = 0;
 	float tx_distance = 0;
-	float max_lateral_dist = 0;
+	float2 max_lateral_dists = { 0,0 };
 	bool diverging = (Constants.src_pos.z < 0.0f);
-	if (diverging)
+	if (Constants.tx_type == TX_X_FOCUS)
 	{
 		tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.x - vox_loc.x, 2)) + Constants.src_pos.z;
-		float tx_angle = atan2f(xdc_edge, -Constants.src_pos.z);
-		max_lateral_dist = xdc_edge + vox_loc.z * tanf(tx_angle);
-		float2 lateral_ratios = { vox_loc.y / xdc_edge, vox_loc.x / max_lateral_dist };
+
+		float tx_angle = atan2f(Constants.xdc_maxes.x, -Constants.src_pos.z);
+
+		max_lateral_dists.x = Constants.xdc_maxes.x + vox_loc.z * tanf(tx_angle);
+		max_lateral_dists.y = Constants.xdc_maxes.y * 2;
+
+		float2 lateral_ratios = { vox_loc.x / max_lateral_dists.x , vox_loc.y / max_lateral_dists.y};
 		
 		if (lateral_ratios.x >= 1.0f || lateral_ratios.y >= 1.0f) return;
 		if (lateral_ratios.x <= -1.0f || lateral_ratios.y <= -1.0f) return;
 
-		apro_argument = NORM_F2(lateral_ratios);
-		apro_argument = fminf(apro_argument, 1);
+	}
+	else if (Constants.tx_type == TX_Y_FOCUS)
+	{
+		tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
+
+		float tx_angle = atan2f(Constants.xdc_maxes.y, -Constants.src_pos.z);
+
+
+		max_lateral_dists.x = Constants.xdc_maxes.x * 2;
+		max_lateral_dists.y = Constants.xdc_maxes.y + vox_loc.z * tanf(tx_angle);
+
+		float2 lateral_ratios = { vox_loc.x / max_lateral_dists.x , vox_loc.y / max_lateral_dists.y };
+
+		if (lateral_ratios.x >= 1.0f || lateral_ratios.y >= 1.0f) return;
+		if (lateral_ratios.x <= -1.0f || lateral_ratios.y <= -1.0f) return;
+
 	}
 	else
 	{
 		tx_distance = vox_loc.z;
-		max_lateral_dist = 2*xdc_edge;
+		max_lateral_dists.x = 2*Constants.xdc_maxes.x;
+		max_lateral_dists.y = 2*Constants.xdc_maxes.y;
 	}
 
 	float apro_depth = vox_loc.z / Constants.z_max;
@@ -102,40 +117,32 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	
 	uint delay_samples = 4*2*3/2;
 
-	float3 rx_vec = { -xdc_edge - vox_loc.x, -xdc_edge - vox_loc.y, vox_loc.z };
-	float starting_y = rx_vec.y;
+	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x, Constants.xdc_mins.y - vox_loc.y, vox_loc.z };
+
+	float starting_y = rx_vec.x;
 	float apro;
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
 
-	int mixes_number = 128/8;
+	int mixes_number = 128/32;
 	//int mixes_offset = 0;
 	int mixes_offset = mixes_number / 2;
-	for (int t = 0; t < 128; t++)
+	for (int t = 0; t < Constants.tx_count; t++)
 	{
-		for (int e = 0; e < 128; e++)
+		for (int e = 0; e < Constants.channel_count; e++)
 		{
 			//if (!offset_mixes(t, e, mixes_number, mixes_offset, 64))
 			//{
-			//	rx_vec.y += element_pitch;
+			//	rx_vec.x += Constants.pitches.x;
 			//	channel_offset += sample_count;
 			//	continue;
 			//}
 
-			float2 lateral_ratios;
-			if (diverging)
-			{
-				lateral_ratios = { rx_vec.x / max_lateral_dist, rx_vec.y / xdc_edge };
-			}
-			else
-			{
-				lateral_ratios = { rx_vec.x / max_lateral_dist, rx_vec.y / max_lateral_dist};
-			}
+			float2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
 
 			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
-			if (t == 0) value = SCALE_F2(value, I_SQRT_128);
 
 			apro_argument = NORM_F2(lateral_ratios);
 			apro = f_num_aprodization(apro_argument, apro_depth, 1.0);
@@ -143,12 +150,12 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 
 			total = ADD_F2(total, value);
 
-			rx_vec.y += element_pitch;
+			rx_vec.x += Constants.pitches.x;
 			channel_offset += sample_count;
 
 		}
-		rx_vec.x += element_pitch;
-		rx_vec.y = starting_y;
+		rx_vec.y += Constants.pitches.y;
+		rx_vec.x = starting_y;
 	}
 
 	float result = sqrtf(total.x * total.x + total.y * total.y);
@@ -168,13 +175,13 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 
 	TransmitType transmit_type;
 
-	if (focus_pos.z == 0.0f)
+	if (focus_pos.z == 0.0f || focus_pos.z == INFINITY)
 	{
 		transmit_type = TX_PLANE;
 	}
 	else if (Session.channel_offset > 0)
 	{
-		// TX on rows (x) axis so we have x focusing
+		// TX on columns (x) axis so we have x focusing
 		transmit_type = TX_X_FOCUS;
 	}
 	else
@@ -194,9 +201,11 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		{vol_config.lateral_resolution, vol_config.lateral_resolution, vol_config.axial_resolution},
 		focus_pos,
 		transmit_type,
-		Session.element_pitch,
+		Session.pitches,
 		Session.pulse_delay,
 		vol_config.maximums.z,
+		Session.xdc_mins,
+		Session.xdc_maxes
 	};
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
