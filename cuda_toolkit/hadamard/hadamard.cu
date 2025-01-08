@@ -6,6 +6,97 @@
 
 #include "hadamard.cuh"
 
+#define MAX_HADAMARD_SIZE 128
+
+/**
+* Takes in (S samples x C channels x T encoded transmits),
+* Sorts each transmit into a group by (T % group_size = group_number)
+* creating group_count sections.
+*
+* Each group is decoded using the rows and columns of the
+* hadamard matrix matching the transmits in the set.
+*
+* Each (S x C x group_size) decoded set of data represents a
+* (C x group_size) transducer with rectangular elements
+*
+* Each channels data should be a linear combination of the signal received
+* by (group_size) ajdacent elements in the encoded direction
+*
+* (Just staggering the decodes means that after the first group its not a sum
+* instead some elements are added and some are subtracted like in the hadamard matrix)
+*/
+
+/**
+* Thread Values: [number_in_group, group_id]
+* Block Values: [sample, channel]
+*/
+__global__ void
+hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d_output, const float* d_hadamard)
+{
+
+	__shared__ float samples[MAX_HADAMARD_SIZE];
+
+	int group_id = threadIdx.y;
+	int inGroup_id = threadIdx.x;
+	int tx_id = group_id * blockDim.x + inGroup_id;
+
+	int group_size = blockDim.x;
+	int group_count = blockDim.y;
+
+	int tx_count = blockDim.x * blockDim.y;
+	
+
+	int sample_id = blockIdx.x;
+	int channel_id = blockIdx.y;
+
+	size_t io_offset = tx_id * gridDim.x * gridDim.y + channel_id * gridDim.x + sample_id;
+
+	samples[tx_id] = d_input[io_offset];
+
+	
+
+	int group_ids[MAX_HADAMARD_SIZE];
+	int g = 0;
+	// Get what other tx's are in this group
+	for (int i = 0; i < tx_count; i++)
+	{
+		if (i % group_size == group_id)
+		{
+			group_ids[g] = i;
+			g++;
+		}
+	}
+
+	float hadamard_row[MAX_HADAMARD_SIZE];
+	int hadamard_row_offset = tx_count * tx_id;
+	float decoded_value = 0.0f;
+	for (int i = 0; i < group_size; i++)
+	{
+		int tx_id = group_ids[i];
+		decoded_value += samples[tx_id] * d_hadamard[tx_id + tx_id * tx_count];
+	}
+
+	d_output[io_offset] = decoded_value;
+
+}
+
+__host__ bool
+hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard, uint group_size, uint group_count)
+{
+
+	int tx_count = group_size * group_count;
+
+	dim3 grid_dim = { Session.decoded_dims.x, Session.decoded_dims.y, 1 };
+	dim3 block_dim = { group_size, group_count, 1 };
+
+	_kernels::readi_staggered_decode_kernel << <grid_dim, block_dim >> > (d_input, d_output, d_hadamard);
+	
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+	return true;
+}
+
 __global__ void
 hadamard::_kernels::generate_hadamard(float* hadamard, int prev_size, int final_size)
 {
@@ -65,33 +156,6 @@ hadamard::_kernels::init_hadamard_matrix(float* matrix, int size)
 }
 
 
-/** 
-* Takes in (S samples x C channels x T encoded transmits),
-* Sorts each transmit into a group by (T % group_size = group_number)
-* creating group_count sections.
-*
-* Each group is decoded using the rows and columns of the 
-* hadamard matrix matching the transmits in the set.
-* 
-* Each (S x C x group_size) decoded set of data represents a 
-* (C x group_size) transducer with rectangular elements
-* 
-* Each channels data should be a linear combination of the signal received 
-* by (group_size) ajdacent elements in the encoded direction 
-*
-* (Just staggering the decodes means that after the first group its not a sum 
-* instead some elements are added and some are subtracted like in the hadamard matrix) 
-*/
-
-/**
-* Thread Values: [number_in_group, group_count]
-* Block Values: [sample, channel]
-*/
-__global__ void
-hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d_output)
-{
-
-}
 
 
 __host__ bool
