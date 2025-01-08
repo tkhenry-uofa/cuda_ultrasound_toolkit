@@ -296,30 +296,10 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(float), cudaMemcpyHostToDevice));
 
-	// Recreate the fft plans for readi subgroup sized batches
-	//cufftDestroy(Session.forward_plan);
-	//cufftDestroy(Session.inverse_plan);
-	//cufftDestroy(Session.strided_plan);
+	//hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
 
-	//hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
-
-	 //Complex hadamard; 
-
-	//CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(Session.d_cplx_encoded), total_count * sizeof(cuComplex)));
-
-	//int hadamard_count = Session.decoded_dims.z * Session.decoded_dims.z;
-	//CUDA_RETURN_IF_ERROR(cudaMalloc(&(Session.d_c_hadamard), hadamard_count * sizeof(cuComplex)));
-	//CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_c_hadamard, 0x00, hadamard_count* sizeof(cuComplex)));
-	//CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_c_hadamard, sizeof(cuComplex), Session.d_hadamard, sizeof(float), sizeof(float), hadamard_count, cudaMemcpyDefault));
-
-	//hilbert::hilbert_transform(d_input, Session.d_cplx_encoded);
-	//CUDA_RETURN_IF_ERROR(cudaGetLastError());
-	//CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
-
-	//hadamard::c_readi_decode(Session.d_cplx_encoded, Session.d_complex, params.readi_group_id, params.readi_group_size);
-
-	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
-	bool do_hilbert = false;
+	hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard, 128, 1);
+	bool do_hilbert = true;
 	if (do_hilbert)
 	{
 		hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
