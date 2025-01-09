@@ -402,8 +402,8 @@ bool readi_beamform()
 int main()
 {
 	bool result = false;
-	result = readi_beamform_fii();
+	//result = readi_beamform_fii();
 
-	//result = readi_beamform();
+	result = readi_beamform();
 	return !result;
 }
