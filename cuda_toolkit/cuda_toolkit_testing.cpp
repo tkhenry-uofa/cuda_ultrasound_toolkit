@@ -296,9 +296,12 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(float), cudaMemcpyHostToDevice));
 
-	//hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
 
-	hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard, 128, 1);
+	//hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard, 128, 1);
+
+	//CUDA_RETURN_IF_ERROR(cudaMemcpy(Session.d_decoded, d_input, total_raw_count * sizeof(float), cudaMemcpyDeviceToDevice));
+
 	bool do_hilbert = true;
 	if (do_hilbert)
 	{

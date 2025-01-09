@@ -45,7 +45,6 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 
 	int tx_count = blockDim.x * blockDim.y;
 	
-
 	int sample_id = blockIdx.x;
 	int channel_id = blockIdx.y;
 
@@ -53,14 +52,12 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 
 	samples[tx_id] = d_input[io_offset];
 
-	
-
 	int group_ids[MAX_HADAMARD_SIZE];
 	int g = 0;
 	// Get what other tx's are in this group
 	for (int i = 0; i < tx_count; i++)
 	{
-		if (i % group_size == group_id)
+		if (i % group_count == group_id)
 		{
 			group_ids[g] = i;
 			g++;
@@ -69,23 +66,26 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 
 	float hadamard_row[MAX_HADAMARD_SIZE];
 	int hadamard_row_offset = tx_count * tx_id;
+	for (int i = 0; i < group_size; i++)
+	{
+
+		hadamard_row[i] =  d_hadamard[i + hadamard_row_offset];
+	}
+
+	
 	float decoded_value = 0.0f;
 	for (int i = 0; i < group_size; i++)
 	{
-		int tx_id = group_ids[i];
-		decoded_value += samples[tx_id] * d_hadamard[tx_id + tx_id * tx_count];
+		int transmit_id = group_ids[i];
+		decoded_value += samples[transmit_id] * hadamard_row[transmit_id];
 	}
 
 	d_output[io_offset] = decoded_value;
-
 }
 
 __host__ bool
 hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard, uint group_size, uint group_count)
 {
-
-	int tx_count = group_size * group_count;
-
 	dim3 grid_dim = { Session.decoded_dims.x, Session.decoded_dims.y, 1 };
 	dim3 block_dim = { group_size, group_count, 1 };
 
@@ -155,9 +155,7 @@ hadamard::_kernels::init_hadamard_matrix(float* matrix, int size)
 	}
 }
 
-
-
-
+ 
 __host__ bool
 hadamard::generate_hadamard(uint size, float** dev_ptr)
 {

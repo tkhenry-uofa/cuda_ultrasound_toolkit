@@ -22,7 +22,7 @@ beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float 
 
 // Returns true if this element should be used for mixes
 __device__ __inline__ bool
-offset_mixes(int transmit, int element, int mixes_number, int offset, int pivot)
+offset_mixes(int transmit, int element, int mixes_spacing, int offset, int pivot)
 {
 	int transmit_offset = 0;
 	int element_offset = 0;
@@ -31,7 +31,7 @@ offset_mixes(int transmit, int element, int mixes_number, int offset, int pivot)
 	if (transmit >= pivot) element_offset = offset;
 	if (element >= pivot) transmit_offset = offset;
 	
-	if (element % mixes_number != element_offset && transmit % mixes_number != transmit_offset)
+	if (element % mixes_spacing != element_offset && transmit % mixes_spacing != transmit_offset)
 	{
 		return false;
 	}
@@ -125,19 +125,20 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
 
-	int mixes_number = 128/32;
-	//int mixes_offset = 0;
-	int mixes_offset = mixes_number / 2;
+	int mixes_number = 128;
+	int mixes_spacing = 128/mixes_number;
+	int mixes_offset = 0;
+	//int mixes_offset = mixes_spacing / 2;
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
 		for (int e = 0; e < Constants.channel_count; e++)
 		{
-			//if (!offset_mixes(t, e, mixes_number, mixes_offset, 64))
-			//{
-			//	rx_vec.x += Constants.pitches.x;
-			//	channel_offset += sample_count;
-			//	continue;
-			//}
+			if (!offset_mixes(t, e, mixes_spacing, mixes_offset, 64))
+			{
+				rx_vec.x += Constants.pitches.x;
+				channel_offset += sample_count;
+				continue;
+			}
 
 			float2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
 
@@ -145,7 +146,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
 			apro_argument = NORM_F2(lateral_ratios);
-			apro = f_num_aprodization(apro_argument, apro_depth, 1.0);
+			apro = f_num_aprodization(apro_argument, apro_depth, 0.1);
 			value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
