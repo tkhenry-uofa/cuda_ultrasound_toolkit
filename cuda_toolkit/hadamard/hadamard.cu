@@ -235,7 +235,7 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 	float* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));
 
-	int hadamard_offset = (group_number-1) * group_size * row_count; 
+	int hadamard_offset = (group_number) * group_size * row_count; 
 
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;
