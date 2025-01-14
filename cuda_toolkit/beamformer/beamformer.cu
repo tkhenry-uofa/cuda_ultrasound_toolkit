@@ -14,7 +14,7 @@ __constant__ KernelConstants Constants;
 __device__ __inline__  float
 beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float f_num)
 {
-	float apro = f_num * lateral_dist / depth;
+	float apro = f_num * lateral_dist / depth/2;
 	apro = fminf(apro, 0.5);
 	apro = cosf(CUDART_PI_F * apro);
 	return apro * apro;
@@ -69,6 +69,8 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 		Constants.volume_mins.z + z_voxel * Constants.resolutions.z,
 	};
 
+	uint delay_samples = 4 * 2 * 3 / 2;
+
 	float apro_argument = 0;
 	float tx_distance = 0;
 	float2 max_lateral_dists = { 0,0 };
@@ -114,12 +116,10 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	float apro_depth = vox_loc.z / Constants.z_max;
 
 	cuComplex total = {0.0f, 0.0f}, value;
-	
-	uint delay_samples = 4*2*3/2;
 
-	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x, Constants.xdc_mins.y - vox_loc.y, vox_loc.z };
+	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x/2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };
 
-	float starting_y = rx_vec.x;
+	float starting_x = rx_vec.x;
 	float apro;
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
@@ -142,11 +142,11 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 
 			float2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
 
-			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
+			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + 0);
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
 			apro_argument = NORM_F2(lateral_ratios);
-			apro = f_num_aprodization(apro_argument, apro_depth, 0.1);
+			apro = f_num_aprodization(apro_argument, apro_depth, 0.0);
 			value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
@@ -156,7 +156,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 
 		}
 		rx_vec.y += Constants.pitches.y;
-		rx_vec.x = starting_y;
+		rx_vec.x = starting_x;
 	}
 
 	float result = sqrtf(total.x * total.x + total.y * total.y);
@@ -233,3 +233,4 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 
 	return true;
 }
+

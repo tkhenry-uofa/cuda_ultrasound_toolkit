@@ -19,7 +19,7 @@ namespace hadamard
 	generate_hadamard(uint size, float** dev_ptr);
 
 	__host__ bool
-	readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard, uint group_size, uint group_count);
+	readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard);
 
 	__host__ bool
 	readi_decode(const float* d_input, float* d_output, uint group_number, uint group_size);
@@ -59,7 +59,7 @@ namespace hadamard
 		* Block Values: [sample, channel]
 		*/
 		__global__ void
-		readi_staggered_decode_kernel(const float* d_input, float* d_output, const float* d_hadamard);
+		readi_staggered_decode_kernel(const float* d_input, float* d_output, const float* d_hadamard, uint readi_group, uint total_transmits);
 	}
 
 	namespace _host

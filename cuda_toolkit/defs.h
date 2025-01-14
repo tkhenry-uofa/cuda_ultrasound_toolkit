@@ -102,6 +102,9 @@ struct CudaSession
 
     float2 xdc_mins;
     float2 xdc_maxes;
+
+    uint readi_group = 0;
+    uint readi_group_size = 0;
 };
 
 extern CudaSession Session;

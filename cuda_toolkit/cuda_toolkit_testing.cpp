@@ -227,6 +227,9 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	i16_to_f::convert_data(d_input, Session.d_converted);
 
+	Session.readi_group = params.readi_group_id;
+	Session.readi_group_size = params.readi_group_size;
+
 	hadamard::readi_decode(Session.d_converted, Session.d_decoded, params.readi_group_id, params.readi_group_size);
 
 	//hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
@@ -248,7 +251,6 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	std::cout << "First converted value: " << sample_value(Session.d_converted) << std::endl;
 	std::cout << "First decoded value: " << sample_value(Session.d_decoded) << std::endl;
 	std::cout << "First complex value: " << sample_value((float*)Session.d_complex) << std::endl;
-
 
 	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
 
@@ -292,13 +294,18 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	Session.xdc_maxes.x = params.array_params.xdc_maxes[0];
 	Session.xdc_maxes.y = params.array_params.xdc_maxes[1];
 
+	Session.readi_group = params.readi_group_id;
+	Session.readi_group_size = params.readi_group_size;
+
+
+
 	float *d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(float), cudaMemcpyHostToDevice));
 
-	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+	//hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
 
-	//hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard, 128, 1);
+	hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard);
 
 	//CUDA_RETURN_IF_ERROR(cudaMemcpy(Session.d_decoded, d_input, total_raw_count * sizeof(float), cudaMemcpyDeviceToDevice));
 
@@ -317,6 +324,12 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	cuComplex* d_volume;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(cuComplex)));
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
+
+
+	uint readi_group_count = dec_data_dims.z / Session.readi_group_size;
+	Session.pitches.y = params.array_params.pitch * (float)readi_group_count;
+
+	Session.decoded_dims.z = Session.readi_group_size;
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	std::cout << "Starting beamform" << std::endl;

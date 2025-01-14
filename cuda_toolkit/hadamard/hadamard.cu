@@ -27,56 +27,49 @@
 */
 
 /**
-* Thread Values: [number_in_group, group_id]
+* Thread Value: [number_in_group]
 * Block Values: [sample, channel]
 */
 __global__ void
-hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d_output, const float* d_hadamard)
+hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d_output, const float* d_hadamard, uint readi_group, uint total_transmits)
 {
-
 	__shared__ float samples[MAX_HADAMARD_SIZE];
-
-	int group_id = threadIdx.y;
-	int inGroup_id = threadIdx.x;
-	int tx_id = group_id * blockDim.x + inGroup_id;
-
+	int tx_in_group[MAX_HADAMARD_SIZE];
+	int in_group_id = threadIdx.x;
 	int group_size = blockDim.x;
-	int group_count = blockDim.y;
 
-	int tx_count = blockDim.x * blockDim.y;
+	int group_count = total_transmits / group_size;
+	
+	int t = 0;
+	for (int i = 0; i < group_size; i++)
+	{
+		if (i % group_count == readi_group)
+		{
+			tx_in_group[t] = i;
+			t++;
+		}
+	}
+
+	int tx_id = tx_in_group[in_group_id];
 	
 	int sample_id = blockIdx.x;
 	int channel_id = blockIdx.y;
 
-	size_t io_offset = tx_id * gridDim.x * gridDim.y + channel_id * gridDim.x + sample_id;
+	size_t io_offset = in_group_id * gridDim.x * gridDim.y + channel_id * gridDim.x + sample_id;
 
-	samples[tx_id] = d_input[io_offset];
-
-	int group_ids[MAX_HADAMARD_SIZE];
-	int g = 0;
-	// Get what other tx's are in this group
-	for (int i = 0; i < tx_count; i++)
-	{
-		if (i % group_count == group_id)
-		{
-			group_ids[g] = i;
-			g++;
-		}
-	}
+	samples[in_group_id] = d_input[io_offset];
 
 	float hadamard_row[MAX_HADAMARD_SIZE];
-	int hadamard_row_offset = tx_count * tx_id;
+	int hadamard_row_offset = total_transmits * tx_id;
 	for (int i = 0; i < group_size; i++)
 	{
-
 		hadamard_row[i] =  d_hadamard[i + hadamard_row_offset];
 	}
 
-	
 	float decoded_value = 0.0f;
 	for (int i = 0; i < group_size; i++)
 	{
-		int transmit_id = group_ids[i];
+		int transmit_id = tx_in_group[i];
 		decoded_value += samples[transmit_id] * hadamard_row[transmit_id];
 	}
 
@@ -84,12 +77,12 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 }
 
 __host__ bool
-hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard, uint group_size, uint group_count)
+hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard)
 {
 	dim3 grid_dim = { Session.decoded_dims.x, Session.decoded_dims.y, 1 };
-	dim3 block_dim = { group_size, group_count, 1 };
+	dim3 block_dim = { Session.readi_group_size, 1, 1 };
 
-	_kernels::readi_staggered_decode_kernel << <grid_dim, block_dim >> > (d_input, d_output, d_hadamard);
+	_kernels::readi_staggered_decode_kernel << <grid_dim, block_dim >> > (d_input, d_output, d_hadamard, Session.readi_group, 128);
 	
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -245,7 +238,7 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 	float* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));
 
-	int hadamard_offset = (group_number-1) * group_size * row_count; 
+	int hadamard_offset = group_number * group_size * row_count; 
 
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;
