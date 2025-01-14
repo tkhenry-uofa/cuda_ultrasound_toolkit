@@ -175,7 +175,6 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 bool
 cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 {
-	std::cout << "Decoding" << std::endl;
 	Session.channel_offset = channel_offset;
 	if (!Session.init)
 	{
@@ -223,7 +222,6 @@ cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 bool
 cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
 {
-	std::cout << "Hilbert" << std::endl;
 	if (!Session.init)
 	{
 		std::cout << "Session not initialized" << std::endl;
