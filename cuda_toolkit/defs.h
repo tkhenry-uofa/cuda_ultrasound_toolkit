@@ -37,6 +37,9 @@
 #define NORM_F3(v) (sqrtf( v.x * v.x + v.y * v.y + v.z * v.z))
 #define ADD_F2(v,u) {(v).x + (u).x, (v).y + (u).y}
 
+#define NORM_D2(v) (sqrt( v.x * v.x + v.y * v.y))
+#define NORM_D3(v) (sqrt( v.x * v.x + v.y * v.y + v.z * v.z))
+
 
 
 typedef unsigned long long int uint64;
@@ -173,7 +176,39 @@ inline cuComplex sample_value_cplx(cuComplex* d_value)
     return sample;
 }
 
+inline double sample_value_d(const double* d_value)
+{
+    double sample = 0;
+    cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(double), cudaMemcpyDeviceToHost);
+
+    if (err != cudaSuccess)
+    {
+        return NaN;
+    }
+
+    return sample;
+}
+
+inline cuDoubleComplex sample_value_d_cplx(cuDoubleComplex* d_value)
+{
+    cuDoubleComplex sample;
+    cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+    {
+        return { -1,-1 };
+    }
+    return sample;
+}
+
+
 inline std::string format_cplx(const cuComplex& value)
+{
+    char buffer[128];
+    std::snprintf(buffer, sizeof(buffer), "Re: %e, Im: %e", value.x, value.y);
+    return std::string(buffer);
+}
+
+inline std::string format_d_cplx(const cuDoubleComplex& value)
 {
     char buffer[128];
     std::snprintf(buffer, sizeof(buffer), "Re: %e, Im: %e", value.x, value.y);

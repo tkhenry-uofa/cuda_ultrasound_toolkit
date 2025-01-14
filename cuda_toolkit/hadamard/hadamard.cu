@@ -83,6 +83,46 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 	d_output[io_offset] = decoded_value;
 }
 
+__global__ void
+hadamard::_kernels::double_decode_kernel(const double* d_input, double* d_output, const float* d_hadamard)
+{
+	__shared__ double samples[MAX_HADAMARD_SIZE];
+
+	int tx_id = threadIdx.x;
+	int tx_count = blockDim.x;
+
+	int sample_id = blockIdx.x;
+	int channel_id = blockIdx.y;
+
+	size_t io_offset = tx_id * gridDim.x * gridDim.y + channel_id * gridDim.x + sample_id;
+
+	samples[tx_id] = d_input[io_offset];
+
+	int hadamard_row_offset = tx_count * tx_id;
+
+	float decoded_value = 0.0f;
+	for (int i = 0; i < tx_count; i++)
+	{
+		decoded_value += samples[i] * (double)d_hadamard[hadamard_row_offset + i];
+	}
+
+	d_output[io_offset] = decoded_value;
+}
+
+__host__ bool
+hadamard::double_decode(const double* d_input, double* d_output)
+{
+	dim3 grid_dim = { Session.decoded_dims.x, Session.decoded_dims.y, 1 };
+	dim3 block_dim = { Session.decoded_dims.z, 1 };
+
+	_kernels::double_decode_kernel << <grid_dim, block_dim >> > (d_input, d_output, Session.d_hadamard);
+
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+	return true;
+}
+
 __host__ bool
 hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard, uint group_size, uint group_count)
 {

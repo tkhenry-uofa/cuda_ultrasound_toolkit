@@ -16,6 +16,9 @@ namespace hadamard
 	hadamard_decode(const float* d_input, float* d_output);
 
 	__host__ bool
+	double_decode(const double* d_input, double* d_output);
+
+	__host__ bool
 	generate_hadamard(uint size, float** dev_ptr);
 
 	__host__ bool
@@ -60,6 +63,9 @@ namespace hadamard
 		*/
 		__global__ void
 		readi_staggered_decode_kernel(const float* d_input, float* d_output, const float* d_hadamard);
+
+		__global__ void
+		double_decode_kernel(const double* d_input, double* d_output, const float* d_hadamard);
 	}
 
 	namespace _host

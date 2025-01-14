@@ -57,6 +57,45 @@ hilbert::plan_hilbert(int sample_count, int channel_count)
 	return true;
 }
 
+
+__host__ bool
+hilbert::plan_double_hilbert(int sample_count, int channel_count)
+{
+	// The FFT fails with CUDA_INTERNAL_ERROR if we don't estimate first, this only happens when FFT size isnt a power of 2
+	// No idea what the cause it, it isn't in the docs anywhere.
+	size_t work_size = 0;
+
+	int data_length = sample_count * channel_count;
+	int double_l = data_length * 2;
+
+	//CUFFT_THROW_IF_ERR(cufftEstimateMany(1, &sample_count, &sample_count, 1, sample_count, &sample_count, 1, sample_count, CUFFT_R2C, channel_count, &work_size));
+
+	CUFFT_THROW_IF_ERR(cufftPlanMany(&(Session.forward_plan), 1, &sample_count, &data_length, 1, sample_count, &data_length, 1, sample_count, CUFFT_D2Z, channel_count));
+	CUFFT_THROW_IF_ERR(cufftPlanMany(&(Session.inverse_plan), 1, &sample_count, NULL, 1, 0, NULL, 1, 0, CUFFT_Z2Z, channel_count));
+
+	CUFFT_THROW_IF_ERR(cufftPlanMany(&(Session.strided_plan), 1, &sample_count, &data_length, 2, sample_count * 2, &data_length, 1, sample_count, CUFFT_D2Z, channel_count));
+	return true;
+}
+
+__host__ bool
+hilbert::double_hilbert_transform(double* d_input, cuDoubleComplex* d_output)
+{
+	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuDoubleComplex);
+
+	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
+
+	CUFFT_THROW_IF_ERR(cufftExecD2Z(Session.forward_plan, d_input, d_output));
+
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+	//hilbert::f_domain_filter(d_output, 1350);
+	CUFFT_THROW_IF_ERR(cufftExecZ2Z(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
+
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+	return true;
+}
+
 __host__ bool 
 hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 {

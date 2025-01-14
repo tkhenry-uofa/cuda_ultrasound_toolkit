@@ -28,6 +28,12 @@ namespace hilbert
 	hilbert_transform(float* d_input, cuComplex* d_output);
 
 	__host__ bool
+	plan_double_hilbert(int sample_count, int channel_count);
+
+	__host__ bool
+	double_hilbert_transform(double* d_input, cuDoubleComplex* d_output);
+
+	__host__ bool
 	hilbert_transform_strided(float* d_input, cuComplex* d_output);
 
 }

@@ -20,6 +20,15 @@ beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float 
 	return apro * apro;
 }
 
+__device__ __inline__  float
+beamformer::_kernels::double_f_num_aprodization(double lateral_dist, double depth, double f_num)
+{
+	double apro = f_num * lateral_dist / depth;
+	apro = fmin(apro, 0.5);
+	apro = cos(CUDART_PI_F * apro);
+	return apro * apro;
+}
+
 // Returns true if this element should be used for mixes
 __device__ __inline__ bool
 offset_mixes(int transmit, int element, int mixes_spacing, int offset, int pivot)
@@ -125,7 +134,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
 
-	int mixes_number = 128;
+	int mixes_number = 32;
 	int mixes_spacing = 128/mixes_number;
 	int mixes_offset = 0;
 	//int mixes_offset = mixes_spacing / 2;
@@ -146,7 +155,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
 			apro_argument = NORM_F2(lateral_ratios);
-			apro = f_num_aprodization(apro_argument, apro_depth, 0.1);
+			apro = f_num_aprodization(apro_argument, apro_depth, 1.0);
 			value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
@@ -169,6 +178,138 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 		times[1] = 0;
 	}
 }
+
+__global__ void
+beamformer::_kernels::double_double_loop(const cuDoubleComplex* rfData, cuDoubleComplex* volume, float samples_per_meter, uint64* times)
+{
+	int tid = threadIdx.x;
+	uint64 start_time;
+	if (tid == 0)
+	{
+		start_time = clock64();
+	}
+
+	uint xy_voxel = threadIdx.x + blockIdx.x * blockDim.x;
+
+	if (xy_voxel > Constants.voxel_dims.x * Constants.voxel_dims.y)
+	{
+		return;
+	}
+
+	uint x_voxel = xy_voxel % Constants.voxel_dims.x;
+	uint y_voxel = xy_voxel / Constants.voxel_dims.x;
+	uint z_voxel = blockIdx.y;
+
+	size_t volume_offset = z_voxel * Constants.voxel_dims.x * Constants.voxel_dims.y + y_voxel * Constants.voxel_dims.x + x_voxel;
+
+	const double3 vox_loc =
+	{
+		(double)Constants.volume_mins.x + x_voxel * (double)Constants.resolutions.x,
+		(double)Constants.volume_mins.y + y_voxel * (double)Constants.resolutions.y,
+		(double)Constants.volume_mins.z + z_voxel * (double)Constants.resolutions.z,
+	};
+
+	double apro_argument = 0;
+	double tx_distance = 0;
+	double2 max_lateral_dists = { 0,0 };
+	bool diverging = (Constants.src_pos.z < 0.0f);
+	if (Constants.tx_type == TX_X_FOCUS)
+	{
+		tx_distance = sqrt(pow((double)Constants.src_pos.z - vox_loc.z, 2) + pow((double)Constants.src_pos.x - vox_loc.x, 2)) + (double)Constants.src_pos.z;
+
+		double tx_angle = atan2((double)Constants.xdc_maxes.x, -(double)Constants.src_pos.z);
+
+		max_lateral_dists.x = Constants.xdc_maxes.x + vox_loc.z * tan(tx_angle);
+		max_lateral_dists.y = Constants.xdc_maxes.y * 2;
+
+		double2 lateral_ratios = { vox_loc.x / max_lateral_dists.x , vox_loc.y / max_lateral_dists.y };
+
+		if (lateral_ratios.x >= 1.0f || lateral_ratios.y >= 1.0f) return;
+		if (lateral_ratios.x <= -1.0f || lateral_ratios.y <= -1.0f) return;
+
+	}
+	else if (Constants.tx_type == TX_Y_FOCUS)
+	{
+		tx_distance = sqrt(pow((double)Constants.src_pos.z - vox_loc.z, 2) + pow((double)Constants.src_pos.y - vox_loc.y, 2)) + (double)Constants.src_pos.z;
+
+		double tx_angle = atan2((double)Constants.xdc_maxes.y, -(double)Constants.src_pos.z);
+
+
+		max_lateral_dists.x = Constants.xdc_maxes.x * 2;
+		max_lateral_dists.y = Constants.xdc_maxes.y + vox_loc.z * tan(tx_angle);
+
+		double2 lateral_ratios = { vox_loc.x / max_lateral_dists.x , vox_loc.y / max_lateral_dists.y };
+
+		if (lateral_ratios.x >= 1.0f || lateral_ratios.y >= 1.0f) return;
+		if (lateral_ratios.x <= -1.0f || lateral_ratios.y <= -1.0f) return;
+
+	}
+	else
+	{
+		tx_distance = vox_loc.z;
+		max_lateral_dists.x = 2 * Constants.xdc_maxes.x;
+		max_lateral_dists.y = 2 * Constants.xdc_maxes.y;
+	}
+
+	double apro_depth = vox_loc.z / Constants.z_max;
+
+	cuDoubleComplex total = { 0.0f, 0.0f }, value;
+
+	uint delay_samples = 12;
+
+	double3 rx_vec = { (double)Constants.xdc_mins.x - vox_loc.x, (double)Constants.xdc_mins.y - vox_loc.y, vox_loc.z };
+
+	double starting_y = rx_vec.x;
+	double apro;
+	size_t channel_offset = 0;
+	uint sample_count = Constants.sample_count;
+	uint scan_index;
+
+	int mixes_number = 128;
+	int mixes_spacing = 128 / mixes_number;
+	int mixes_offset = 0;
+	//int mixes_offset = mixes_spacing / 2;
+	for (int t = 0; t < Constants.tx_count; t++)
+	{
+		for (int e = 0; e < Constants.channel_count; e++)
+		{
+			if (!offset_mixes(t, e, mixes_spacing, mixes_offset, 64))
+			{
+				rx_vec.x += Constants.pitches.x;
+				channel_offset += sample_count;
+				continue;
+			}
+
+			double2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
+
+			scan_index = (uint)((NORM_D3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
+			value = __ldg(&rfData[channel_offset + scan_index - 1]);
+
+			apro_argument = NORM_D2(lateral_ratios);
+			apro = f_num_aprodization(apro_argument, apro_depth, 0.1);
+			//value = SCALE_F2(value, apro);
+
+			total = ADD_F2(total, value);
+
+			rx_vec.x += (double)Constants.pitches.x;
+			channel_offset += sample_count;
+
+		}
+		rx_vec.y += Constants.pitches.y;
+		rx_vec.x = starting_y;
+	}
+
+	double result = sqrt(total.x * total.x + total.y * total.y);
+	volume[volume_offset] = total;
+
+	if (tid == 0)
+	{
+		uint64 end_time = clock64();
+		times[0] = end_time - start_time;
+		times[1] = 0;
+	}
+}
+
 
 bool
 beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
@@ -230,6 +371,79 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
+
+	return true;
+}
+
+
+bool
+beamformer::double_beamform(cuDoubleComplex* d_volume, const cuDoubleComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
+{
+
+	TransmitType transmit_type;
+
+	if (focus_pos.z == 0.0f || focus_pos.z == INFINITY)
+	{
+		transmit_type = TX_PLANE;
+	}
+	else if (Session.channel_offset > 0)
+	{
+		// TX on columns (x) axis so we have x focusing
+		transmit_type = TX_X_FOCUS;
+	}
+	else
+	{
+		transmit_type = TX_Y_FOCUS;
+	}
+
+	VolumeConfiguration vol_config = Session.volume_configuration;
+
+	KernelConstants consts =
+	{
+		Session.decoded_dims.x,
+		Session.decoded_dims.y,
+		Session.decoded_dims.z,
+		vol_config.voxel_counts,
+		vol_config.minimums,
+		{vol_config.lateral_resolution, vol_config.lateral_resolution, vol_config.axial_resolution},
+		focus_pos,
+		transmit_type,
+		Session.pitches,
+		Session.pulse_delay,
+		vol_config.maximums.z,
+		Session.xdc_mins,
+		Session.xdc_maxes
+	};
+	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
+
+	uint64* times, * d_times;
+
+	times = (uint64*)malloc(2 * sizeof(uint64));
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_times, 2 * sizeof(uint64)));
+
+	uint3 vox_counts = vol_config.voxel_counts;
+	uint xy_count = vox_counts.x * vox_counts.y;
+	dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
+	dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
+
+	auto start = std::chrono::high_resolution_clock::now();
+
+	std::cout << "Before first volume value: " << format_d_cplx(sample_value_d_cplx(d_volume)) << std::endl;
+	std::cout << "Before second volume value: " << format_d_cplx(sample_value_d_cplx(d_volume + 1)) << std::endl;
+
+	_kernels::double_double_loop << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
+
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+
+
+	auto end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = end - start;
+	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
+
+	std::cout << "First volume value: " << format_d_cplx(sample_value_d_cplx(d_volume)) << std::endl;
+	std::cout << "Second volume value: " << format_d_cplx(sample_value_d_cplx(d_volume + 1)) << std::endl;
 
 	return true;
 }
