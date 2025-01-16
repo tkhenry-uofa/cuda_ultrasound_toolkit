@@ -261,6 +261,9 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
 
 	cudaFree(d_input);
+	cudaFree(d_volume);
+
+	deinit_cuda_configuration();
 
 	return true;
 }
@@ -339,6 +342,9 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
 
 	cudaFree(d_input);
+	cudaFree(d_volume);
+
+	deinit_cuda_configuration();
 
 	return true;
 }

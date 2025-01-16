@@ -47,11 +47,7 @@
 		*/
 		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset);
 
-		/**
-		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
-		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
-		*/
-		EXPORT_FN bool cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx);
+		EXPORT_FN void deinit_cuda_configuration();
 
 		// Internal init
 		bool _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256]);

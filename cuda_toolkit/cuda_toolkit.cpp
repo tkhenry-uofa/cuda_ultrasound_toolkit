@@ -251,3 +251,9 @@ cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 }
+
+void
+deinit_cuda_configuration()
+{
+	_cleanup_session();
+}

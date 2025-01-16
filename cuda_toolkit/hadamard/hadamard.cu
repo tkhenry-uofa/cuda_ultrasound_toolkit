@@ -41,7 +41,7 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 	int group_count = total_transmits / group_size;
 	
 	int t = 0;
-	for (int i = 0; i < group_size; i++)
+	for (int i = 0; i < total_transmits; i++)
 	{
 		if (i % group_count == readi_group)
 		{
@@ -50,7 +50,7 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 		}
 	}
 
-	int tx_id = tx_in_group[in_group_id];
+	int thread_tx_id = tx_in_group[in_group_id];
 	
 	int sample_id = blockIdx.x;
 	int channel_id = blockIdx.y;
@@ -59,19 +59,14 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 
 	samples[in_group_id] = d_input[io_offset];
 
-	float hadamard_row[MAX_HADAMARD_SIZE];
-	int hadamard_row_offset = total_transmits * tx_id;
-	for (int i = 0; i < group_size; i++)
-	{
-		hadamard_row[i] =  d_hadamard[i + hadamard_row_offset];
-	}
-
 	float decoded_value = 0.0f;
 	for (int i = 0; i < group_size; i++)
 	{
 		int transmit_id = tx_in_group[i];
-		decoded_value += samples[transmit_id] * hadamard_row[transmit_id];
+		//decoded_value += samples[i] * d_hadamard[transmit_id + total_transmits * thread_tx_id];
+		decoded_value += samples[i] * d_hadamard[i + total_transmits * in_group_id];
 	}
+
 
 	d_output[io_offset] = decoded_value;
 }

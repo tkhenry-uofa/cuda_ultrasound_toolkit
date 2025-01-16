@@ -69,8 +69,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 		Constants.volume_mins.z + z_voxel * Constants.resolutions.z,
 	};
 
-	uint delay_samples = 4 * 2 * 3 / 2;
-
+	
 	float apro_argument = 0;
 	float tx_distance = 0;
 	float2 max_lateral_dists = { 0,0 };
@@ -119,13 +118,19 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 
 	float incoherent_sum = 0.0f;
 
-	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x/2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };
+	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x/2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };	
+	//float3 rx_vec = { vox_loc.x - Constants.pitches.x / 2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };
+	//float3 rx_vec = { vox_loc.x - Constants.pitches.x / 2, vox_loc.y - Constants.pitches.y / 2, vox_loc.z };
+
+	uint delay_samples = 12;
+
 
 	float starting_x = rx_vec.x;
 	float apro;
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
+	uint channel_count = Constants.channel_count;
 
 	int mixes_number = 128;
 	int mixes_spacing = 128/mixes_number;
@@ -134,14 +139,15 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	//int mixes_offset = mixes_spacing / 2;
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
-		for (int e = 0; e < Constants.channel_count; e++)
+		for (int e = 0; e < channel_count; e++)
 		{
 			if (!offset_mixes(t, e, mixes_spacing, mixes_offset, 64))
 			{
 				rx_vec.x += Constants.pitches.x;
-				channel_offset += sample_count;
 				continue;
 			}
+
+			channel_offset = channel_count * sample_count * t + sample_count * e;
 
 			float2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
 
@@ -149,14 +155,13 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
 			apro_argument = NORM_F2(lateral_ratios);
-			apro = f_num_aprodization(apro_argument, apro_depth, 1.0);
+			apro = f_num_aprodization(apro_argument, apro_depth, 0.0);
 			value = SCALE_F2(value, apro);
 
 			total = ADD_F2(total, value);
 			incoherent_sum += NORM_SQUARE_F2(value);
 
 			rx_vec.x += Constants.pitches.x;
-			channel_offset += sample_count;
 			total_used_channels++;
 
 		}
@@ -167,9 +172,9 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	float coherent_sum = NORM_SQUARE_F2(total);
 
 	float coherency_factor = coherent_sum / (incoherent_sum * total_used_channels);
-	volume[volume_offset] = SCALE_F2(total, coherency_factor);;
+	//volume[volume_offset] = SCALE_F2(total, coherency_factor);;
 
-	//volume[volume_offset] = total;
+	volume[volume_offset] = total;
 
 	if (tid == 0)
 	{
