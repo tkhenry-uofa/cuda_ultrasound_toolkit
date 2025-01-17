@@ -41,6 +41,12 @@
 		EXPORT_FN bool register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo);
 
 		/**
+		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
+		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
+		*/
+		EXPORT_FN bool cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx);
+
+		/**
 		* input_offset: Offset into raw_data_ssbo 
 		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
 		*/

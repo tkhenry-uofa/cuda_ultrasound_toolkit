@@ -126,7 +126,6 @@ init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 cha
 bool
 init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping)
 {
-	std::cout << "Init config" << std::endl;
 	if (!Session.init)
 	{
 		return init_session(input_dims, decoded_dims, channel_mapping);
@@ -150,7 +149,6 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const 
 bool 
 register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
 {
-	std::cout << "Register buffers" << std::endl;
 	if (Session.rf_buffer_count != 0)
 	{
 		unregister_cuda_buffers();
@@ -163,8 +161,7 @@ register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_
 	Session.rf_data_ssbos = (BufferMapping*)malloc(rf_buffer_count * sizeof(BufferMapping));
 	for (uint i = 0; i < rf_buffer_count; i++)
 	{
-		std::cout << "Registering buffer : " << i << ", " << rf_data_ssbos[i] << std::endl;
-		Session.rf_data_ssbos[i] = { nullptr, rf_data_ssbos[i] };
+		Session.rf_data_ssbos[i] = { NULL, rf_data_ssbos[i] };
 		CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.rf_data_ssbos[i].cuda_resource), Session.rf_data_ssbos[i].gl_buffer_id, cudaGraphicsRegisterFlagsNone));
 	}
 	Session.rf_buffer_count = rf_buffer_count;
