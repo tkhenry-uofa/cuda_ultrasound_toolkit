@@ -20,7 +20,7 @@
 		* In any order:
 		*	a. When data dimensions are known call init_cuda_configuration to configure the kernel sizes
 		*	b. When OGL input and decoded data buffers are created register with register_cuda_buffers
-		* Both functions can be indipendently called if configuration changes to handle updates
+		* Both functions can be independently called if configuration changes to handle updates
 		*	
 		* After init call decode_and_hilbert with the byte offset of the input data in the raw buffer
 		* and the index of the output buffer
@@ -30,7 +30,6 @@
 		* input_dims: (samples * transmissions + padding) x raw channels
 		* output_dims: samples x channels x transmissions
 		* channel_mapping: VSX channels to row-column conversion
-		* channel_offset: Offset into the receiving channels in the rf data
 		*/
 		EXPORT_FN bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping);
 		
@@ -39,7 +38,7 @@
 		* rf_buffer_count: List length
 		* raw_data_ssbo: Opengl buffer id for the raw data buffer
 		*/
-		EXPORT_FN bool register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo);
+		EXPORT_FN bool register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo);
 
 		/**
 		* input_offset: Offset into raw_data_ssbo 
@@ -47,10 +46,16 @@
 		*/
 		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset);
 
-		EXPORT_FN void deinit_cuda_configuration();
+		/**
+		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
+		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
+		*/
+		EXPORT_FN bool cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx);
 
-		// Internal init
-		bool _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256]);
+		/**
+		 * Closes all contexts and frees all cuda GPU buffers.
+		 */
+		EXPORT_FN void deinit_cuda_configuration();
 
 #ifdef __cplusplus
 	}

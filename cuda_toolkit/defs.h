@@ -17,30 +17,28 @@
 #include <cublas_v2.h>
 #include <cuda_gl_interop.h>
 
-#define PI_F 3.141592654f
-#define NaN (float)0xFFFFFFFF; 
+constexpr float NaN = (float)0xFFFFFFFF; 
 
-#define MAX_THREADS_PER_BLOCK 128
-#define MAX_2D_BLOCK_DIM 32
+constexpr float I_SQRT_128 = 0.088388347648318f;
+constexpr float PI_F = 3.141592654f;
 
-#define I_SQRT_128 0.088388347648318f
+constexpr int MAX_THREADS_PER_BLOCK = 128;
+constexpr int MAX_2D_BLOCK_DIM = 32;
+constexpr int WARP_SIZE = 32;
+constexpr int TOTAL_TOBE_CHANNELS = 256;
 
-#define WARP_SIZE 32
 
-#define TOTAL_TOBE_CHANNELS 256
 #define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
 
 #define SCALAR_ABS(x)         ((x) < 0 ? -(x) : (x))
-#define SCALE_F2(v, a) {v.x * a, v.y * a};
+#define SCALE_F2(v, a) {(v).x * (a), (v).y * (a)}
 
-#define NORM_F2(v) (sqrtf( v.x * v.x + v.y * v.y))
-#define NORM_F3(v) (sqrtf( v.x * v.x + v.y * v.y + v.z * v.z))
+#define NORM_F2(v) (sqrtf( (v).x * (v).x + (v).y * (v).y))
+#define NORM_F3(v) (sqrtf( (v).x * (v).x + (v).y * (v).y + (v).z * (v).z))
 
-#define NORM_SQUARE_F2(v) (v.x * v.x + v.y * v.y)
-#define NORM_SQUARE_F3(v) (v.x * v.x + v.y * v.y + v.z * v.z)
+#define NORM_SQUARE_F2(v) ((v).x * (v).x + (v).y * (v).y)
+#define NORM_SQUARE_F3(v) ((v).x * (v).x + (v).y * (v).y + (v).z * (v).z)
 #define ADD_F2(v,u) {(v).x + (u).x, (v).y + (u).y}
-
-
 
 typedef unsigned long long int uint64;
 typedef unsigned int uint;
@@ -159,7 +157,7 @@ inline float sample_value(const float* d_value)
     return sample;
 }
 
-inline i16 sample_value_i16(i16* d_value)
+inline i16 sample_value_i16(const i16* d_value)
 {
     i16 sample = 0;
     cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(i16), cudaMemcpyDeviceToHost);
@@ -170,7 +168,7 @@ inline i16 sample_value_i16(i16* d_value)
     return sample;
 }
 
-inline cuComplex sample_value_cplx(cuComplex* d_value)
+inline cuComplex sample_value_cplx(const cuComplex* d_value)
 {
     cuComplex sample;
     cudaError_t err = cudaMemcpy(&sample, d_value, sizeof(cuComplex), cudaMemcpyDeviceToHost);
@@ -185,7 +183,7 @@ inline std::string format_cplx(const cuComplex& value)
 {
     char buffer[128];
     std::snprintf(buffer, sizeof(buffer), "Re: %e, Im: %e", value.x, value.y);
-    return std::string(buffer);
+    return { buffer };
 }
 
 #define PRINT_CPLX(value) format_cplx(value).c_str()
@@ -204,7 +202,7 @@ inline std::string format_cplx(const cuComplex& value)
     do {                                    \
         if(PTR)                             \
         {                                   \
-            cudaFree(PTR); PTR = nullptr;   \
+            cudaFree(PTR); (PTR) = nullptr; \
         }                                   \
     } while (0)                             \
 
@@ -247,9 +245,9 @@ inline std::string format_cplx(const cuComplex& value)
 {                                                                                           \
     auto start = std::chrono::high_resolution_clock::now();                                 \
     CALL;                                                                                   \
-    CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());                                           \
+    CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());                                          \
     auto elapsed = std::chrono::high_resolution_clock::now() - start;                       \
-    std::cout << MESSAGE << " " <<                                                          \
+    std::cout << (MESSAGE) << " " <<                                                        \
       std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count() <<         \
         " seconds." << std::endl;                                                           \
 }  

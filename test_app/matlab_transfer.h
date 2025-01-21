@@ -9,7 +9,7 @@ namespace matlab_transfer
 
 	bool _nack_response();
 
-	bool write_to_pipe(Handle pipe, void* data, uint len);
+	bool write_to_pipe(Handle pipe, void* data, size_t len);
 
 	void* _open_shared_memory_area(char* name, size cap);
 
@@ -24,7 +24,7 @@ namespace matlab_transfer
 	bool create_smem(BeamformerParametersFull** bp_mem_h);
 	bool wait_for_data(Handle pipe, void* data, uint* bytes, uint timeout = 0);
 
-	Handle open_output_pipe(char* name);
+	Handle open_output_pipe(const char* name);
 
 	bool disconnect_pipe(Handle pipe);
 

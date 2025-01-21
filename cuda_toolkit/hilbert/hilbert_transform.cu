@@ -79,7 +79,7 @@ hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 __host__ bool
 hilbert::hilbert_transform_strided(float* d_input, cuComplex* d_output)
 {
-	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
+	size_t output_size = (size_t)Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 

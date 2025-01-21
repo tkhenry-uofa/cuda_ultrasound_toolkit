@@ -383,7 +383,7 @@ bool readi_beamform()
 		PipelineParams params = convert_params(full_bp);
 
 		cuComplex* volume = nullptr;
-		size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
+		size_t output_size = (size_t)full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
 
 		std::cout << "Starting pipeline " << g + 1 << std::endl;
 		readi_beamform_raw(data_buffer, params, &volume);
@@ -405,8 +405,8 @@ bool readi_beamform()
 int main()
 {
 	bool result = false;
-	result = readi_beamform_fii();
+	//result = readi_beamform_fii();
 
-	//result = readi_beamform();
+	result = readi_beamform();
 	return !result;
 }

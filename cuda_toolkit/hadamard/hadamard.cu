@@ -88,8 +88,8 @@ hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d
 __global__ void
 hadamard::_kernels::generate_hadamard(float* hadamard, int prev_size, int final_size)
 {
-	int row = threadIdx.x + blockDim.x * blockIdx.x;
-	int col = threadIdx.y + blockDim.y * blockIdx.y;
+	int row = (size_t)blockDim.x * blockIdx.x + threadIdx.x;
+	int col = (size_t)blockDim.y * blockIdx.y + threadIdx.y;
 
 	bool top = row < prev_size;
 	bool left = col < prev_size;
@@ -111,7 +111,7 @@ hadamard::_kernels::generate_hadamard(float* hadamard, int prev_size, int final_
 }
 
 __host__ void 
-hadamard::_host::print_array(float* out_array, uint size)
+hadamard::_host::print_array(const float* out_array, uint size)
 {
 	std::cout << "Output" << std::endl;
 	for (uint i = 0; i < size; i++)
@@ -128,10 +128,10 @@ hadamard::_host::print_array(float* out_array, uint size)
 }
 
 __global__ void
-hadamard::_kernels::init_hadamard_matrix(float* matrix, int size)
+hadamard::_kernels::init_hadamard_matrix(float* matrix, uint size)
 {
-	int row = threadIdx.x * blockIdx.x;
-	int col = threadIdx.y * blockIdx.y;
+	uint row = threadIdx.x * blockIdx.x;
+	uint col = threadIdx.y * blockIdx.y;
 
 	if (row == 0 && col == 0)
 	{
@@ -154,11 +154,11 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 
 	CUDA_NULL_FREE(*dev_ptr);
 
-	size_t matrix_size = size * size * sizeof(float);
+	size_t matrix_size = (size_t)size * size * sizeof(float);
 	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)dev_ptr, matrix_size));
 
 	uint grid_length;
-	dim3 block_dim, grid_dim;
+	dim3 block_dim;
 
 	if (size <= MAX_2D_BLOCK_DIM)
 	{
@@ -171,7 +171,7 @@ hadamard::generate_hadamard(uint size, float** dev_ptr)
 		block_dim = { MAX_2D_BLOCK_DIM, MAX_2D_BLOCK_DIM, 1 };
 	}
 
-	grid_dim = { grid_length, grid_length, 1 };
+	dim3 grid_dim = { grid_length, grid_length, 1 };
 
 	_kernels::init_hadamard_matrix << <grid_dim, block_dim >> > (*dev_ptr, size);
 
@@ -219,7 +219,14 @@ hadamard::hadamard_decode(const float* d_input, float* d_output)
 	//float alpha = 1/((float)dims.x/2);
 	float beta = 0.0f;
 
-	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N, tx_size, dims.z, dims.z, &alpha, d_input, tx_size, Session.d_hadamard, dims.z, &beta, d_output, tx_size));
+	CUBLAS_THROW_IF_ERR(cublasSgemm(
+							Session.cublas_handle, 
+							CUBLAS_OP_N, 
+							CUBLAS_OP_N, 
+							tx_size, dims.z, dims.z, 
+							&alpha, d_input, tx_size, 
+							Session.d_hadamard, dims.z, 
+							&beta, d_output, tx_size));
 
 	return true;
 }
@@ -233,7 +240,7 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 	float* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));
 
-	int hadamard_offset = group_number * group_size * row_count; 
+	uint hadamard_offset = group_number * group_size * row_count; 
 
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;

@@ -7,58 +7,31 @@
 #include "cuda_toolkit_testing.h"
 
 
-bool generate_hero_location_array(ArrayParams params, float2** d_location)
-{
-
-	uint total_count = params.row_count * params.col_count;
-	float2* cpu_array = (float2*)malloc(total_count * sizeof(float2));
-
-	if (!cpu_array) return false; 
-	
-	float row_min = -1.0f * (params.row_count - 1) * params.pitch / 2;
-	float col_min = -1.0f * (params.col_count - 1) * params.pitch / 2;
-
-	float2 value;
-	for (uint col = 0; col < params.col_count; col++)
-	{
-		for (uint row = 0; row < params.row_count; row++)
-		{
-			value = { row * params.pitch + row_min, col * params.pitch + col_min };
-			cpu_array[col * params.row_count + row] = value;
-		}
-	}
-
-	CUDA_RETURN_IF_ERROR(cudaMalloc(d_location, total_count * sizeof(float2)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*d_location, cpu_array, total_count * sizeof(float2), cudaMemcpyHostToDevice));
-
-	free(cpu_array);
-	return true;
-}
-
-bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping )
+bool
+raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping )
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 	if (!Session.init)
 	{
-		_init_session(input_dims, decoded_dims, channel_mapping);
+		init_cuda_configuration(input_dims, decoded_dims, channel_mapping);
 	}
 	
-	size_t data_size = input_struct.x * input_struct.y * sizeof(int16_t);
+	size_t data_size = (size_t)input_struct.x * input_struct.y * sizeof(int16_t);
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(Session.d_input, input, data_size, cudaMemcpyHostToDevice));
 
 	return true;
 }
 
-bool test_convert_and_decode(const int16_t* input, const PipelineParams params, complex_f** complex_out, complex_f** intermediate)
+bool test_convert_and_decode(const int16_t* input, const PipelineParams& params, complex_f** complex_out, complex_f** intermediate)
 {
-	const uint2 input_dims = *(uint2*)&(params.raw_dims); // lol
-	const uint3 output_dims = *(uint3*)&(params.decoded_dims);
-	size_t input_size = input_dims.x * input_dims.y * sizeof(i16);
-	size_t decoded_size = output_dims.x * output_dims.y * output_dims.z * sizeof(float);
-	size_t complex_size = decoded_size * 2;
+	const uint2 input_dims = *(const uint2*)&(params.raw_dims); // lol
+	const uint3 output_dims = *(const uint3*)&(params.decoded_dims);
+	size_t input_size = (size_t)input_dims.x * input_dims.y * sizeof(i16);
+	const size_t decoded_size = (size_t)output_dims.x * output_dims.y * output_dims.z * sizeof(float);
+	const size_t complex_size = decoded_size * 2;
 
-	size_t total_count = output_dims.x * output_dims.y * output_dims.z;
+	size_t total_count = (size_t)output_dims.x * output_dims.y * output_dims.z;
 
 	*complex_out = (complex_f*)malloc(complex_size);
 	*intermediate = (complex_f*)malloc(complex_size);
@@ -86,8 +59,8 @@ bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, cuComplex
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
-	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
-	size_t total_raw_count = raw_data_dims.x * raw_data_dims.y;
+	size_t total_count = (size_t)dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
+	size_t total_raw_count = (size_t)raw_data_dims.x * raw_data_dims.y;
 
 
 	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);
@@ -181,9 +154,8 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
-	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
-	size_t total_raw_count = raw_data_dims.x * raw_data_dims.y;
-
+	size_t total_count = (size_t)dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
+	size_t total_raw_count = (size_t)raw_data_dims.x * raw_data_dims.y;
 
 	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);
 
@@ -198,7 +170,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	vol_config.voxel_counts.y = params.vol_counts[1];
 	vol_config.voxel_counts.z = params.vol_counts[2];
 
-	vol_config.total_voxels = vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
+	vol_config.total_voxels = (size_t)vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
 
 	Session.volume_configuration = vol_config;
 
@@ -223,7 +195,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	cufftDestroy(Session.inverse_plan);
 	cufftDestroy(Session.strided_plan);
 
-	hilbert::plan_hilbert(Session.decoded_dims.x, Session.decoded_dims.y * params.readi_group_size);
+	hilbert::plan_hilbert((int)Session.decoded_dims.x, (int)Session.decoded_dims.y * params.readi_group_size);
 
 	i16_to_f::convert_data(d_input, Session.d_converted);
 
@@ -246,7 +218,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
 
-	std::cout << "Starting beamform" << std::endl;
+	std::cout << "Starting beamform\n";
 	std::cout << "First value: " << sample_value_i16(d_input) << std::endl;
 	std::cout << "First converted value: " << sample_value(Session.d_converted) << std::endl;
 	std::cout << "First decoded value: " << sample_value(Session.d_decoded) << std::endl;
@@ -272,8 +244,8 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 {
 	uint3 dec_data_dims = *(uint3*)&(params.decoded_dims);
 	uint2 raw_data_dims = *(uint2*)&(params.raw_dims);
-	size_t total_count = dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
-	size_t total_raw_count = raw_data_dims.x * raw_data_dims.y;
+	size_t total_count = (size_t)dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
+	size_t total_raw_count = (size_t)raw_data_dims.x * raw_data_dims.y;
 
 
 	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);

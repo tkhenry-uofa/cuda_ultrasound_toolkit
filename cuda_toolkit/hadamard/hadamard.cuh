@@ -33,7 +33,7 @@ namespace hadamard
 		generate_hadamard(float* hadamard, int prev_size, int final_size);
 
 		__global__ void
-		init_hadamard_matrix(float* matrix, int size);
+		init_hadamard_matrix(float* matrix, uint size);
 
 
 		/**
@@ -65,7 +65,7 @@ namespace hadamard
 	namespace _host
 	{
 		__host__ void 
-		print_array(float* out_array, uint size);
+		print_array(const float* out_array, uint size);
 	}
 }
 

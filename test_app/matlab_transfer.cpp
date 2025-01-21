@@ -29,7 +29,7 @@ matlab_transfer::_nack_response()
 }
 
 bool
-matlab_transfer::write_to_pipe(Handle pipe, void* data, uint len)
+matlab_transfer::write_to_pipe(Handle pipe, void* data, size_t len)
 {
 
 	uint elapsed = 0;
@@ -99,7 +99,7 @@ matlab_transfer::_open_shared_memory_area(char* name, size cap)
 
 
 Handle
-matlab_transfer::open_output_pipe(char* name)
+matlab_transfer::open_output_pipe(const char* name)
 {
 	return CreateFileA(name, GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
 }
@@ -128,12 +128,12 @@ matlab_transfer::last_error()
 }
 
 bool 
-matlab_transfer::create_smem(BeamformerParametersFull** bp_full)
+matlab_transfer::create_smem(BeamformerParametersFull** bp_mem_h)
 {
 	// Gives a pointer directly to the shared memory 
-	*bp_full = (BeamformerParametersFull*)_open_shared_memory_area(SMEM_NAME, sizeof(BeamformerParametersFull));
+	*bp_mem_h = (BeamformerParametersFull*)_open_shared_memory_area(SMEM_NAME, sizeof(BeamformerParametersFull));
 
-	return *bp_full != nullptr;
+	return *bp_mem_h != nullptr;
 }
 bool 
 matlab_transfer::wait_for_data(Handle pipe, void* data, uint* bytes_read, uint timeout)

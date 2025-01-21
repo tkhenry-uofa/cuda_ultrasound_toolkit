@@ -12,10 +12,9 @@ CudaSession Session;
 * Internal helpers
 *****************************************************************************************************************************/
 
-bool
-_unregister_cuda_buffers()
+static bool
+unregister_cuda_buffers()
 {
-	if (Session.raw_data_ssbo.cuda_resource != NULL)
 	if (Session.raw_data_ssbo.cuda_resource != nullptr)
 	{
 		CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(Session.raw_data_ssbo.cuda_resource));
@@ -37,8 +36,8 @@ _unregister_cuda_buffers()
 	return true;
 }
 
-bool
-_cleanup_session()
+static bool
+cleanup_session()
 {
 	CUDA_NULL_FREE(Session.d_complex);
 	CUDA_NULL_FREE(Session.d_hadamard);
@@ -60,8 +59,8 @@ _cleanup_session()
 	return true;
 }
 
-bool 
-_init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256])
+static bool 
+init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256])
 {
 	if (!Session.init)
 	{
@@ -96,8 +95,8 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 ch
 			return false;
 		}
 
-		size_t input_size = input_dims[0] * input_dims[1];
-		size_t decoded_size = decoded_dims[0] * decoded_dims[1] * decoded_dims[2];
+		size_t input_size = (size_t)input_dims[0] * input_dims[1];
+		size_t decoded_size = (size_t)decoded_dims[0] * decoded_dims[1] * decoded_dims[2];
 
 		//std::cout << "Allocing memory" << std::endl;
 		CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&(Session.d_input), input_size * sizeof(i16)));
@@ -112,7 +111,7 @@ _init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 ch
 		uint fft_channel_count = decoded_dims[1] * decoded_dims[2];
 		uint sample_count = decoded_dims[0];
 
-		hilbert::plan_hilbert(sample_count, fft_channel_count);
+		hilbert::plan_hilbert((int)sample_count, (int)fft_channel_count);
 
 		Session.init = true;
 	}
@@ -130,7 +129,7 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const 
 	std::cout << "Init config" << std::endl;
 	if (!Session.init)
 	{
-		return _init_session(input_dims, decoded_dims, channel_mapping);
+		return init_session(input_dims, decoded_dims, channel_mapping);
 	}
 	else
 	{
@@ -141,20 +140,20 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const 
 		if (changed)
 		{
 			std::cout << "configuration changed" << std::endl;
-			_cleanup_session();
-			return _init_session(input_dims, decoded_dims, channel_mapping);
+			cleanup_session();
+			return init_session(input_dims, decoded_dims, channel_mapping);
 		}
 		return true;
 	}
 }
 
 bool 
-register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
+register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
 {
 	std::cout << "Register buffers" << std::endl;
 	if (Session.rf_buffer_count != 0)
 	{
-		_unregister_cuda_buffers();
+		unregister_cuda_buffers();
 	}
 	
 	Session.raw_data_ssbo = { nullptr, 0 };
@@ -165,7 +164,7 @@ register_cuda_buffers(uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_s
 	for (uint i = 0; i < rf_buffer_count; i++)
 	{
 		std::cout << "Registering buffer : " << i << ", " << rf_data_ssbos[i] << std::endl;
-		Session.rf_data_ssbos[i] = { NULL, rf_data_ssbos[i] };
+		Session.rf_data_ssbos[i] = { nullptr, rf_data_ssbos[i] };
 		CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(Session.rf_data_ssbos[i].cuda_resource), Session.rf_data_ssbos[i].gl_buffer_id, cudaGraphicsRegisterFlagsNone));
 	}
 	Session.rf_buffer_count = rf_buffer_count;
@@ -186,13 +185,13 @@ cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
 	cudaGraphicsResource_t output_resource = Session.rf_data_ssbos[output_buffer_idx].cuda_resource;
 	if (!input_resource || !output_resource)
 	{
-		fprintf(stderr, "Open GL buffers not registered with cuda.");
+		std::cout << "Open GL buffers not registered with cuda.\n";
 		return false;
 	}
 
 	CUDA_RETURN_IF_ERROR(cudaGraphicsMapResources(1, &input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsMapResources(1, &output_resource));
-	size_t total_count = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z;
+	const size_t total_count = (size_t)Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z;
 
 	size_t num_bytes;
 	i16* d_input = nullptr;
@@ -250,10 +249,12 @@ cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+	return true;
 }
 
 void
 deinit_cuda_configuration()
 {
-	_cleanup_session();
+	cleanup_session();
 }

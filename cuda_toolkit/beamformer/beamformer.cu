@@ -42,7 +42,7 @@ offset_mixes(int transmit, int element, int mixes_spacing, int offset, int pivot
 __global__ void
 beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint64* times)
 {
-	int tid = threadIdx.x;
+	uint tid = threadIdx.x;
 	uint64 start_time;
 	if (tid == 0)
 	{
