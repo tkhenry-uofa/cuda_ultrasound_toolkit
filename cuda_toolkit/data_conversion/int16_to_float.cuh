@@ -19,7 +19,7 @@ namespace i16_to_f
 	namespace _kernels
 	{
 		__global__ void
-		short_to_float(const i16* input, float* output, uint2 input_dims, uint3 output_dims, uint channel_offset);
+		short_to_float(const i16* input, float* output, uint2 input_dims, uint3 output_dims);
 	}
 }
 

@@ -18,7 +18,7 @@ typedef struct {
 	float center_freq;
 	float sample_freq;
 	float c;
-	float pitch;
+	float pitch[2];
 	uint row_count;
 	uint col_count;
 	float xdc_mins[2];
@@ -55,9 +55,6 @@ typedef struct {
 	uint readi_group_id;
 	uint readi_group_size;
 
-
-	// Where in the rf data to start reading
-	u16 channel_offset;
 } PipelineParams;
 
 /**

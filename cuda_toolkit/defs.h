@@ -67,7 +67,7 @@ struct VolumeConfiguration
 struct CudaSession
 {
     bool init = false;
-    uint channel_offset = 0;
+
 	uint2 input_dims;
 	uint3 decoded_dims;
 

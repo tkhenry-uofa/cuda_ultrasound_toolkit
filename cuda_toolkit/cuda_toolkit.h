@@ -50,7 +50,7 @@
 		* input_offset: Offset into raw_data_ssbo 
 		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
 		*/
-		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset);
+		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx);
 
 		/**
 		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
