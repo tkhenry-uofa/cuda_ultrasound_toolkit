@@ -135,22 +135,22 @@ enum compute_shaders {
 /* NOTE: This struct follows the OpenGL std140 layout. DO NOT modify unless you have
  * read and understood the rules, particulary with regards to _member alignment_ */
 typedef struct {
-    u16 channel_mapping[512];   /* Transducer Channel to Verasonics Channel */
-    u32 uforces_channels[128];  /* Channels used for virtual UFORCES elements */
-    f32 xdc_origin[4 * MAX_MULTI_XDC_COUNT];  /* [m] Corner of transducer being treated as origin */
-    f32 xdc_corner1[4 * MAX_MULTI_XDC_COUNT]; /* [m] Corner of transducer along first axis */
-    f32 xdc_corner2[4 * MAX_MULTI_XDC_COUNT]; /* [m] Corner of transducer along second axis */
+    u16 channel_mapping[256];   /* Transducer Channel to Verasonics Channel */
+    u16 uforces_channels[256];  /* Channels used for virtual UFORCES elements */
+    f32 focal_depths[256];      /* [m] Focal Depths for each transmit of a RCA imaging scheme*/
+    f32 transmit_angles[256];   /* [radians] Transmit Angles for each transmit of a RCA imaging scheme*/
+    f32 xdc_transform[16];      /* IMPORTANT: column major order */
     uv4 dec_data_dim;           /* Samples * Channels * Acquisitions; last element ignored */
     uv4 output_points;          /* Width * Height * Depth * (Frame Average Count) */
     v4  output_min_coordinate;  /* [m] Back-Top-Left corner of output region (w ignored) */
     v4  output_max_coordinate;  /* [m] Front-Bottom-Right corner of output region (w ignored)*/
+    f32 xdc_element_pitch[2];   /* [m] Transducer Element Pitch {row, col} */
     uv2 rf_raw_dim;             /* Raw Data Dimensions */
-    u32 xdc_count;              /* Number of Transducer Arrays (4 max) */
-    u32 channel_offset;         /* Offset into channel_mapping: 0 or 128 (rows or columns) */
+    i32 transmit_mode;          /* Method/Orientation of Transmit */
+    u32 decode;                 /* Decode or just reshape data */
     f32 speed_of_sound;         /* [m/s] */
     f32 sampling_frequency;     /* [Hz]  */
     f32 center_frequency;       /* [Hz]  */
-    f32 focal_depth;            /* [m]   */
     f32 time_offset;            /* pulse length correction time [s]   */
     f32 off_axis_pos;           /* [m] Position on screen normal to beamform in 2D HERCULES */
     i32 beamform_plane;         /* Plane to Beamform in 2D HERCULES */
@@ -158,7 +158,7 @@ typedef struct {
     u32 das_shader_id;
     u32 readi_group_id;			/* Which readi group this data is from*/
     u32 readi_group_size;		/* Size of readi transmit group */
-    f32 _pad[1];
+    f32 _pad[3];
 } BeamformerParameters;
 
 typedef struct {

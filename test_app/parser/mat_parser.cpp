@@ -88,17 +88,6 @@ bool parser::parse_bp_struct(std::string file_path, PipelineParams* params)
         std::cout << "Failed to read " << defs::raw_dims_name << std::endl;
     }
 
-    field_p = mxGetField(struct_array, 0, defs::channel_offset_name.c_str());
-    if (field_p)
-    {
-        double_mx = (double*)mxGetDoubles(field_p);
-        params->channel_offset = (uint)*double_mx;
-    }
-    else
-    {
-        std::cout << "Failed to read " << defs::channel_offset_name << std::endl;
-    }
-
     field_p = mxGetField(struct_array, 0, defs::center_freq_name.c_str());
     if (field_p)
     {
@@ -125,7 +114,8 @@ bool parser::parse_bp_struct(std::string file_path, PipelineParams* params)
     if (field_p)
     {
         double_mx = (double*)mxGetDoubles(field_p);
-        params->array_params.pitch = (float)*double_mx;
+        params->array_params.pitch[0] = (float)*double_mx;
+        params->array_params.pitch[1] = (float)*double_mx;
     }
     else
     {
@@ -276,7 +266,8 @@ parser::load_f2_tx_config(std::string file_path, PipelineParams* params)
     params->array_params.row_count = (int)*mxGetDoubles(field_p);
 
     field_p = mxGetField(struct_array, 0, defs::sims::pitch_name.c_str());
-    params->array_params.pitch = (float)*mxGetDoubles(field_p);
+    params->array_params.pitch[0] = (float)*mxGetDoubles(field_p);
+    params->array_params.pitch[1] = (float)*mxGetDoubles(field_p);
 
     field_p = mxGetField(struct_array, 0, defs::sims::x_min_name.c_str());
     params->array_params.xdc_mins[0] = (float)*mxGetDoubles(field_p);

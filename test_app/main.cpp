@@ -17,7 +17,7 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 
 	params.focus[0] = 0.0f;
 	params.focus[1] = 0.0f;
-	params.focus[2] = bp.focal_depth;
+	params.focus[2] = bp.focal_depths[0];
 
 	params.pulse_delay = bp.time_offset;
 
@@ -49,8 +49,6 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 		params.channel_mapping[i] = bp.channel_mapping[i];
 	}
 
-	params.channel_offset = bp.channel_offset;
-
 	params.array_params.c = bp.speed_of_sound;
 	params.array_params.center_freq = bp.center_frequency;
 	params.array_params.sample_freq = bp.sampling_frequency;
@@ -58,174 +56,19 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	params.array_params.row_count = bp.dec_data_dim.y; // Assuming square arrays for now
 	params.array_params.col_count = bp.dec_data_dim.y;
 
-	params.array_params.xdc_mins[0] = bp.xdc_origin[0];
-	params.array_params.xdc_mins[1] = bp.xdc_origin[1];
+	params.array_params.xdc_mins[0] = -bp.xdc_transform[12];
+	params.array_params.xdc_mins[1] = -bp.xdc_transform[13];
 
+	params.array_params.xdc_maxes[0] = bp.xdc_transform[12];
+	params.array_params.xdc_maxes[1] = bp.xdc_transform[13];
 
-	// Origin is at (-x,-y), corner 1 is (+x,-y), corner 2 is (-x,+y)
-	params.array_params.xdc_maxes[0] = bp.xdc_corner1[0];
-	params.array_params.xdc_maxes[1] = bp.xdc_corner2[1];
-
-	float width = params.array_params.xdc_maxes[0] - params.array_params.xdc_mins[0];
-	params.array_params.pitch = width / params.array_params.row_count;
+	params.array_params.pitch[0] = bp.xdc_element_pitch[0];
+	params.array_params.pitch[1] = bp.xdc_element_pitch[1];
 
 	params.readi_group_id = bp.readi_group_id;
 	params.readi_group_size = bp.readi_group_size;
 
 	return params;
-}
-
-bool beamform_from_fieldii()
-{
-	std::string data_root = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
-	std::string data_path = data_root + R"(field_ii)" + R"(\)";
-	std::string input_file_path = data_path + R"(psf_plane.mat)";
-	std::string output_file_path = data_root + R"(beamformed\psf_plane\)" + R"(8_stagger_apro.mat)";
-
-	uint3 dims;
-	std::vector<cuComplex>* data_array = nullptr;
-
-	bool result = parser::load_complex_array(input_file_path, &data_array, &dims);
-	if (!result) return false;
-
-	PipelineParams params;
-	result = parser::load_f2_tx_config(input_file_path, &params);
-	if (!result) return false;
-
-	params.decoded_dims[0] = dims.x;
-	params.decoded_dims[1] = params.array_params.row_count;
-	params.decoded_dims[2] = params.array_params.row_count;
-
-	size_t vol_dims[3] = { 0,0,0 };
-	{
-		params.vol_mins[0] = -0.015f;
-		params.vol_maxes[0] = 0.015f;
-
-		params.vol_mins[1] = -0.015f;
-		params.vol_maxes[1] = 0.015f;
-
-		params.vol_mins[2] = 0.065f;
-		params.vol_maxes[2] = 0.095f;
-
-		float lateral_resolution = 0.0001f;
-		float axial_resolution = 0.0001f;
-
-		params.vol_resolutions[0] = lateral_resolution;
-		params.vol_resolutions[1] = lateral_resolution;
-		params.vol_resolutions[2] = axial_resolution;
-
-
-		params.array_params.c = 1452;
-
-		for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += lateral_resolution) {
-			vol_dims[0]++;
-		}
-		for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += lateral_resolution) {
-			vol_dims[1]++;
-		}
-		for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += axial_resolution) {
-			vol_dims[2]++;
-		}
-	}
-
-	cuComplex* volume = nullptr;
-	std::cout << "Processing" << std::endl;
-
-	auto start = std::chrono::high_resolution_clock::now();
-
-	result = fully_sampled_beamform((float*)data_array->data(), params, &volume);
-	if (!result) return false;
-
-	auto end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed = end - start;
-	std::cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
-
-	result = parser::save_float_array(volume, vol_dims, output_file_path, "volume", false);
-	if (!result) std::cout << "Failed to save volume" << std::endl;
-
-
-	free(volume);
-	delete data_array;
-
-	return true;
-}
-
-bool test_beamforming()
-{
-	std::string data_root = R"(C:\Users\tkhen\OneDrive\Documents\MATLAB\lab\vrs_transfers\vrs_data\)";
-	std::string data_path = data_root + R"(Resolution_HERCULES-Diverging-TxColumn)" + R"(\)";
-	std::string input_file_path = data_path + R"(49.mat)";
-	std::string output_file_path = data_root + R"(beamformed\)" + R"(reso_mixes16.mat)";
-
-	defs::RfDataDims dims;
-	std::vector<i16>* data_array = nullptr;
-
-	bool result = parser::load_int16_array(input_file_path, &data_array, &dims);
-	if (!result) return false;
-
-	PipelineParams params;
-	result = parser::parse_bp_struct(input_file_path, &params);
-	if (!result) return false;
-
-	uint input_dims[2] = { dims.sample_count, dims.channel_count };
-
-	params.vol_mins[0] = -0.015f;
-	params.vol_maxes[0] = 0.015f;
-
-	params.vol_mins[1] = -0.015f;
-	params.vol_maxes[1] = 0.015f;
-
-	params.vol_mins[2] = 0.04f;
-	params.vol_maxes[2] = 0.06f;
-
-	float lateral_resolution = 0.0001f;
-	float axial_resolution = 0.0001f;
-
-	params.vol_resolutions[0] = lateral_resolution;
-	params.vol_resolutions[1] = lateral_resolution;
-	params.vol_resolutions[2] = axial_resolution;
-
-	params.array_params.c = 1454;
-	params.array_params.row_count = params.decoded_dims[1];
-	params.array_params.col_count = params.decoded_dims[1];
-
-	params.array_params.pitch = (params.array_params.xdc_maxes[0] - params.array_params.xdc_mins[0]) / params.array_params.col_count;
-
-
-	uint x_count, y_count, z_count;
-	x_count = y_count = z_count = 0;
-	for (float x = params.vol_mins[0]; x <= params.vol_maxes[0]; x += lateral_resolution) {
-		x_count++;
-	}
-	for (float x = params.vol_mins[1]; x <= params.vol_maxes[1]; x += lateral_resolution) {
-		y_count++;
-	}
-	for (float x = params.vol_mins[2]; x <= params.vol_maxes[2]; x += axial_resolution) {
-		z_count++;
-	}
-
-	cuComplex* volume = nullptr;
-	std::cout << "Processing" << std::endl;
-
-	size_t vol_dims[3] = { x_count, y_count, z_count };
-
-	auto start = std::chrono::high_resolution_clock::now();
-
-	result = hero_raw_to_beamform(data_array->data(), params, &volume);
-	if (!result) return false;
-
-	auto end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed = end - start;
-	std::cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
-
-	result = parser::save_float_array(volume, vol_dims, output_file_path, "volume", false);
-	if (!result) return false;
-
-
-	free(volume);
-	delete data_array;
-
-	return true;
 }
 
 
@@ -405,8 +248,8 @@ bool readi_beamform()
 int main()
 {
 	bool result = false;
-	//result = readi_beamform_fii();
+	result = readi_beamform_fii();
 
-	result = readi_beamform();
+	//result = readi_beamform();
 	return !result;
 }

@@ -169,9 +169,8 @@ register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_
 }
 
 bool
-cuda_decode(size_t input_offset, uint output_buffer_idx, uint channel_offset)
+cuda_decode(size_t input_offset, uint output_buffer_idx)
 {
-	Session.channel_offset = channel_offset;
 	if (!Session.init)
 	{
 		std::cout << "Session not initialized" << std::endl;

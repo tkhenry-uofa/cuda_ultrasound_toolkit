@@ -41,7 +41,6 @@ bool test_convert_and_decode(const int16_t* input, const PipelineParams& params,
 
 	raw_data_to_cuda(input, params.raw_dims, params.decoded_dims, params.channel_mapping);
 
-	Session.channel_offset = params.channel_offset;
 	i16_to_f::convert_data(Session.d_input, Session.d_converted);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 
@@ -75,14 +74,13 @@ bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, cuComplex
 
 	Session.volume_configuration = vol_config;
 
-	Session.pitches.x = params.array_params.pitch;
-	Session.pitches.y = params.array_params.pitch;
+	Session.pitches.x = params.array_params.pitch[0];
+	Session.pitches.y = params.array_params.pitch[1];
 
 	i16* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(i16), cudaMemcpyHostToDevice));
 
-	Session.channel_offset = params.channel_offset;
 	i16_to_f::convert_data(d_input, Session.d_converted);
 	hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
 	hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
@@ -125,8 +123,8 @@ fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** vo
 
 	Session.volume_configuration = vol_config;
 	
-	Session.pitches.x = params.array_params.pitch;
-	Session.pitches.y = params.array_params.pitch;
+	Session.pitches.x = params.array_params.pitch[0];
+	Session.pitches.y = params.array_params.pitch[1];
 
 	Session.pulse_delay = params.pulse_delay;
 	Session.decoded_dims = { params.decoded_dims[0] ,params.decoded_dims[1], params.decoded_dims[2] };
@@ -174,16 +172,14 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	Session.volume_configuration = vol_config;
 
-	Session.pitches.x = params.array_params.pitch;
-	Session.pitches.y = params.array_params.pitch;
+	Session.pitches.x = params.array_params.pitch[0];
+	Session.pitches.y = params.array_params.pitch[1];
 
 	Session.xdc_mins.x = params.array_params.xdc_mins[0];
 	Session.xdc_mins.y = params.array_params.xdc_mins[1];
 
 	Session.xdc_maxes.x = params.array_params.xdc_maxes[0];
 	Session.xdc_maxes.y = params.array_params.xdc_maxes[1];
-
-	Session.channel_offset = params.channel_offset;
 
 	i16* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
@@ -260,8 +256,8 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	vol_config.voxel_counts = *(uint3*) & params.vol_counts;
 	Session.volume_configuration = vol_config;
 
-	Session.pitches.x = params.array_params.pitch;
-	Session.pitches.y = params.array_params.pitch;
+	Session.pitches.x = params.array_params.pitch[0];
+	Session.pitches.y = params.array_params.pitch[1];
 
 	Session.xdc_mins.x = params.array_params.xdc_mins[0];
 	Session.xdc_mins.y = params.array_params.xdc_mins[1];	
@@ -302,7 +298,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 
 	uint readi_group_count = dec_data_dims.z / Session.readi_group_size;
-	Session.pitches.y = params.array_params.pitch * (float)readi_group_count;
+	Session.pitches.y = Session.pitches.y * (float)readi_group_count;
 
 	Session.decoded_dims.z = Session.readi_group_size;
 

@@ -194,14 +194,14 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	{
 		transmit_type = TX_PLANE;
 	}
-	else if (Session.channel_offset > 0)
-	{
-		// TX on columns (x) axis so we have x focusing
-		transmit_type = TX_X_FOCUS;
-	}
+	//else if (Session.channel_offset > 0)
+	//{
+	//	// TX on columns (x) axis so we have x focusing
+	//	transmit_type = TX_X_FOCUS;
+	//}
 	else
 	{
-		transmit_type = TX_Y_FOCUS;
+		transmit_type = TX_X_FOCUS;
 	}
 
 	VolumeConfiguration vol_config = Session.volume_configuration;
