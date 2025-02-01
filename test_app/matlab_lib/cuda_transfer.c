@@ -118,9 +118,16 @@ poll_pipe_server(HANDLE* p)
 		return 1;
 	}
 
+	if (error == ERROR_BROKEN_PIPE)
+	{
+		// Only time the client will disconnect is if it crashes, cleanup 
+		// and error out.
+		cleanup_pipe_server(p);
+		error_msg("Beamformer has exited without returning a volume\n");
+	}
 	// These three errors just mean nothing's been sent yet, otherwise the pipe is in a bad state
 	// and needs to be recreated.
-	if (error != ERROR_NO_DATA && error != ERROR_PIPE_LISTENING && error != ERROR_PIPE_NOT_CONNECTED)
+	else if (error != ERROR_NO_DATA && error != ERROR_PIPE_LISTENING && error != ERROR_PIPE_NOT_CONNECTED)
 	{
 		warning_msg("Poll failed, Windows error '%i'.\n", error);
 		cleanup_pipe_server(p);
@@ -129,9 +136,10 @@ poll_pipe_server(HANDLE* p)
 		if (*p == INVALID_HANDLE_VALUE)
 		{
 			error = GetLastError();
-			error_msg("Failed to reopen volumne pipe after error, "
+			error_msg("Failed to reopen volume pipe after error, "
 				"Windows error '%i'.\n", error);
 		}
+
 	}
 	return 0;
 }
