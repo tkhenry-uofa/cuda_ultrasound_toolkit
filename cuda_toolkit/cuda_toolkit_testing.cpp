@@ -304,7 +304,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	std::cout << "Starting beamform" << std::endl;
-	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
+	beamformer::coherency_factor_beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
