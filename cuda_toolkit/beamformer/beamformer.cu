@@ -119,6 +119,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 	float incoherent_sum = 0.0f;
 
 	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x/2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };	
+	//float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x / 2, Constants.xdc_mins.y - vox_loc.y, vox_loc.z };
 	//float3 rx_vec = { vox_loc.x - Constants.pitches.x / 2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };
 	//float3 rx_vec = { vox_loc.x - Constants.pitches.x / 2, vox_loc.y - Constants.pitches.y / 2, vox_loc.z };
 

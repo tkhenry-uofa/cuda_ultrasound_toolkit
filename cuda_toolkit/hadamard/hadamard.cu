@@ -59,6 +59,8 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 
 	samples[in_group_id] = d_input[io_offset];
 
+	__syncthreads();
+
 	float decoded_value = 0.0f;
 	for (int i = 0; i < group_size; i++)
 	{
