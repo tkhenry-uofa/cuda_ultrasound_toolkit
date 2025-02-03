@@ -1,7 +1,7 @@
 #ifndef MATLAB_TRANSFER_H
 #define MATLAB_TRANSFER_H
 
-#include "defs.h"
+#include "../defs.h"
 
 
 namespace matlab_transfer

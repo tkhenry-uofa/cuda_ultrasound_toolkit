@@ -99,7 +99,7 @@
   <ItemGroup>
     <ClInclude Include="defs.h" />
     <ClInclude Include="matlab_lib\cuda_transfer.h" />
-    <ClInclude Include="matlab_transfer.h" />
+    <ClInclude Include="transfer_server\matlab_transfer.h" />
     <ClInclude Include="parser\mat_parser.h" />
   </ItemGroup>
   <ItemGroup>
@@ -113,7 +113,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="matlab_transfer.cpp" />
+    <ClCompile Include="transfer_server\matlab_transfer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="matlab_lib\build.sh" />

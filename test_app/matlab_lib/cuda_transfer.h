@@ -48,6 +48,7 @@ typedef struct {
 	u32 das_shader_id;
 	u32 readi_group_id;			/* Which readi group this data is from*/
 	u32 readi_group_size;		/* Size of readi transmit group */
+	u32 data_type;
 	f32 _pad[3];
 } BeamformerParameters;
 

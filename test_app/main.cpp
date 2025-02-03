@@ -7,7 +7,7 @@
 #include "defs.h"
 #include "parser/mat_parser.h"
 
-#include "matlab_transfer.h"
+#include "transfer_server/matlab_transfer.h"
 
 
 PipelineParams convert_params(BeamformerParametersFull* full_bp)
@@ -44,7 +44,7 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	params.vol_resolutions[1] = (params.vol_maxes[1] - params.vol_mins[1]) / params.vol_counts[1];
 	params.vol_resolutions[2] = (params.vol_maxes[2] - params.vol_mins[2]) / params.vol_counts[2];
 
-	for (int i = 0; i < 512; i++)
+	for (int i = 0; i < 256; i++)
 	{
 		params.channel_mapping[i] = bp.channel_mapping[i];
 	}
@@ -68,94 +68,10 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	params.readi_group_id = bp.readi_group_id;
 	params.readi_group_size = bp.readi_group_size;
 
+	params.rf_data_type = (RfDataType)bp.data_type;
+	params.f_number = bp.f_number;
+
 	return params;
-}
-
-
-bool readi_beamform_fii()
-{
-	BeamformerParametersFull* full_bp = nullptr;
-	Handle input_pipe = nullptr;
-	Handle output_pipe = nullptr;
-
-	std::cout << "Main: Creating smem and input pipe." << std::endl;
-	bool result = matlab_transfer::create_smem(&full_bp);
-
-	if (!result)
-	{
-		std::cout << "Main: Failed to create smem." << std::endl;
-		return false;
-	}
-
-	f32* data_buffer = (f32*)malloc(INPUT_MAX_BUFFER);
-	uint bytes_read = 0;
-	uint timeout = 2 * 60 * 60 * 1000; // 2 hours (for long simulations)
-
-	result = matlab_transfer::create_input_pipe(&input_pipe);
-
-	int max_beamforms = 1000;
-	// No state is carried over between iterations so this can handle multiple runs
-	// All beamforming settings come from the state of the shared memory
-	for (int g = 0; g < max_beamforms; g++)
-	{
-		std::cout << "Starting volume " << g + 1 << std::endl;
-		if (!result)
-		{
-			std::cout << "Main: Failed to create input pipe." << std::endl;
-			return false;
-		}
-
-		result = matlab_transfer::wait_for_data(input_pipe, data_buffer, &bytes_read, timeout);
-
-		if (!result)
-		{
-			std::cout << "Error reading data from matlab." << std::endl;
-			return false;
-		}
-
-		std::cout << "Restarting pipe" << std::endl;
-
-		matlab_transfer::disconnect_pipe(input_pipe);
-		matlab_transfer::close_pipe(input_pipe);
-		input_pipe = nullptr;
-		result = matlab_transfer::create_input_pipe(&input_pipe);
-
-		std::cout << "Created input pipe, last error: " << matlab_transfer::last_error() << std::endl;
-
-		if (!result)
-		{
-			std::cout << "Main: Failed to restart input pipe." << std::endl;
-			return false;
-		}
-
-		// Now that we know matlab is up we can connect to the output pipe
-		output_pipe = matlab_transfer::open_output_pipe(PIPE_OUTPUT_NAME);
-		if (output_pipe == nullptr)
-		{
-			std::cout << "Error opening export pipe to matlab." << std::endl;
-			return false;
-		}
-
-		// TODO: Unify structs and types so I don't have to deal with this 
-		PipelineParams params = convert_params(full_bp);
-
-		cuComplex* volume = nullptr;
-		size_t output_size = full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
-
-		std::cout << "Starting pipeline " << g + 1 << std::endl;
-		readi_beamform_fii(data_buffer, params, &volume);
-
-		matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
-
-		matlab_transfer::close_pipe(output_pipe);
-
-		std::cout << "Volume " << g + 1 << " done." << std::endl << std::endl;
-		free(volume);
-	}
-
-	free(data_buffer);
-
-	return true;
 }
 
 bool readi_beamform()
@@ -173,7 +89,7 @@ bool readi_beamform()
 		return false;
 	}
 
-	i16* data_buffer = (i16*)malloc(INPUT_MAX_BUFFER);
+	void* data_buffer = (void*)malloc(INPUT_MAX_BUFFER);
 	uint bytes_read = 0;
 	uint timeout = 2 * 60 * 60 * 1000; // 2 hours (for long simulations)
 
@@ -229,7 +145,17 @@ bool readi_beamform()
 		size_t output_size = (size_t)full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
 
 		std::cout << "Starting pipeline " << g + 1 << std::endl;
-		readi_beamform_raw(data_buffer, params, &volume);
+
+
+		if (params.rf_data_type == RfDataType::INT_16)
+			readi_beamform_raw((i16*)data_buffer, params, &volume);
+		else if (params.rf_data_type == RfDataType::FLOAT_32)
+			readi_beamform_fii((f32*)data_buffer, params, &volume);
+		else
+		{
+			std::cout << "Invalid data type." << std::endl;
+			return false;
+		}
 
 		matlab_transfer::write_to_pipe(output_pipe, volume, output_size);
 
@@ -248,8 +174,7 @@ bool readi_beamform()
 int main()
 {
 	bool result = false;
-	result = readi_beamform_fii();
 
-	//result = readi_beamform();
+	result = readi_beamform();
 	return !result;
 }

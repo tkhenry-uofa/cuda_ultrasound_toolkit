@@ -225,7 +225,7 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 
 	uint channel_id = threadIdx.x;
 
-	__shared__ cuComplex das_samples[MAX_CHANNEL_COUNT]; // 128
+	__shared__ cuComplex das_samples[MAX_CHANNEL_COUNT * 2]; // 128 * 2
 
 	uint x_voxel = blockIdx.x;
 	uint y_voxel = blockIdx.y;
@@ -250,6 +250,9 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 						Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, 
 						vox_loc.z };
 
+
+	float f_number = Constants.f_number;
+
 	uint delay_samples = 12;
 	float apro;
 	size_t channel_offset = 0;
@@ -259,6 +262,7 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 	uint sample_offset = channel_id;
 	cuComplex value;
 	cuComplex channel_total = { 0.0f,0.0f };
+	float incoherent_total = 0.0f;
 	for (int t = 0; t < transmit_count; t++)
 	{
 		channel_offset = channel_count * sample_count * t + sample_count * channel_id;
@@ -269,9 +273,10 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 		value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
 		float apro_argument = NORM_F2(lateral_ratios);
-		apro = f_num_aprodization(apro_argument, apro_depth, 0.0);
+		apro = f_num_aprodization(apro_argument, apro_depth, f_number);
 		value = SCALE_F2(value, apro);
 
+		incoherent_total += NORM_SQUARE_F2(value);
 		channel_total = ADD_F2(channel_total,value);
 
 		rx_vec.y += Constants.pitches.y;
@@ -280,19 +285,26 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 	__syncthreads();
 
 	das_samples[channel_id] = channel_total;
+	das_samples[channel_id + MAX_CHANNEL_COUNT] = { incoherent_total, 0.0f };
 
 	cuComplex vox_total = reduce_shared_sum(das_samples, channel_count);
 
+	__syncthreads();
+	cuComplex incoherent_sum = reduce_shared_sum(das_samples + MAX_CHANNEL_COUNT, channel_count);
+
+	__syncthreads();
 	if (channel_id == 0)
 	{
-		volume[volume_offset] = vox_total;
+		float coherence_factor = NORM_SQUARE_F2(vox_total) / (incoherent_sum.x * channel_count);
+		//volume[volume_offset] = vox_total;
+		volume[volume_offset] = SCALE_F2(vox_total, coherence_factor);
 	}
 
 }
 
 
 bool
-beamformer::per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
+beamformer::per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter, float f_number)
 {
 
 	TransmitType transmit_type;
@@ -327,7 +339,8 @@ beamformer::per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data
 		Session.pulse_delay,
 		vol_config.maximums.z,
 		Session.xdc_mins,
-		Session.xdc_maxes
+		Session.xdc_maxes,
+		f_number
 	};
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 

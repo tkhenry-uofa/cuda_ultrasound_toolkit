@@ -27,7 +27,7 @@ namespace beamformer
 	bool configure_volume(VolumeConfiguration* config);
 	bool beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter);
 
-	bool per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter);
+	bool per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter, float f_number);
 }
 
 #endif // !BEAMFORMER_CUH
