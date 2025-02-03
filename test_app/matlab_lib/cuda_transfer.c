@@ -182,7 +182,7 @@ beamform(char* pipe_name, char* shm_name, void* data, size_t data_size,
 	}
 	else
 	{
-		warning_msg("Opened export pipe '%s', file '%p'", OS_EXPORT_PIPE_NAME, volume_pipe);
+		//warning_msg("Opened export pipe '%s', file '%p'", OS_EXPORT_PIPE_NAME, volume_pipe);
 	}
 
 	g_data_pipe = CreateFileA(pipe_name, GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);

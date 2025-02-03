@@ -24,16 +24,15 @@ beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float 
 }
 
 __device__ cuComplex 
-reduce_shared_sum(const cuComplex* sharedVals, int channel_count, int transmit_count) 
+reduce_shared_sum(const cuComplex* sharedVals, const uint channel_count) 
 {
 	// Each thread will compute a partial sum.
 	int tid = threadIdx.x;
-	const int total_elements = channel_count * transmit_count; 
 
 	// Compute partial sum over a stripe of the shared memory.
 	cuComplex partial_sum = { 0.0f, 0.0f };
 	// Each thread processes elements starting at its index and strides by the block size.
-	for (int i = tid; i < total_elements; i += blockDim.x) {
+	for (int i = tid; i < channel_count; i += blockDim.x) {
 		partial_sum = ADD_F2( sharedVals[i], partial_sum);
 	}
 
@@ -220,13 +219,13 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 }
 
 __global__ void
-beamformer::_kernels::coherency_factor_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id)
+beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id)
 {
 	uint tid = threadIdx.x;
 
 	uint channel_id = threadIdx.x;
 
-	__shared__ cuComplex das_samples[MAX_CHANNEL_COUNT * MAX_TX_COUNT]; // 128 * 128
+	__shared__ cuComplex das_samples[MAX_CHANNEL_COUNT]; // 128
 
 	uint x_voxel = blockIdx.x;
 	uint y_voxel = blockIdx.y;
@@ -257,8 +256,9 @@ beamformer::_kernels::coherency_factor_beamform(const cuComplex* rfData, cuCompl
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
 	uint channel_count = Constants.channel_count;
-	uint sample_offset = channel_id * transmit_count;
-	float2 value;
+	uint sample_offset = channel_id;
+	cuComplex value;
+	cuComplex channel_total = { 0.0f,0.0f };
 	for (int t = 0; t < transmit_count; t++)
 	{
 		channel_offset = channel_count * sample_count * t + sample_count * channel_id;
@@ -272,84 +272,27 @@ beamformer::_kernels::coherency_factor_beamform(const cuComplex* rfData, cuCompl
 		apro = f_num_aprodization(apro_argument, apro_depth, 0.0);
 		value = SCALE_F2(value, apro);
 
-		das_samples[sample_offset + t] = value;
+		channel_total = ADD_F2(channel_total,value);
 
 		rx_vec.y += Constants.pitches.y;
 	}
 
 	__syncthreads();
 
-	
-	cuComplex total = reduce_shared_sum(das_samples, channel_count, transmit_count);
-	volume[volume_offset] = total;
-}
+	das_samples[channel_id] = channel_total;
 
-bool
-beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
-{
+	cuComplex vox_total = reduce_shared_sum(das_samples, channel_count);
 
-	TransmitType transmit_type;
-
-	if (focus_pos.z == 0.0f || focus_pos.z == INFINITY)
+	if (channel_id == 0)
 	{
-		transmit_type = TX_PLANE;
-	}
-	//else if (Session.channel_offset > 0)
-	//{
-	//	// TX on columns (x) axis so we have x focusing
-	//	transmit_type = TX_X_FOCUS;
-	//}
-	else
-	{
-		transmit_type = TX_X_FOCUS;
+		volume[volume_offset] = vox_total;
 	}
 
-	VolumeConfiguration vol_config = Session.volume_configuration;
-
-	KernelConstants consts =
-	{
-		Session.decoded_dims.x,
-		Session.decoded_dims.y,
-		Session.decoded_dims.z,
-		vol_config.voxel_counts,
-		vol_config.minimums,
-		{vol_config.lateral_resolution, vol_config.lateral_resolution, vol_config.axial_resolution},
-		focus_pos,
-		transmit_type,
-		Session.pitches,
-		Session.pulse_delay,
-		vol_config.maximums.z,
-		Session.xdc_mins,
-		Session.xdc_maxes
-	};
-	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
-
-	uint64 *times, *d_times;
-
-	times = (uint64*)malloc(2 * sizeof(uint64));
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_times, 2 * sizeof(uint64)));
-
-	uint3 vox_counts = vol_config.voxel_counts;
-	uint xy_count = vox_counts.x * vox_counts.y;
-	dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
-	dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
-
-	auto start = std::chrono::high_resolution_clock::now();
-
-	_kernels::double_loop << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
-	
-	CUDA_RETURN_IF_ERROR(cudaGetLastError());
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
-
-	auto end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed = end - start;
-	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
-
-	return true;
 }
 
+
 bool
-beamformer::coherency_factor_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
+beamformer::per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
 {
 
 	TransmitType transmit_type;
@@ -401,7 +344,74 @@ beamformer::coherency_factor_beamform(cuComplex* d_volume, const cuComplex* d_rf
 	auto start = std::chrono::high_resolution_clock::now();
 
 
-	_kernels::coherency_factor_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, Session.readi_group);
+	_kernels::per_channel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, Session.readi_group);
+
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+	auto end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = end - start;
+	std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
+
+	return true;
+}
+
+
+
+
+bool
+beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter)
+{
+
+	TransmitType transmit_type;
+
+	if (focus_pos.z == 0.0f || focus_pos.z == INFINITY)
+	{
+		transmit_type = TX_PLANE;
+	}
+	//else if (Session.channel_offset > 0)
+	//{
+	//	// TX on columns (x) axis so we have x focusing
+	//	transmit_type = TX_X_FOCUS;
+	//}
+	else
+	{
+		transmit_type = TX_X_FOCUS;
+	}
+
+	VolumeConfiguration vol_config = Session.volume_configuration;
+
+	KernelConstants consts =
+	{
+		Session.decoded_dims.x,
+		Session.decoded_dims.y,
+		Session.decoded_dims.z,
+		vol_config.voxel_counts,
+		vol_config.minimums,
+		{vol_config.lateral_resolution, vol_config.lateral_resolution, vol_config.axial_resolution},
+		focus_pos,
+		transmit_type,
+		Session.pitches,
+		Session.pulse_delay,
+		vol_config.maximums.z,
+		Session.xdc_mins,
+		Session.xdc_maxes
+	};
+	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
+
+	uint64* times, * d_times;
+
+	times = (uint64*)malloc(2 * sizeof(uint64));
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_times, 2 * sizeof(uint64)));
+
+	uint3 vox_counts = vol_config.voxel_counts;
+	uint xy_count = vox_counts.x * vox_counts.y;
+	dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
+	dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
+
+	auto start = std::chrono::high_resolution_clock::now();
+
+	_kernels::double_loop << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, d_times);
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
