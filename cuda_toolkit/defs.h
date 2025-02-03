@@ -136,6 +136,7 @@ struct KernelConstants
     float z_max;
     float2 xdc_mins;
     float2 xdc_maxes;
+    float f_number;
 };
 
 

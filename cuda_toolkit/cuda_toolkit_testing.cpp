@@ -215,14 +215,8 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
 
 	std::cout << "Starting beamform\n";
-	std::cout << "First value: " << sample_value_i16(d_input) << std::endl;
-	std::cout << "First converted value: " << sample_value(Session.d_converted) << std::endl;
-	std::cout << "First decoded value: " << sample_value(Session.d_decoded) << std::endl;
-	std::cout << "First complex value: " << sample_value((float*)Session.d_complex) << std::endl;
 
-	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
-
-	std::cout << "First volume value: " << sample_value((float*)d_volume) << std::endl;
+	beamformer::per_channel_beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number);
 
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -304,7 +298,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	std::cout << "Starting beamform" << std::endl;
-	beamformer::per_channel_beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter);
+	beamformer::per_channel_beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number);
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));

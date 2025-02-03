@@ -25,6 +25,10 @@ typedef struct {
 	float xdc_maxes[2];
 } ArrayParams;
 
+typedef enum {
+	INT_16 = 0,
+	FLOAT_32 = 1
+} RfDataType;
 
 typedef struct {
 	float focus[3];
@@ -54,6 +58,10 @@ typedef struct {
 
 	uint readi_group_id;
 	uint readi_group_size;
+
+	RfDataType rf_data_type;
+
+	float f_number;
 
 } PipelineParams;
 
