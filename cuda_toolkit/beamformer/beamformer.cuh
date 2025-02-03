@@ -21,13 +21,13 @@ namespace beamformer
 		double_loop(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint64* times);
 
 		__global__ void
-		coherency_factor_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id);
+		per_channel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id);
 	}
 
 	bool configure_volume(VolumeConfiguration* config);
 	bool beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter);
 
-	bool coherency_factor_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter);
+	bool per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter);
 }
 
 #endif // !BEAMFORMER_CUH
