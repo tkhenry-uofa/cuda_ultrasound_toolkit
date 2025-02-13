@@ -219,7 +219,7 @@ beamformer::_kernels::double_loop(const cuComplex* rfData, cuComplex* volume, fl
 }
 
 __global__ void
-beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id)
+beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id, float* hadamard)
 {
 	uint tid = threadIdx.x;
 
@@ -246,10 +246,14 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 	float tx_distance = calc_tx_distance(vox_loc, &max_lateral_dists);
 	float apro_depth = vox_loc.z / Constants.z_max;
 
-	float3 rx_vec =	  { Constants.xdc_mins.x - vox_loc.x + channel_id * Constants.pitches.x + Constants.pitches.x / 2, 
-						Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, 
+	float3 rx_vec =	  { Constants.xdc_mins.x - vox_loc.x + channel_id * Constants.pitches.x,// + Constants.pitches.x / 2, 
+						Constants.xdc_mins.y - vox_loc.y,// + Constants.pitches.y / 2, 
 						vox_loc.z };
 
+
+	uint readi_group_size = Constants.channel_count / Constants.tx_count;
+
+	uint hadamard_offset = Constants.channel_count * readi_group_id;
 
 	float f_number = Constants.f_number;
 
@@ -269,17 +273,25 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 
 		float2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
 
-		scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + 0);
-		value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
-		float apro_argument = NORM_F2(lateral_ratios);
-		apro = f_num_aprodization(apro_argument, apro_depth, f_number);
-		value = SCALE_F2(value, apro);
+		for (int g = 0; g < readi_group_size; g++)
+		{
+			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
+			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
-		incoherent_total += NORM_SQUARE_F2(value);
-		channel_total = ADD_F2(channel_total,value);
+			float apro_argument = NORM_F2(lateral_ratios);
+			apro = f_num_aprodization(apro_argument, apro_depth, f_number);
 
-		rx_vec.y += Constants.pitches.y;
+			value = SCALE_F2(value, hadamard[hadamard_offset + g]);
+
+			value = SCALE_F2(value, apro);
+
+			incoherent_total += NORM_SQUARE_F2(value);
+			channel_total = ADD_F2(channel_total, value);
+
+			rx_vec.y += Constants.pitches.x;
+		}
+
 	}
 
 	__syncthreads();
@@ -290,14 +302,14 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 	cuComplex vox_total = reduce_shared_sum(das_samples, channel_count);
 
 	__syncthreads();
-	cuComplex incoherent_sum = reduce_shared_sum(das_samples + MAX_CHANNEL_COUNT, channel_count);
+	//cuComplex incoherent_sum = reduce_shared_sum(das_samples + MAX_CHANNEL_COUNT, channel_count);
 
 	__syncthreads();
 	if (channel_id == 0)
 	{
-		float coherence_factor = NORM_SQUARE_F2(vox_total) / (incoherent_sum.x * channel_count);
-		//volume[volume_offset] = vox_total;
-		volume[volume_offset] = SCALE_F2(vox_total, coherence_factor);
+		//float coherence_factor = NORM_SQUARE_F2(vox_total) / (incoherent_sum.x * channel_count);
+		volume[volume_offset] = vox_total;
+		//volume[volume_offset] = SCALE_F2(vox_total, coherence_factor);
 	}
 
 }
@@ -357,7 +369,7 @@ beamformer::per_channel_beamform(cuComplex* d_volume, const cuComplex* d_rf_data
 	auto start = std::chrono::high_resolution_clock::now();
 
 
-	_kernels::per_channel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, Session.readi_group);
+	_kernels::per_channel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, Session.readi_group, Session.d_hadamard);
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
