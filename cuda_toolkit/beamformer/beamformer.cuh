@@ -21,7 +21,7 @@ namespace beamformer
 		double_loop(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint64* times);
 
 		__global__ void
-		per_channel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id);
+		per_channel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id, float* hadamard);
 	}
 
 	bool configure_volume(VolumeConfiguration* config);
