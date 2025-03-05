@@ -72,23 +72,22 @@ typedef struct {
 EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping);
 
 /**
-* Converts input to floats, hadamard decodes, and hilbert transforms via fft
-* 
-* Padding at the end of each channel is skipped, along with the transmitting channels
-* 
-* input_dims - [raw_sample_count (sample_count * tx_count + padding), total_channel_count]	
-* decoded_dims - [sample_count, rx_channel_count, tx_count]
-* rx_cols - TRUE|FALSE: The first|second half of the input channels are read
+* Full pipeline
+* 1. Convert to floats
+* 2. Decode
+* 3. Hilbert
+* 4. Beamform
 */
-EXPORT_FN bool test_convert_and_decode(const int16_t* input, const PipelineParams& params, complex_f** complex_out, complex_f** intermediate);
-
-
-EXPORT_FN bool hero_raw_to_beamform(const int16_t* input, PipelineParams params, cuComplex** volume);
-
 EXPORT_FN bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex** volume);
 
+/**
+* Pipeline without conversion
+*/
 EXPORT_FN bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** volume);
 
+/**
+* Just hilbert and beamform
+*/
 EXPORT_FN bool fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** volume);
 
 

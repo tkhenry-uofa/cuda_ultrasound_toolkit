@@ -70,7 +70,6 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 	}
 
 
-
 	d_output[io_offset] = decoded_value;
 }
 

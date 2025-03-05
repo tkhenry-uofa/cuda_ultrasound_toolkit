@@ -147,9 +147,9 @@ bool readi_beamform()
 		std::cout << "Starting pipeline " << g + 1 << std::endl;
 
 
-		if (params.rf_data_type == RfDataType::INT_16)
+		if (params.rf_data_type == RfDataType::INT_16) 
 			readi_beamform_raw((i16*)data_buffer, params, &volume);
-		else if (params.rf_data_type == RfDataType::FLOAT_32)
+		else if (params.rf_data_type == RfDataType::FLOAT_32) 
 			readi_beamform_fii((f32*)data_buffer, params, &volume);
 		else
 		{
