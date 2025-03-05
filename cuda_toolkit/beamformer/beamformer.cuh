@@ -4,17 +4,23 @@
 #include <device_launch_parameters.h>
 #include "../defs.h"
 
-#define OUT_OF_TX_RANGE -1.0f
-
 namespace beamformer
 {
 	namespace _kernels
 	{
-		__device__ inline float
-		calc_tx_distance(float3 vox_loc, float2* max_lateral_dists);
+		__device__ inline float3
+		calc_tx_distance(float3 vox_loc, float3 source_pos);
 
 		__device__ inline float
-		f_num_aprodization(float lateral_dist_ratio, float depth, float f_num);
+		total_path_length(float3 tx_vec, float3 rx_vec, float focal_depth, float vox_depth);
+
+
+		// Any voxels outside of the f# defined range of all channels are skipped
+		__device__ inline bool
+		check_ranges(float3 vox_loc, float f_number, float2 array_edges);
+
+		__device__ inline float
+		f_num_apodization(float lateral_dist_ratio, float depth, float f_num);
 
 		__global__ void
 		per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter);

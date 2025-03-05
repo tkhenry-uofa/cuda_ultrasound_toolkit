@@ -15,12 +15,14 @@ __constant__ KernelConstants Constants;
 #define MAX_TX_COUNT 128
 
 __device__ __inline__  float
-beamformer::_kernels::f_num_aprodization(float lateral_dist, float depth, float f_num)
+beamformer::_kernels::f_num_apodization(float lateral_dist, float depth, float f_num)
 {
-	float apro = f_num * lateral_dist / depth/2;
-	apro = fminf(apro, 0.5);
-	apro = cosf(CUDART_PI_F * apro);
-	return apro * apro;
+	// When lateral_dist > depth / f_num clamp the argument to pi/2 so that the cos is 0
+	// Otherwise the ratio will map between 0 and pi/2 forming a hann window
+	float apo = f_num * (lateral_dist / depth) /2;
+	apo = fminf(apo, 0.5);
+	apo = cosf(CUDART_PI_F * apo);
+	return apo * apo; // cos^2
 }
 
 __device__ cuComplex 
@@ -70,49 +72,46 @@ offset_mixes(int transmit, int element, int mixes_spacing, int offset, int pivot
 	return true;
 }
 
-__device__ inline float
-beamformer::_kernels::calc_tx_distance(float3 vox_loc, float2* max_lateral_dists)
+__device__ inline bool
+beamformer::_kernels::check_ranges(float3 vox_loc, float f_number, float2 array_edges)
 {
-	float tx_distance = 0.0f;
+	// Get the max aperture size for this depth
+	float lateral_extent = vox_loc.z / f_number;
+
+	// Model 2 1D apertures to maintain square planes
+	float x_extent = lateral_extent + array_edges.x;
+	float y_extent = lateral_extent + array_edges.y;
+
+	return (abs(vox_loc.x) < x_extent && abs(vox_loc.y) < y_extent);
+}
+
+__device__ inline float3
+beamformer::_kernels::calc_tx_distance(float3 vox_loc, float3 source_pos)
+{
+	float3 tx_distance;
 	if (Constants.tx_type == TX_X_FOCUS)
 	{
-		tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.x - vox_loc.x, 2)) + Constants.src_pos.z;
-
-		float tx_angle = atan2f(Constants.xdc_maxes.x, -Constants.src_pos.z);
-
-		max_lateral_dists->x = Constants.xdc_maxes.x + vox_loc.z * tanf(tx_angle);
-		max_lateral_dists->y = Constants.xdc_maxes.y * 2;
-
-		float2 lateral_ratios = { vox_loc.x / max_lateral_dists->x , vox_loc.y / max_lateral_dists->y };
-
-		if (lateral_ratios.x >= 1.0f || lateral_ratios.y >= 1.0f) return OUT_OF_TX_RANGE;
-		if (lateral_ratios.x <= -1.0f || lateral_ratios.y <= -1.0f) return OUT_OF_TX_RANGE;
-
+		tx_distance = { Constants.src_pos.x - vox_loc.x, 0.0f, Constants.src_pos.z - vox_loc.z };
 	}
 	else if (Constants.tx_type == TX_Y_FOCUS)
 	{
-		tx_distance = sqrt(powf(Constants.src_pos.z - vox_loc.z, 2) + powf(Constants.src_pos.y - vox_loc.y, 2)) + Constants.src_pos.z;
-
-		float tx_angle = atan2f(Constants.xdc_maxes.y, -Constants.src_pos.z);
-
-
-		max_lateral_dists->x = Constants.xdc_maxes.x * 2;
-		max_lateral_dists->y = Constants.xdc_maxes.y + vox_loc.z * tanf(tx_angle);
-
-		float2 lateral_ratios = { vox_loc.x / max_lateral_dists->x , vox_loc.y / max_lateral_dists->y };
-
-		if (lateral_ratios.x >= 1.0f || lateral_ratios.y >= 1.0f) return OUT_OF_TX_RANGE;
-		if (lateral_ratios.x <= -1.0f || lateral_ratios.y <= -1.0f) return OUT_OF_TX_RANGE;
-
+		tx_distance = { 0.0f, Constants.src_pos.y - vox_loc.y, Constants.src_pos.z - vox_loc.z };
 	}
 	else
 	{
-		tx_distance = vox_loc.z;
-		max_lateral_dists->x = 2 * Constants.xdc_maxes.x;
-		max_lateral_dists->y = 2 * Constants.xdc_maxes.y;
+		tx_distance = {0.0f, 0.0f, vox_loc.z };
 	}
 
 	return tx_distance;
+}
+
+__device__ inline float
+beamformer::_kernels::total_path_length(float3 tx_vec, float3 rx_vec, float focal_depth, float vox_depth)
+{
+	// If the voxel is shallower than the focus we need to subtract the tx vec
+	float vox_depth_sign = vox_depth > focal_depth ? 1.0f : -1.0f;
+	int sign = (vox_depth - focal_depth) > 0 ? 1 : -1;
+	return focal_depth + NORM_F3(rx_vec) + NORM_F3(tx_vec) * sign;
 }
 
 __global__ void
@@ -138,25 +137,25 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 		Constants.volume_mins.z + z_voxel * Constants.resolutions.z,
 	};
 
-	float2 max_lateral_dists;
-	float tx_distance = calc_tx_distance(vox_loc, &max_lateral_dists);
+	// If the voxel is out of the f_number defined range for all elements skip it
+	if (!check_ranges(vox_loc, Constants.f_number, Constants.xdc_maxes)) return;
+	
+	float3 tx_vec = calc_tx_distance(vox_loc, Constants.src_pos);
 
-	if (tx_distance == OUT_OF_TX_RANGE) return;
-
-	float apro_depth = vox_loc.z / Constants.z_max;
-	cuComplex total = {0.0f, 0.0f}, value;
-	float incoherent_sum = 0.0f;
-
+	
 	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x/2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };	
 	//float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x / 2, Constants.xdc_mins.y - vox_loc.y, vox_loc.z };
 	//float3 rx_vec = { vox_loc.x - Constants.pitches.x / 2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };
 	//float3 rx_vec = { vox_loc.x - Constants.pitches.x / 2, vox_loc.y - Constants.pitches.y / 2, vox_loc.z };
 
+
 	uint delay_samples = 12;
 
+	cuComplex total = { 0.0f, 0.0f }, value;
+	float incoherent_sum = 0.0f;
 
 	float starting_x = rx_vec.x;
-	float apro;
+	float apo;
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
@@ -167,6 +166,8 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	int mixes_offset = 0;
 	int total_used_channels = 0;
 	//int mixes_offset = mixes_spacing / 2;
+
+	float total_distance = 0.0f;
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
 		for (int e = 0; e < channel_count; e++)
@@ -179,14 +180,13 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 
 			channel_offset = channel_count * sample_count * t + sample_count * e;
 
-			float2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
-
-			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + 0);
+			total_distance = total_path_length(tx_vec, rx_vec, Constants.src_pos.z, vox_loc.z);
+			scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
-			float apro_argument = NORM_F2(lateral_ratios);
-			apro = f_num_aprodization(apro_argument, apro_depth, 0.0);
-			value = SCALE_F2(value, apro);
+
+			apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
+			value = SCALE_F2(value, apo);
 
 			total = ADD_F2(total, value);
 			incoherent_sum += NORM_SQUARE_F2(value);
@@ -231,25 +231,22 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 
 	uint transmit_count = Constants.tx_count;
 
-	float2 max_lateral_dists;
-	float tx_distance = calc_tx_distance(vox_loc, &max_lateral_dists);
-	if (tx_distance == OUT_OF_TX_RANGE) return;
+	// If the voxel is out of the f_number defined range for all elements skip it
+	if (!check_ranges(vox_loc, Constants.f_number, Constants.xdc_maxes)) return;
 
-	float apro_depth = vox_loc.z / Constants.z_max;
+	float3 tx_vec = calc_tx_distance(vox_loc, Constants.src_pos);
 
-	float3 rx_vec =	  { Constants.xdc_mins.x - vox_loc.x + channel_id * Constants.pitches.x,// + Constants.pitches.x / 2, 
-						Constants.xdc_mins.y - vox_loc.y,// + Constants.pitches.y / 2, 
+	float3 rx_vec =	  { Constants.xdc_mins.x - vox_loc.x + channel_id * Constants.pitches.x + Constants.pitches.x / 2, 
+						Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, 
 						vox_loc.z };
 
 
+
 	uint readi_group_size = Constants.channel_count / Constants.tx_count;
-
 	uint hadamard_offset = Constants.channel_count * readi_group_id;
-
 	float f_number = Constants.f_number;
-
 	uint delay_samples = 12;
-	float apro;
+	float apo;
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
 	uint scan_index;
@@ -258,24 +255,23 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 	cuComplex value;
 	cuComplex channel_total = { 0.0f,0.0f };
 	float incoherent_total = 0.0f;
+	float total_distance = 0.0f;
 	for (int t = 0; t < transmit_count; t++)
 	{
 		channel_offset = channel_count * sample_count * t + sample_count * channel_id;
 
-		float2 lateral_ratios = { rx_vec.x / max_lateral_dists.x, rx_vec.y / max_lateral_dists.y };
-
-
 		for (int g = 0; g < readi_group_size; g++)
 		{
-			scan_index = (uint)((NORM_F3(rx_vec) + tx_distance) * samples_per_meter + delay_samples);
+			total_distance = total_path_length(tx_vec, rx_vec, Constants.src_pos.z, vox_loc.z);
+			scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
-			float apro_argument = NORM_F2(lateral_ratios);
-			apro = f_num_aprodization(apro_argument, apro_depth, f_number);
+
+			apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
 
 			value = SCALE_F2(value, hadamard[hadamard_offset + g]);
 
-			value = SCALE_F2(value, apro);
+			value = SCALE_F2(value, apo);
 
 			incoherent_total += NORM_SQUARE_F2(value);
 			channel_total = ADD_F2(channel_total, value);
@@ -312,8 +308,10 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 
 	TransmitType transmit_type;
 
-	if (focus_pos.z == 0.0f || focus_pos.z == INFINITY)
+
+	if (focus_pos.z == INFINITY)
 	{
+		focus_pos.z = 0.0f; // This lets us reuse focusing code for plane waves
 		transmit_type = TX_PLANE;
 	}
 	//else if (Session.channel_offset > 0)
@@ -347,11 +345,9 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	};
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
-
-
 	uint3 vox_counts = vol_config.voxel_counts;
 
-	bool per_voxel = false;
+	bool per_voxel = true;
 	auto start = std::chrono::high_resolution_clock::now();
 
 	if (per_voxel)
