@@ -27,6 +27,14 @@ constexpr int MAX_2D_BLOCK_DIM = 32;
 constexpr int WARP_SIZE = 32;
 constexpr int TOTAL_TOBE_CHANNELS = 256;
 
+typedef enum {
+    DAS_ID_FORCES = 0,
+    DAS_ID_UFORCES = 1,
+    DAS_ID_HERCULES = 2,
+    DAS_ID_RCA_VLS = 3,
+    DAS_ID_RCA_TPW = 4
+} TransmitModes;
+
 
 #define ISPOWEROF2(a)  (((a) & ((a) - 1)) == 0)
 

@@ -104,6 +104,16 @@ enum compute_shaders {
     CS_LAST
 };
 
+
+typedef enum {
+    DAS_ID_FORCES = 0,
+    DAS_ID_UFORCES = 1,
+    DAS_ID_HERCULES = 2,
+    DAS_ID_RCA_VLS = 3,
+    DAS_ID_RCA_TPW = 4
+} TransmitModes;
+
+
 #define DAS_ID_UFORCES  0
 #define DAS_ID_HERCULES 1
 
