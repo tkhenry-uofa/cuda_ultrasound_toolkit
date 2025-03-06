@@ -23,7 +23,7 @@ namespace beamformer
 		f_num_apodization(float lateral_dist_ratio, float depth, float f_num);
 
 		__global__ void
-		per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter);
+		per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id, float* hadamard);
 
 		__global__ void
 		per_channel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id, float* hadamard);

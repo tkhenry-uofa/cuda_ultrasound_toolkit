@@ -115,7 +115,7 @@ beamformer::_kernels::total_path_length(float3 tx_vec, float3 rx_vec, float foca
 }
 
 __global__ void
-beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter)
+beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, float samples_per_meter, uint readi_group_id, float* hadamard)
 {
 	uint xy_voxel = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -149,6 +149,10 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	//float3 rx_vec = { vox_loc.x - Constants.pitches.x / 2, vox_loc.y - Constants.pitches.y / 2, vox_loc.z };
 
 
+
+
+	int readi_group_size = Constants.channel_count / Constants.tx_count;
+	uint hadamard_offset = Constants.channel_count * readi_group_id;
 	uint delay_samples = 12;
 
 	cuComplex total = { 0.0f, 0.0f }, value;
@@ -172,30 +176,36 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	{
 		for (int e = 0; e < channel_count; e++)
 		{
-			if (!offset_mixes(t, e, mixes_spacing, mixes_offset, 64))
-			{
-				rx_vec.x += Constants.pitches.x;
-				continue;
-			}
-
 			channel_offset = channel_count * sample_count * t + sample_count * e;
+			for (int g = 0; g < readi_group_size; g++)
+			{
+				if (!offset_mixes(t, e, mixes_spacing, mixes_offset, 64))
+				{
+					rx_vec.x += Constants.pitches.x;
+					continue;
+				}
 
-			total_distance = total_path_length(tx_vec, rx_vec, Constants.src_pos.z, vox_loc.z);
-			scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
-			value = __ldg(&rfData[channel_offset + scan_index - 1]);
+				total_distance = total_path_length(tx_vec, rx_vec, Constants.src_pos.z, vox_loc.z);
+				scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
+				value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
 
-			apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
-			value = SCALE_F2(value, apo);
+				apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
+				value = SCALE_F2(value, apo);
 
-			total = ADD_F2(total, value);
-			incoherent_sum += NORM_SQUARE_F2(value);
+				// This acts as the final decoding step for the data within the readi group
+				// If readi is turned off this will just scan the first row of the hadamard matrix (all 1s)
+				value = SCALE_F2(value, hadamard[hadamard_offset + g]);
 
-			rx_vec.x += Constants.pitches.x;
-			total_used_channels++;
+				total = ADD_F2(total, value);
+				incoherent_sum += NORM_SQUARE_F2(value);
 
+				rx_vec.x += Constants.pitches.x;
+				total_used_channels++;
+
+			}
 		}
-		rx_vec.y += Constants.pitches.y;
+		rx_vec.y += Constants.pitches.x;
 		rx_vec.x = starting_x;
 	}
 
@@ -266,9 +276,10 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 			scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
 			value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
-
 			apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
 
+			// This acts as the final decoding step for the data within the readi group
+			// If readi is turned off this will just scan the first row of the hadamard matrix (all 1s)
 			value = SCALE_F2(value, hadamard[hadamard_offset + g]);
 
 			value = SCALE_F2(value, apo);
@@ -356,7 +367,7 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
 		dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
-		_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter);
+		_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, samples_per_meter, Session.readi_group, Session.d_hadamard);
 	}
 	else
 	{
