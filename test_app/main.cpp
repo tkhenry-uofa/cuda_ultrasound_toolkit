@@ -71,6 +71,8 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	params.rf_data_type = (RfDataType)bp.data_type;
 	params.f_number = bp.f_number;
 
+	params.sequence = bp.das_shader_id;
+
 	return params;
 }
 

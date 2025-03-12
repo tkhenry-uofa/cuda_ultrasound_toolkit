@@ -36,7 +36,8 @@ fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** vo
 	vol_config.axial_resolution = params.vol_resolutions[2];
 	vol_config.lateral_resolution = params.vol_resolutions[0];
 
-	beamformer::configure_volume(&vol_config);
+	vol_config.voxel_counts = *(uint3*)&params.vol_counts;
+	vol_config.total_voxels = (size_t)vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
 
 	Session.volume_configuration = vol_config;
 	
@@ -92,11 +93,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	vol_config.axial_resolution = params.vol_resolutions[2];
 	vol_config.lateral_resolution = params.vol_resolutions[0];
 
-	beamformer::configure_volume(&vol_config);
-	vol_config.voxel_counts.x = params.vol_counts[0];
-	vol_config.voxel_counts.y = params.vol_counts[1];
-	vol_config.voxel_counts.z = params.vol_counts[2];
-
+	vol_config.voxel_counts = *(uint3*)&params.vol_counts;
 	vol_config.total_voxels = (size_t)vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
 
 	Session.volume_configuration = vol_config;
@@ -109,6 +106,8 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	Session.xdc_maxes.x = params.array_params.xdc_maxes[0];
 	Session.xdc_maxes.y = params.array_params.xdc_maxes[1];
+
+	Session.sequence = (TransmitModes)params.sequence;
 
 	i16* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
@@ -179,8 +178,8 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	vol_config.axial_resolution = params.vol_resolutions[2];
 	vol_config.lateral_resolution = params.vol_resolutions[0];
 
-	beamformer::configure_volume(&vol_config);
 	vol_config.voxel_counts = *(uint3*) & params.vol_counts;
+	vol_config.total_voxels = (size_t)vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
 	Session.volume_configuration = vol_config;
 
 	Session.pitches.x = params.array_params.pitch[0];
@@ -195,7 +194,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	Session.readi_group = params.readi_group_id;
 	Session.readi_group_size = params.readi_group_size;
 
-
+	Session.sequence = (TransmitModes)params.sequence;
 
 	float *d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));

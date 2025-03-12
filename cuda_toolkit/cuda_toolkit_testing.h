@@ -63,6 +63,8 @@ typedef struct {
 
 	float f_number;
 
+	int sequence;
+
 } PipelineParams;
 
 /**

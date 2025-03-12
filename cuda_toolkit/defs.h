@@ -114,6 +114,8 @@ struct CudaSession
 
     uint readi_group = 0;
     uint readi_group_size = 0;
+
+	TransmitModes sequence;
 };
 
 extern CudaSession Session;
@@ -145,6 +147,8 @@ struct KernelConstants
     float2 xdc_mins;
     float2 xdc_maxes;
     float f_number;
+	float samples_per_meter;
+	TransmitModes sequence;
 };
 
 
