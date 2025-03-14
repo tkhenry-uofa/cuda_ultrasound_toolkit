@@ -91,7 +91,7 @@ beamformer::_kernels::calc_tx_distance(float3 vox_loc, float3 source_pos)
 	float3 tx_distance;
 	if (Constants.tx_type == TX_X_FOCUS)
 	{
-		tx_distance = { source_pos.x - vox_loc.x, 0.0f, source_pos.z - vox_loc.z };
+		tx_distance = { source_pos.x - vox_loc.x, 0.0f, source_pos.z - vox_loc.z};
 	}
 	else if (Constants.tx_type == TX_Y_FOCUS)
 	{
@@ -142,7 +142,8 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	float3 src_pos = Constants.src_pos;
 	if (Constants.sequence == DAS_ID_FORCES)
 	{
-		src_pos.x = Constants.xdc_mins.x;
+		src_pos.x = Constants.xdc_mins.x + Constants.pitches.x / 2;
+		src_pos.z = 0; // Ignoring the elevational focus as it is out of plane
 	}
 
 
@@ -190,7 +191,7 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 					continue;
 				}
 
-				total_distance = total_path_length(tx_vec, rx_vec, Constants.src_pos.z, vox_loc.z);
+				total_distance = total_path_length(tx_vec, rx_vec, src_pos.z, vox_loc.z);
 				scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
 				value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
