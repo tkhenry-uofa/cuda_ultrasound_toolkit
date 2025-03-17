@@ -22,19 +22,19 @@ namespace beamformer
 		__device__ inline float
 		f_num_apodization(float lateral_dist_ratio, float depth, float f_num);
 
-		__global__ void
-		forces_beamformer(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard);
 
 		__global__ void
 		per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard);
 
 		__global__ void
 		per_channel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard);
+
+
+		__global__ void
+		hercforces_beamform(const cuComplex* rfData, cuComplex* volume);
 	}
 
-	bool beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter, float f_number);
-
-	bool forces_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter, float f_number);
+	bool beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter, float f_number, TransmitModes sequence);
 }
 
 #endif // !BEAMFORMER_CUH

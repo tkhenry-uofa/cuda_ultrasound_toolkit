@@ -67,7 +67,7 @@ fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** vo
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	
 
-	beamformer::beamform(d_volume, d_input, *(float3*)params.focus, samples_per_meter, params.f_number);
+	beamformer::beamform(d_volume, d_input, *(float3*)params.focus, samples_per_meter, params.f_number, TransmitModes::DAS_ID_HERCULES);
 
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(float));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
@@ -75,8 +75,6 @@ fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** vo
 
 	return true;
 }
-
-
 
 bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex** volume)
 {
@@ -148,7 +146,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	std::cout << "Starting beamform\n";
 
-	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number);
+	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number, Session.sequence);
 
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -230,7 +228,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	std::cout << "Starting beamform" << std::endl;
-	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number);
+	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number, Session.sequence);
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));
@@ -242,3 +240,5 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	return true;
 }
+
+

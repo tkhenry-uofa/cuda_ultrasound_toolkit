@@ -151,8 +151,10 @@ bool readi_beamform()
 
 		if (params.rf_data_type == RfDataType::INT_16) 
 			readi_beamform_raw((i16*)data_buffer, params, &volume);
-		else if (params.rf_data_type == RfDataType::FLOAT_32) 
+		else if (params.rf_data_type == RfDataType::FLOAT_32)
+		{
 			readi_beamform_fii((f32*)data_buffer, params, &volume);
+		}
 		else
 		{
 			std::cout << "Invalid data type." << std::endl;

@@ -111,7 +111,8 @@ typedef enum {
     DAS_ID_UFORCES = 1,
     DAS_ID_HERCULES = 2,
     DAS_ID_RCA_VLS = 3,
-    DAS_ID_RCA_TPW = 4
+    DAS_ID_RCA_TPW = 4,
+    HERCFORCES = 5
 } TransmitModes;
 
 

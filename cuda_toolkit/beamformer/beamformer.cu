@@ -213,11 +213,12 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 		}
 		rx_vec.x = starting_x;
 
-		if (Constants.sequence == TransmitModes::DAS_ID_HERCULES)
+		if (Constants.sequence == TransmitModes::DAS_ID_HERCULES || Constants.sequence == TransmitModes::HERCFORCES)
 		{
 			rx_vec.y += Constants.pitches.x;
 		}
-		else if (Constants.sequence == TransmitModes::DAS_ID_FORCES)
+		
+		if (Constants.sequence == TransmitModes::DAS_ID_FORCES || Constants.sequence == TransmitModes::HERCFORCES)
 		{
 			tx_vec.x += Constants.pitches.x;
 		}
@@ -328,9 +329,77 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 
 }
 
+__global__ void
+beamformer::_kernels::hercforces_beamform(const cuComplex* rfData, cuComplex* volume)
+{
+	uint xy_voxel = threadIdx.x + blockIdx.x * blockDim.x;
+
+	if (xy_voxel > Constants.voxel_dims.x * Constants.voxel_dims.y)
+	{
+		return;
+	}
+
+	uint x_voxel = xy_voxel % Constants.voxel_dims.x;
+	uint y_voxel = xy_voxel / Constants.voxel_dims.x;
+	uint z_voxel = blockIdx.y;
+
+	size_t volume_offset = z_voxel * Constants.voxel_dims.x * Constants.voxel_dims.y + y_voxel * Constants.voxel_dims.x + x_voxel;
+
+	const float3 vox_loc =
+	{
+		Constants.volume_mins.x + x_voxel * Constants.resolutions.x,
+		Constants.volume_mins.y + y_voxel * Constants.resolutions.y,
+		Constants.volume_mins.z + z_voxel * Constants.resolutions.z,
+	};
+
+	// If the voxel is out of the f_number defined range for all elements skip it
+	//if (!check_ranges(vox_loc, Constants.f_number, Constants.xdc_maxes)) return;
+
+	float3 src_pos = Constants.src_pos;
+	src_pos.y = Constants.xdc_mins.y + Constants.pitches.y / 2;
+
+	float3 tx_vec = { src_pos.x - vox_loc.x, src_pos.y - vox_loc.y, src_pos.z - vox_loc.z };
+	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x / 2, 0, vox_loc.z };
+
+	uint delay_samples = 12;
+
+	cuComplex total = { 0.0f, 0.0f }, value;
+
+	float apo;
+	size_t channel_offset = 0;
+	uint sample_count = Constants.sample_count;
+	uint scan_index;
+	uint channel_count = Constants.channel_count;
+	float samples_per_meter = Constants.samples_per_meter;
+	float starting_x = rx_vec.x;
+
+	float total_distance = 0.0f;
+	for (int t = 0; t < Constants.tx_count; t++)
+	{
+		for (int e = 0; e < channel_count; e++)
+		{
+			channel_offset = channel_count * sample_count * t + sample_count * e;
+
+			total_distance = total_path_length(tx_vec, rx_vec, src_pos.z, vox_loc.z);
+			scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
+			value = __ldg(&rfData[channel_offset + scan_index - 1]);
+
+			apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
+			value = SCALE_F2(value, apo);
+
+			total = ADD_F2(total, value);
+
+			rx_vec.x += Constants.pitches.x;
+
+		}
+		rx_vec.x = starting_x;
+		tx_vec.y += Constants.pitches.y;
+	}
+	volume[volume_offset] = total;
+}
 
 bool
-beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter, float f_number)
+beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter, float f_number, TransmitModes sequence)
 {
 
 	TransmitType transmit_type;
@@ -370,7 +439,7 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		Session.xdc_maxes,
 		f_number,
 		samples_per_meter,
-		Session.sequence,
+		sequence,
 	};
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
@@ -378,8 +447,16 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 
 	bool per_voxel = true;
 	auto start = std::chrono::high_resolution_clock::now();
+	
+	if (sequence == TransmitModes::HERCFORCES)
+	{
+		uint xy_count = vox_counts.x * vox_counts.y;
+		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
+		dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
-	if (per_voxel)
+		_kernels::hercforces_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume);
+	}
+	else if (per_voxel)
 	{
 		uint xy_count = vox_counts.x * vox_counts.y;
 		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
