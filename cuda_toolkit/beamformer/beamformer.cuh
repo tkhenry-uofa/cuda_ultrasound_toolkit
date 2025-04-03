@@ -30,9 +30,12 @@ namespace beamformer
 
 		__global__ void
 		per_channel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard);
+
+		__global__ void
+		mixes_beamform(const cuComplex* rfData, cuComplex* volume);
 	}
 
-	bool beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter, float f_number);
+	bool beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter, float f_number, int delay_samples);
 
 	bool forces_beamform(cuComplex* d_volume, const cuComplex* d_rf_data, const float3 focus_pos, float samples_per_meter, float f_number);
 }

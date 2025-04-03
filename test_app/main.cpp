@@ -73,6 +73,11 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 
 	params.sequence = bp.das_shader_id;
 
+	params.mixes_count = bp.mixes_count;
+	params.mixes_offset = bp.mixes_offset;
+
+	memcpy(params.mixes_rows, bp.mixes_rows, sizeof(bp.mixes_rows));
+
 	return params;
 }
 

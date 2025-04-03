@@ -114,6 +114,136 @@ beamformer::_kernels::total_path_length(float3 tx_vec, float3 rx_vec, float foca
 }
 
 __global__ void
+beamformer::_kernels::mixes_beamform(const cuComplex* rfData, cuComplex* volume)
+{
+	uint xy_voxel = threadIdx.x + blockIdx.x * blockDim.x;
+
+	if (xy_voxel > Constants.voxel_dims.x * Constants.voxel_dims.y)
+	{
+		return;
+	}
+
+	uint x_voxel = xy_voxel % Constants.voxel_dims.x;
+	uint y_voxel = xy_voxel / Constants.voxel_dims.x;
+	uint z_voxel = blockIdx.y;
+
+	size_t volume_offset = z_voxel * Constants.voxel_dims.x * Constants.voxel_dims.y + y_voxel * Constants.voxel_dims.x + x_voxel;
+
+	const float3 vox_loc =
+	{
+		Constants.volume_mins.x + x_voxel * Constants.resolutions.x,
+		Constants.volume_mins.y + y_voxel * Constants.resolutions.y,
+		Constants.volume_mins.z + z_voxel * Constants.resolutions.z,
+	};
+
+	// If the voxel is out of the f_number defined range for all elements skip it
+	if (!check_ranges(vox_loc, Constants.f_number, Constants.xdc_maxes)) return;
+
+	float3 src_pos = Constants.src_pos;
+	float3 tx_vec = calc_tx_distance(vox_loc, src_pos);
+
+	float3 rx_vec = { Constants.xdc_mins.x - vox_loc.x + Constants.pitches.x / 2, Constants.xdc_mins.y - vox_loc.y + Constants.pitches.y / 2, vox_loc.z };
+
+	int delay_samples = 0;
+
+	cuComplex total = { 0.0f, 0.0f }, value;
+	float incoherent_sum = 0.0f;
+
+	uint middle_row = Constants.channel_count / 2;
+
+	float3 starting_rx = rx_vec;
+	uint sample_count = Constants.sample_count;
+	int scan_index;
+	uint transmit_count = Constants.tx_count;
+	uint channel_count = Constants.channel_count;
+	float samples_per_meter = Constants.samples_per_meter;
+
+	uint mixes_count = Constants.mixes_count;
+	int mixes_offset = Constants.mixes_offset;
+	float total_distance = 0.0f;
+	int total_used_channels = 0;
+	for (int i = 0; i < mixes_count; i++)
+	{
+		int t = Constants.mixes_rows[i];
+
+		if (t >= middle_row )
+		{
+			t += mixes_offset;
+		}
+
+		rx_vec.y = starting_rx.y + Constants.pitches.y * t;
+
+		for (int e = 0; e < channel_count; e++)
+		{
+			rx_vec.x = starting_rx.x + Constants.pitches.x * e;
+
+			size_t channel_offset = channel_count * sample_count * t + sample_count * e;
+			total_distance = total_path_length(tx_vec, rx_vec, src_pos.z, vox_loc.z);
+			scan_index = (int)(total_distance * samples_per_meter) + delay_samples;
+			value = __ldg(&rfData[channel_offset + scan_index - 1]);
+
+			if (t == 0)
+			{
+				value = SCALE_F2(value, I_SQRT_128);
+			}
+
+			float apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
+			value = SCALE_F2(value, apo);
+
+
+			total = ADD_F2(total, value);
+			total_used_channels++;
+			//incoherent_sum += NORM_SQUARE_F2(value);
+
+		}
+	}
+
+	rx_vec = starting_rx;
+	for (int t = 0; t < transmit_count; t++)
+	{
+		rx_vec.y = starting_rx.y + Constants.pitches.y * t;
+
+		for (int j = 0; j < mixes_count; j++)
+		{
+			int e = Constants.mixes_rows[j];
+
+			if (e >= middle_row)
+			{
+				e += mixes_offset;
+			}
+
+			rx_vec.x = starting_rx.x + Constants.pitches.x * e;
+
+			size_t channel_offset = channel_count * sample_count * t + sample_count * e;
+			total_distance = total_path_length(tx_vec, rx_vec, src_pos.z, vox_loc.z);
+			scan_index = (int)(total_distance * samples_per_meter) + delay_samples;
+			value = __ldg(&rfData[channel_offset + scan_index - 1]);
+
+			if (t == 0)
+			{
+				value = SCALE_F2(value, I_SQRT_128);
+			}
+
+			float apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
+			value = SCALE_F2(value, apo);
+
+
+			total = ADD_F2(total, value);
+			total_used_channels++;
+			//incoherent_sum += NORM_SQUARE_F2(value);
+
+		}
+	}
+
+	float coherent_sum = NORM_SQUARE_F2(total);
+
+	//float coherency_factor = coherent_sum / (incoherent_sum * total_used_channels);
+	//volume[volume_offset] = SCALE_F2(total, coherency_factor);
+
+	volume[volume_offset] = total;
+}
+
+__global__ void
 beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard)
 {
 	uint xy_voxel = threadIdx.x + blockIdx.x * blockDim.x;
@@ -171,7 +301,7 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	uint channel_count = Constants.channel_count;
 	float samples_per_meter = Constants.samples_per_meter;
 
-	int mixes_number = 32;
+	int mixes_number = 128;
 	int mixes_spacing = 128/mixes_number;
 	int mixes_offset = 0;
 	//int mixes_offset = mixes_spacing / 2;
@@ -334,7 +464,7 @@ beamformer::_kernels::per_channel_beamform(const cuComplex* rfData, cuComplex* v
 
 
 bool
-beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter, float f_number)
+beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 focus_pos, float samples_per_meter, float f_number, int delay_samples)
 {
 
 	TransmitType transmit_type;
@@ -368,35 +498,46 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		focus_pos,
 		transmit_type,
 		Session.pitches,
-		Session.pulse_delay,
+		delay_samples,
 		vol_config.maximums.z,
 		Session.xdc_mins,
 		Session.xdc_maxes,
 		f_number,
 		samples_per_meter,
 		Session.sequence,
+		Session.mixes_count,
+		Session.mixes_offset
 	};
+	memcpy(consts.mixes_rows, Session.mixes_rows, sizeof(Session.mixes_rows)); // Copy the mix rows to the constant memory
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
 	uint3 vox_counts = vol_config.voxel_counts;
 
-	bool per_voxel = true;
+	bool per_channel = false;
 	auto start = std::chrono::high_resolution_clock::now();
 
-	if (per_voxel)
+	if (Session.sequence == TransmitModes::MIXES)
+	{
+		uint xy_count = vox_counts.x * vox_counts.y;
+		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
+		dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
+
+		_kernels::mixes_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume);
+	}
+	else if (per_channel)
+	{
+		dim3 grid_dim = { vox_counts.x, vox_counts.y, vox_counts.z };
+		dim3 block_dim = { Session.decoded_dims.y, 1, 1 };
+
+		_kernels::per_channel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, Session.readi_group, Session.d_hadamard);
+	}
+	else
 	{
 		uint xy_count = vox_counts.x * vox_counts.y;
 		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
 		dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
 		_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, Session.readi_group, Session.d_hadamard);
-	}
-	else
-	{
-		dim3 grid_dim = { vox_counts.x, vox_counts.y, vox_counts.z };
-		dim3 block_dim = { Session.decoded_dims.y, 1, 1 };
-
-		_kernels::per_channel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, Session.readi_group, Session.d_hadamard);
 	}
 
 
