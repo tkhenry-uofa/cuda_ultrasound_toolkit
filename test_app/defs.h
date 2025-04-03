@@ -170,6 +170,9 @@ typedef struct {
     u32 readi_group_id;			/* Which readi group this data is from*/
     u32 readi_group_size;		/* Size of readi transmit group */
 	u32 data_type = 0;          /* 0: i16, 1: f32 */
+    u8 mixes_count;
+    u8 mixes_offset;
+	u8 mixes_rows[128];         
     f32 _pad[3];
 } BeamformerParameters;
 

@@ -247,7 +247,7 @@ beamform(char* pipe_name, char* shm_name, void* data, size_t data_size,
 			{
 				i32 error_code = GetLastError();
 				// Use warning_msg, error_msg exits MEX early preventing cleanup
-				warning_msg("Read pipe error, Data size: %i, Total read: %i, Error code: %i\n", output_size, total_read, error_code);
+				warning_msg("Read pipe error, Data size: %i, Total read: %i, Error code: %i, Handle: %p\n", output_size, total_read, error_code, volume_pipe);
 			}
 
 

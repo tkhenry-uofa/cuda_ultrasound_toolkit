@@ -32,7 +32,8 @@ typedef enum {
     DAS_ID_UFORCES = 1,
     DAS_ID_HERCULES = 2,
     DAS_ID_RCA_VLS = 3,
-    DAS_ID_RCA_TPW = 4
+    DAS_ID_RCA_TPW = 4,
+    MIXES = 100 // temp
 } TransmitModes;
 
 
@@ -52,6 +53,7 @@ typedef unsigned long long int uint64;
 typedef unsigned int uint;
 typedef int16_t i16;
 typedef uint16_t u16;
+typedef uint8_t u8;
 typedef std::vector<std::complex<float>> ComplexVectorF;
 
 struct BufferMapping
@@ -115,6 +117,10 @@ struct CudaSession
     uint readi_group = 0;
     uint readi_group_size = 0;
 
+    u8 mixes_count;
+    u8 mixes_offset;
+    u8 mixes_rows[128];
+
 	TransmitModes sequence;
 };
 
@@ -142,13 +148,16 @@ struct KernelConstants
 	float3 src_pos;
 	TransmitType tx_type;
     float2 pitches;
-    float pulse_delay;
+    int delay_samples;
     float z_max;
     float2 xdc_mins;
     float2 xdc_maxes;
     float f_number;
 	float samples_per_meter;
 	TransmitModes sequence;
+    u8 mixes_count;
+    u8 mixes_offset;
+    u8 mixes_rows[128];
 };
 
 

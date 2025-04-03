@@ -65,6 +65,10 @@ typedef struct {
 
 	int sequence;
 
+	uint8_t mixes_count;
+	uint8_t mixes_offset;
+	uint8_t mixes_rows[128];
+
 } PipelineParams;
 
 /**
