@@ -171,12 +171,11 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	uint channel_count = Constants.channel_count;
 	float samples_per_meter = Constants.samples_per_meter;
 
-	int mixes_number = 128;
+	int mixes_number = 32;
 	int mixes_spacing = 128/mixes_number;
 	int mixes_offset = 0;
-	int total_used_channels = 0;
 	//int mixes_offset = mixes_spacing / 2;
-
+	int total_used_channels = 0;
 	float total_distance = 0.0f;
 	for (int t = 0; t < Constants.tx_count; t++)
 	{
@@ -191,10 +190,15 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 					continue;
 				}
 
+
 				total_distance = total_path_length(tx_vec, rx_vec, src_pos.z, vox_loc.z);
 				scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
 				value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
+				if (t == 0)
+				{
+					value = SCALE_F2(value, I_SQRT_128);
+				}
 
 				apo = f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Constants.f_number);
 				value = SCALE_F2(value, apo);
@@ -348,7 +352,7 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	//}
 	else
 	{
-		transmit_type = TX_X_FOCUS;
+		transmit_type = TX_Y_FOCUS;
 	}
 
 	VolumeConfiguration vol_config = Session.volume_configuration;
