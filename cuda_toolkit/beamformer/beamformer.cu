@@ -13,6 +13,49 @@ __constant__ KernelConstants Constants;
 
 #define MAX_CHANNEL_COUNT 128
 #define MAX_TX_COUNT 128
+#define C_SPLINE 0.5f 
+
+__device__ cuComplex cubic_spline(int channel_offset, float x, const cuComplex* rf_data) {
+	// Hermite basis matrix (transposed for row vector * matrix order)
+	float h[4][4] = {
+		{ 2.0f, -2.0f,  1.0f,  1.0f},
+		{-3.0f,  3.0f, -2.0f, -1.0f},
+		{ 0.0f,  0.0f,  1.0f,  0.0f},
+		{ 1.0f,  0.0f,  0.0f,  0.0f}
+	};
+
+	int x_whole = static_cast<int>(floorf(x));
+	float xr = x - static_cast<float>(x_whole);
+	float S[4] = { xr * xr * xr, xr * xr, xr, 1.0f };
+
+	cuComplex P1 = rf_data[channel_offset + x_whole];
+	cuComplex P2 = rf_data[channel_offset + x_whole + 1];
+	cuComplex T1 = {
+		C_SPLINE * (P2.x - rf_data[channel_offset + x_whole - 1].x),
+		C_SPLINE * (P2.y - rf_data[channel_offset + x_whole - 1].y)
+	};
+	float2 T2 = {
+		C_SPLINE * (rf_data[channel_offset + x_whole + 2].x - P1.x),
+		C_SPLINE * (rf_data[channel_offset + x_whole + 2].y - P1.y)
+	};
+
+	float Cx[4] = { P1.x, P2.x, T1.x, T2.x };
+	float Cy[4] = { P1.y, P2.y, T1.y, T2.y };
+
+	float result_x = 0.0f;
+	float result_y = 0.0f;
+	for (int i = 0; i < 4; ++i) {
+		float hx = 0.0f;
+		float hy = 0.0f;
+		for (int j = 0; j < 4; ++j) {
+			hx += S[j] * h[j][i];
+		}
+		result_x += hx * Cx[i];
+		result_y += hx * Cy[i];
+	}
+
+	return { result_x, result_y };
+}
 
 __device__ __inline__  float
 beamformer::_kernels::f_num_apodization(float lateral_dist, float depth, float f_num)
@@ -243,6 +286,8 @@ beamformer::_kernels::mixes_beamform(const cuComplex* rfData, cuComplex* volume)
 	volume[volume_offset] = total;
 }
 
+
+
 __global__ void
 beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard)
 {
@@ -288,7 +333,7 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 
 	int readi_group_size = Constants.channel_count / Constants.tx_count;
 	uint hadamard_offset = Constants.channel_count * readi_group_id;
-	uint delay_samples = 12;
+	uint delay_samples = Constants.delay_samples;
 
 	cuComplex total = { 0.0f, 0.0f }, value;
 	float incoherent_sum = 0.0f;
@@ -297,7 +342,7 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	float apo;
 	size_t channel_offset = 0;
 	uint sample_count = Constants.sample_count;
-	uint scan_index;
+	float scan_index;
 	uint channel_count = Constants.channel_count;
 	float samples_per_meter = Constants.samples_per_meter;
 
@@ -312,7 +357,7 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 		for (int e = 0; e < channel_count; e++)
 		{
 			channel_offset = channel_count * sample_count * t + sample_count * e;
-			for (int g = 0; g < readi_group_size; g++)
+			//for (int g = 0; g < readi_group_size; g++)
 			{
 				if (!offset_mixes(t, e, mixes_spacing, mixes_offset, 64))
 				{
@@ -322,8 +367,10 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 
 
 				total_distance = total_path_length(tx_vec, rx_vec, src_pos.z, vox_loc.z);
-				scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
-				value = __ldg(&rfData[channel_offset + scan_index - 1]);
+				scan_index = total_distance * samples_per_meter + delay_samples;
+
+				value = cubic_spline(channel_offset, scan_index, rfData);
+				//value = __ldg(&rfData[channel_offset + (uint)scan_index - 1]);
 
 				if (t == 0)
 				{
@@ -335,7 +382,7 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 
 				// This acts as the final decoding step for the data within the readi group
 				// If readi is turned off this will just scan the first row of the hadamard matrix (all 1s)
-				value = SCALE_F2(value, hadamard[hadamard_offset + g]);
+				//value = SCALE_F2(value, hadamard[hadamard_offset + g]);
 
 				total = ADD_F2(total, value);
 				incoherent_sum += NORM_SQUARE_F2(value);
@@ -475,11 +522,11 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		focus_pos.z = 0.0f; // This lets us reuse focusing code for plane waves
 		transmit_type = TX_PLANE;
 	}
-	//else if (Session.channel_offset > 0)
-	//{
-	//	// TX on columns (x) axis so we have x focusing
-	//	transmit_type = TX_X_FOCUS;
-	//}
+	// We transmit on the Y axis and receive on the X
+	else if (Session.sequence == DAS_ID_FORCES || Session.sequence == DAS_ID_UFORCES)
+	{
+		transmit_type = TX_X_FOCUS;
+	}
 	else
 	{
 		transmit_type = TX_Y_FOCUS;

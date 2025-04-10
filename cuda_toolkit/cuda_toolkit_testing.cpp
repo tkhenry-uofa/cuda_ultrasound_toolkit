@@ -7,6 +7,11 @@
 #include "cuda_toolkit_testing.h"
 
 
+
+
+
+
+
 bool
 raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping )
 {
@@ -125,7 +130,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	cufftDestroy(Session.inverse_plan);
 	cufftDestroy(Session.strided_plan);
 
-	hilbert::plan_hilbert((int)Session.decoded_dims.x, (int)Session.decoded_dims.y * params.readi_group_size);
+	hilbert::plan_hilbert((int)Session.decoded_dims.x, (int)Session.decoded_dims.y * 128);
 
 	i16_to_f::convert_data(d_input, Session.d_converted);
 
@@ -207,9 +212,9 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(float), cudaMemcpyHostToDevice));
 
-	//hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
 
-	hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard);
+	//hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard);
 
 	//CUDA_RETURN_IF_ERROR(cudaMemcpy(Session.d_decoded, d_input, total_raw_count * sizeof(float), cudaMemcpyDeviceToDevice));
 
@@ -231,9 +236,9 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 
 	uint readi_group_count = dec_data_dims.z / Session.readi_group_size;
-	Session.pitches.y = Session.pitches.y * (float)readi_group_count;
+	//Session.pitches.y = Session.pitches.y * (float)readi_group_count;
 
-	Session.decoded_dims.z = Session.readi_group_size;
+	//Session.decoded_dims.z = Session.readi_group_size;
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	std::cout << "Starting beamform" << std::endl;
