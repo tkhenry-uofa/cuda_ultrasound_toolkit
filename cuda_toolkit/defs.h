@@ -19,6 +19,7 @@
 
 constexpr float NaN = (float)0xFFFFFFFF; 
 
+constexpr float I_SQRT_64 = 0.125f;
 constexpr float I_SQRT_128 = 0.088388347648318f;
 constexpr float PI_F = 3.141592654f;
 

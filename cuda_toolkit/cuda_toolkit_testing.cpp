@@ -130,7 +130,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	cufftDestroy(Session.inverse_plan);
 	cufftDestroy(Session.strided_plan);
 
-	hilbert::plan_hilbert((int)Session.decoded_dims.x, (int)Session.decoded_dims.y * 128);
+	hilbert::plan_hilbert((int)Session.decoded_dims.x, (int)Session.decoded_dims.y * (int)Session.decoded_dims.z);
 
 	i16_to_f::convert_data(d_input, Session.d_converted);
 
