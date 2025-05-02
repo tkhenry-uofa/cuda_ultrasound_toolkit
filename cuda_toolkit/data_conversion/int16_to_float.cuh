@@ -14,7 +14,7 @@ namespace i16_to_f
 	convert_data(const i16* input, float* output);
 
 	__host__ bool
-	copy_channel_mapping(const u16 channel_mapping[TOTAL_TOBE_CHANNELS]);
+	copy_channel_mapping(const i16 channel_mapping[TOTAL_TOBE_CHANNELS]);
 
 	namespace _kernels
 	{

@@ -3,10 +3,10 @@
 
 #include "int16_to_float.cuh"
 
-__constant__ u16 Channel_Mapping[TOTAL_TOBE_CHANNELS];
+__constant__ i16 Channel_Mapping[TOTAL_TOBE_CHANNELS];
 
 __host__ bool
-i16_to_f::copy_channel_mapping(const u16 channel_mapping[TOTAL_TOBE_CHANNELS])
+i16_to_f::copy_channel_mapping(const i16 channel_mapping[TOTAL_TOBE_CHANNELS])
 {
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Channel_Mapping, channel_mapping, TOTAL_TOBE_CHANNELS * sizeof(u16)));
 	return true;
@@ -20,7 +20,7 @@ __global__ void
 i16_to_f::_kernels::short_to_float(const i16* input, float* output, uint2 input_dims, uint3 output_dims)
 {
 	uint raw_sample_idx = threadIdx.x + blockIdx.x * blockDim.x;
-	uint channel_idx = blockIdx.y;
+	int channel_idx = (int)blockIdx.y;
 
 	uint tx_idx = (uint)floorf((float)raw_sample_idx / output_dims.x);
 	uint sample_idx = raw_sample_idx % output_dims.x;
@@ -34,9 +34,9 @@ i16_to_f::_kernels::short_to_float(const i16* input, float* output, uint2 input_
 	
 	// Shift the index by channel count if we are accessing the column data
 	channel_idx = channel_idx;
-	channel_idx = (uint)Channel_Mapping[channel_idx];
+	channel_idx = Channel_Mapping[channel_idx];
 
-	uint input_idx = (channel_idx * input_dims.x) + raw_sample_idx;
+	uint input_idx = (uint)(channel_idx * input_dims.x) + raw_sample_idx;
 
 	i16 result = input[input_idx];
 
@@ -57,7 +57,7 @@ i16_to_f::convert_data(const i16* d_input, float* d_output)
 //	size_t output_size = output_dims.tx_count * output_dims.channel_count * output_dims.sample_count * sizeof(float);
 	//CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
-	_kernels::short_to_float << <grid_dim, block_dim >> > (d_input, d_output, input_dims, Session.decoded_dims);
+	_kernels::short_to_float<<<grid_dim, block_dim >>>(d_input, d_output, input_dims, Session.decoded_dims);
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 
 	return true;

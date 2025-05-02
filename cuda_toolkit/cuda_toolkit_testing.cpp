@@ -13,13 +13,15 @@
 
 
 bool
-raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping )
+raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const i16* channel_mapping )
 {
 	uint2 input_struct = { input_dims[0], input_dims[1] };
 	uint3 decoded_struct = { decoded_dims[0], decoded_dims[1], decoded_dims[2] };
 	if (!Session.init)
 	{
-		init_cuda_configuration(input_dims, decoded_dims, channel_mapping);
+		init_cuda_configuration(input_dims, decoded_dims);
+		cuda_set_channel_mapping(channel_mapping);
+
 	}
 	
 	size_t data_size = (size_t)input_struct.x * input_struct.y * sizeof(int16_t);
@@ -71,7 +73,7 @@ fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** vo
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	
-	uint delay_samples = round(params.pulse_delay * params.array_params.sample_freq);
+	int delay_samples = (uint)round(params.pulse_delay * params.array_params.sample_freq);
 	beamformer::beamform(d_volume, d_input, *(float3*)params.focus, samples_per_meter, params.f_number, delay_samples);
 
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(float));
@@ -90,7 +92,8 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	size_t total_count = (size_t)dec_data_dims.x * dec_data_dims.y * dec_data_dims.z;
 	size_t total_raw_count = (size_t)raw_data_dims.x * raw_data_dims.y;
 
-	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);
+	init_cuda_configuration(params.raw_dims, params.decoded_dims);
+	cuda_set_channel_mapping(params.channel_mapping);
 
 	VolumeConfiguration vol_config;
 	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
@@ -155,7 +158,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&(d_volume), vol_config.total_voxels * sizeof(cuComplex)));
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
-	int delay_samples = round(params.pulse_delay * params.array_params.sample_freq);
+	int delay_samples = (int)round(params.pulse_delay * params.array_params.sample_freq);
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
 
 	std::cout << "Starting beamform\n";
@@ -182,7 +185,8 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	size_t total_raw_count = (size_t)raw_data_dims.x * raw_data_dims.y;
 
 
-	init_cuda_configuration(params.raw_dims, params.decoded_dims, params.channel_mapping);
+	init_cuda_configuration(params.raw_dims, params.decoded_dims);
+	cuda_set_channel_mapping(params.channel_mapping);
 
 	VolumeConfiguration vol_config;
 	vol_config.minimums = { params.vol_mins[0], params.vol_mins[1], params.vol_mins[2] };
@@ -242,7 +246,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	std::cout << "Starting beamform" << std::endl;
-	uint delay_samples = round(params.pulse_delay * params.array_params.sample_freq);
+	int delay_samples = (int)round(params.pulse_delay * params.array_params.sample_freq);
 	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number, delay_samples);
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());

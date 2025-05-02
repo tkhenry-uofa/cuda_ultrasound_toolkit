@@ -107,7 +107,7 @@ struct CudaSession
 
 	VolumeConfiguration volume_configuration;
 	
-    u16* channel_mapping = nullptr;
+    i16* channel_mapping = nullptr;
 
     float pulse_delay;
     float2 pitches;

@@ -146,7 +146,7 @@ typedef enum {
 /* NOTE: This struct follows the OpenGL std140 layout. DO NOT modify unless you have
  * read and understood the rules, particulary with regards to _member alignment_ */
 typedef struct {
-    u16 channel_mapping[256];   /* Transducer Channel to Verasonics Channel */
+    i16 channel_mapping[256];   /* Transducer Channel to Verasonics Channel */
     u16 uforces_channels[256];  /* Channels used for virtual UFORCES elements */
     f32 focal_depths[256];      /* [m] Focal Depths for each transmit of a RCA imaging scheme*/
     f32 transmit_angles[256];   /* [radians] Transmit Angles for each transmit of a RCA imaging scheme*/
@@ -169,7 +169,7 @@ typedef struct {
     u32 das_shader_id;
     u32 readi_group_id;			/* Which readi group this data is from*/
     u32 readi_group_size;		/* Size of readi transmit group */
-	u32 data_type = 0;          /* 0: i16, 1: f32 */
+	u32 data_type;          /* 0: i16, 1: f32 */
     u8 mixes_count;
     u8 mixes_offset;
 	u8 mixes_rows[128];         

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MAX_CHANNEL_COUNT 256
+
 #ifdef _WIN32
 	#define EXPORT_FN __declspec(dllexport)
 #else
@@ -14,6 +16,7 @@
 #endif
 		typedef unsigned int uint;
 		typedef uint16_t u16;
+		typedef int16_t i16;
 
 		/**
 		* API Usage:
@@ -31,7 +34,7 @@
 		* output_dims: samples x channels x transmissions
 		* channel_mapping: VSX channels to row-column conversion
 		*/
-		EXPORT_FN bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping);
+		EXPORT_FN bool init_cuda_configuration(const uint* input_dims, const uint* decoded_dims);
 		
 		/**
 		* rf_data_ssbos: List of opengl buffer ids for decoded rf data
@@ -39,6 +42,11 @@
 		* raw_data_ssbo: Opengl buffer id for the raw data buffer
 		*/
 		EXPORT_FN bool register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo);
+
+		/**
+		* channel_mapping: Channel mapping array
+		*/
+		EXPORT_FN bool cuda_set_channel_mapping(const i16 channel_mapping[MAX_CHANNEL_COUNT]);
 
 		/**
 		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
@@ -51,12 +59,6 @@
 		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
 		*/
 		EXPORT_FN bool cuda_decode(size_t input_offset, uint output_buffer_idx);
-
-		/**
-		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
-		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
-		*/
-		EXPORT_FN bool cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx);
 
 		/**
 		 * Closes all contexts and frees all cuda GPU buffers.

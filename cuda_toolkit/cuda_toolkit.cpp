@@ -60,11 +60,10 @@ cleanup_session()
 }
 
 static bool 
-init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 channel_mapping[256])
+init_session(const uint input_dims[2], const uint decoded_dims[3])
 {
 	if (!Session.init)
 	{
-		i16_to_f::copy_channel_mapping(channel_mapping);
 
 		Session.input_dims.x = input_dims[0];
 		Session.input_dims.y = input_dims[1];
@@ -124,11 +123,11 @@ init_session(const uint input_dims[2], const uint decoded_dims[3], const u16 cha
 *****************************************************************************************************************************/
 
 bool
-init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping)
+init_cuda_configuration(const uint* input_dims, const uint* decoded_dims)
 {
 	if (!Session.init)
 	{
-		return init_session(input_dims, decoded_dims, channel_mapping);
+		return init_session(input_dims, decoded_dims);
 	}
 	else
 	{
@@ -140,10 +139,22 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims, const 
 		{
 			std::cout << "configuration changed" << std::endl;
 			cleanup_session();
-			return init_session(input_dims, decoded_dims, channel_mapping);
+			return init_session(input_dims, decoded_dims);
 		}
 		return true;
 	}
+}
+
+bool 
+cuda_set_channel_mapping(const i16 channel_mapping[MAX_CHANNEL_COUNT])
+{
+	if(!Session.channel_mapping)
+	{
+		Session.channel_mapping = (i16*)malloc(MAX_CHANNEL_COUNT * sizeof(i16));
+	}
+
+	memcpy(Session.channel_mapping, channel_mapping, MAX_CHANNEL_COUNT * sizeof(i16));
+	return i16_to_f::copy_channel_mapping(channel_mapping);
 }
 
 bool 
@@ -200,8 +211,6 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
 
 	bool result = i16_to_f::convert_data(d_input, Session.d_converted);
 	result = hadamard::hadamard_decode(Session.d_converted, Session.d_decoded);
-
-
 
 	// Insert 0s between each value for their imaginary components
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, total_count * sizeof(cuComplex)));

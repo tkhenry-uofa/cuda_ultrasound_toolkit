@@ -54,7 +54,7 @@ typedef struct {
 
 	// Mapping verasonics channels to row and column numbers
 	// First half are rows, second half are columns
-	u16 channel_mapping[512];
+	i16 channel_mapping[512];
 
 	uint readi_group_id;
 	uint readi_group_size;
@@ -75,7 +75,7 @@ typedef struct {
 * Test functions
 */
 
-EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const u16* channel_mapping);
+EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const i16* channel_mapping);
 
 /**
 * Full pipeline
