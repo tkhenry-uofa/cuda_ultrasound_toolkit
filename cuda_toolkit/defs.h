@@ -123,6 +123,9 @@ struct CudaSession
     u8 mixes_rows[128];
 
 	TransmitModes sequence;
+    
+    uint match_filter_length = 0;
+    cuComplex* d_match_filter = nullptr;
 };
 
 extern CudaSession Session;
@@ -209,6 +212,7 @@ inline std::string format_cplx(const cuComplex& value)
     return { buffer };
 }
 
+
 #define PRINT_CPLX(value) format_cplx(value).c_str()
 
 
@@ -242,7 +246,7 @@ inline std::string format_cplx(const cuComplex& value)
     } while (0)
 
 // cublas API error checking
-#define CUBLAS_THROW_IF_ERR(err)                                                            \
+#define CUBLAS_RETURN_IF_ERR(err)                                                            \
     do {                                                                                    \
         cublasStatus_t err_ = (err);                                                        \
         if (err_ != CUBLAS_STATUS_SUCCESS) {                                                \
@@ -253,7 +257,7 @@ inline std::string format_cplx(const cuComplex& value)
     } while (0)
 
 // cufft API error checking
-#define CUFFT_THROW_IF_ERR(err)                                                             \
+#define CUFFT_RETURN_IF_ERR(err)                                                             \
     do {                                                                                    \
         cufftResult_t err_ = (err);                                                         \
         if (err_ != CUFFT_SUCCESS) {                                                        \
@@ -275,6 +279,11 @@ inline std::string format_cplx(const cuComplex& value)
         " seconds." << std::endl;                                                           \
 }  
 
+#define CUDA_FLOAT_TO_COMPLEX(SOURCE, DEST, COUNT) \
+{                                                                                           \
+    CUDA_RETURN_IF_ERROR(cudaMemcpy2D(DEST, 2 * sizeof(float), SOURCE, sizeof(float),       \
+                                      sizeof(float), COUNT, cudaMemcpyDefault));            \
+}   while (0)                                                                               \
 
 
 #endif // !DEFS_H

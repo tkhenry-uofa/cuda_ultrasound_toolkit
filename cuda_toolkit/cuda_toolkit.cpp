@@ -45,6 +45,7 @@ cleanup_session()
 	CUDA_NULL_FREE(Session.d_converted);
 	CUDA_NULL_FREE(Session.d_decoded);
 	CUDA_NULL_FREE(Session.d_input);
+	CUDA_NULL_FREE(Session.d_match_filter);
 	cublasDestroy(Session.cublas_handle);
 	cufftDestroy(Session.forward_plan);
 	cufftDestroy(Session.inverse_plan);
@@ -155,6 +156,26 @@ cuda_set_channel_mapping(const i16 channel_mapping[MAX_CHANNEL_COUNT])
 
 	memcpy(Session.channel_mapping, channel_mapping, MAX_CHANNEL_COUNT * sizeof(i16));
 	return i16_to_f::copy_channel_mapping(channel_mapping);
+}
+
+bool
+cuda_set_match_filter(const float* match_filter, uint length)
+{
+	if (Session.d_match_filter)
+	{
+		CUDA_NULL_FREE(Session.d_match_filter);
+	}
+
+	if (length == 0)
+	{
+		Session.match_filter_length = 0;
+		return true;
+	}
+	else
+	{
+		Session.match_filter_length = length;
+	}
+	return true;
 }
 
 bool 

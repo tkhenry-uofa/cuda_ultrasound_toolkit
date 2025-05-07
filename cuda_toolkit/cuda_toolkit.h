@@ -49,6 +49,15 @@
 		EXPORT_FN bool cuda_set_channel_mapping(const i16 channel_mapping[MAX_CHANNEL_COUNT]);
 
 		/**
+		* Generates the spectrum of the time reversed filter waveform and stores it on the GPU
+		* If length is 0 filtering is disabled
+		* 
+		* match_filter: Match filter waveform
+		* length: Filter length
+		*/
+		EXPORT_FN bool cuda_set_match_filter(const float* match_filter, uint length);
+
+		/**
 		* input_buffer_idx: Index into rf_data_ssbos for the input buffer
 		* output_buffer_idx: Index into rf_data_ssbos for the output buffer
 		*/

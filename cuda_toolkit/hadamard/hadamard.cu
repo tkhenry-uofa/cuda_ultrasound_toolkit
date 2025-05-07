@@ -221,7 +221,7 @@ hadamard::hadamard_decode(const float* d_input, float* d_output)
 	float alpha = 1/((float)dims.z); // Counters the N scaling of hadamard decoding 
 	float beta = 0.0f;
 
-	CUBLAS_THROW_IF_ERR(cublasSgemm(
+	CUBLAS_RETURN_IF_ERR(cublasSgemm(
 		Session.cublas_handle,
 		CUBLAS_OP_N,
 		CUBLAS_OP_N,
@@ -252,7 +252,7 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 	float alpha = 1 / ((float)dims.z); // Counters the N scaling of hadamard decoding 
 	float beta = 0.0f;
 
-	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
+	CUBLAS_RETURN_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
 
 	return true;
 }
@@ -279,7 +279,7 @@ hadamard::c_readi_decode(const cuComplex* d_input, cuComplex* d_output, uint gro
 	cuComplex alpha = { 1.0f, 0.0f };
 	cuComplex beta = { 0.0f, 0.0f };
 
-	CUBLAS_THROW_IF_ERR(cublasCgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
+	CUBLAS_RETURN_IF_ERR(cublasCgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 

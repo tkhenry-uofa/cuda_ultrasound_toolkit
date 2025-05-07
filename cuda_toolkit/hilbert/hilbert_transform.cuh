@@ -16,13 +16,19 @@ namespace hilbert
 	{
 		__global__ void
 		filter(cuComplex* data, uint sample_count, uint cutoff_sample);
+
+		__global__ void
+		scale_and_filter(cuComplex* signals, cuComplex* filter_kernel, uint sample_count);
 	}
 
 	__host__ bool
-	f_domain_filter(cuComplex* input, uint cutoff_sample);
+	f_domain_filter(cuComplex* input);
 
 	__host__ bool
 	plan_hilbert(int sample_count, int channel_count);
+
+	__host__ bool
+	setup_filter(int signal_length, int filter_length, float* filter);
 
 	__host__ bool 
 	hilbert_transform(float* d_input, cuComplex* d_output);
