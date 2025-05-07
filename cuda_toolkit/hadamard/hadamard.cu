@@ -2,11 +2,52 @@
 #include <thrust/device_vector.h>
 #include <thrust/complex.h>
 
+#include <iomanip>
+
 #include <chrono>
 
 #include "hadamard.cuh"
 
 #define MAX_HADAMARD_SIZE 128
+
+constexpr float hadamard_12_transpose[] = {
+1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+1, -1, -1,  1, -1, -1, -1,  1,  1,  1, -1,  1,
+1,  1, -1, -1,  1, -1, -1, -1,  1,  1,  1, -1,
+1, -1,  1, -1, -1,  1, -1, -1, -1,  1,  1,  1,
+1,  1, -1,  1, -1, -1,  1, -1, -1, -1,  1,  1,
+1,  1,  1, -1,  1, -1, -1,  1, -1, -1, -1,  1,
+1,  1,  1,  1, -1,  1, -1, -1,  1, -1, -1, -1,
+1, -1,  1,  1,  1, -1,  1, -1, -1,  1, -1, -1,
+1, -1, -1,  1,  1,  1, -1,  1, -1, -1,  1, -1,
+1, -1, -1, -1,  1,  1,  1, -1,  1, -1, -1,  1,
+1,  1, -1, -1, -1,  1,  1,  1, -1,  1, -1, -1,
+1, -1,  1, -1, -1, -1,  1,  1,  1, -1,  1, -1,
+};
+
+constexpr float hadamard_20_transpose[] = {
+1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,
+1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,
+1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,
+1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,
+1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,
+1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,
+1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,
+1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,
+1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,
+1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,
+1,   1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,
+1,  -1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,
+1,   1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,
+1,   1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,
+1,   1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,
+1,   1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,
+1,  -1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,
+1,  -1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,
+1,   1,  -1,  -1,   1,   1,  -1,  -1,  -1,  -1,   1,  -1,   1,  -1,   1,   1,   1,   1,  -1,  -1,
+};
+
 
 /**
 * Takes in (S samples x C channels x T encoded transmits),
@@ -39,7 +80,7 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 	int group_size = blockDim.x;
 
 	int group_count = total_transmits / group_size;
-	
+
 	int t = 0;
 	for (int i = 0; i < total_transmits; i++)
 	{
@@ -51,7 +92,7 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 	}
 
 	int thread_tx_id = tx_in_group[in_group_id];
-	
+
 	int sample_id = blockIdx.x;
 	int channel_id = blockIdx.y;
 
@@ -80,131 +121,91 @@ hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d
 	dim3 block_dim = { Session.readi_group_size, 1, 1 };
 
 	_kernels::readi_staggered_decode_kernel << <grid_dim, block_dim >> > (d_input, d_output, d_hadamard, Session.readi_group, 128);
-	
+
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	return true;
 }
 
-__global__ void
-hadamard::_kernels::generate_hadamard(float* hadamard, int prev_size, int final_size)
-{
-	int row = (size_t)blockDim.x * blockIdx.x + threadIdx.x;
-	int col = (size_t)blockDim.y * blockIdx.y + threadIdx.y;
-
-	bool top = row < prev_size;
-	bool left = col < prev_size;
-
-	// Index to get the value from the previous iteration
-	int prev_row = top ? row : row - prev_size;
-	int prev_col = left ? col : col - prev_size;
-
-	if (!top && !left)
-	{
-		// If we are bottom right make a negative copy of top left
-		hadamard[row * final_size + col] = -1.0 * hadamard[prev_row * final_size + prev_col];
-	}
-	else if (top != left)
-	{
-		// If we are top right or bottom left copy the top left value
-		hadamard[row * final_size + col] = hadamard[prev_row * final_size + prev_col];
-	}
-}
-
-__host__ void 
-hadamard::_host::print_array(const float* out_array, uint size)
-{
-	std::cout << "Output" << std::endl;
-	for (uint i = 0; i < size; i++)
-	{
-		for (uint j = 0; j < size; j++)
-		{
-			std::cout << out_array[i * size + j] << " ";
-		}
-
-		std::cout << std::endl;
-	}
-
-	std::cout << std::endl;
-}
-
-__global__ void
-hadamard::_kernels::init_hadamard_matrix(float* matrix, uint size)
-{
-	uint row = threadIdx.x * blockIdx.x;
-	uint col = threadIdx.y * blockIdx.y;
-
-	if (row == 0 && col == 0)
-	{
-		matrix[0] = 1.0f;
-	}
-	else if (row < size && col < size)
-	{
-		matrix[row * size + col] = 0.0f;
-	}
-}
-
- 
 __host__ bool
-hadamard::generate_hadamard(uint size, float** dev_ptr)
+hadamard::generate_hadamard(uint requested_length, float** dev_ptr)
 {
-	if (!(ISPOWEROF2(size)))
+		
+	uint base_length = 0;
+	uint iterations = 0;
+
+	size_t element_count = (size_t)requested_length * requested_length;
+	float* cpu_hadamard = (float*)calloc(element_count, sizeof(float));
+	if (!cpu_hadamard)
 	{
-		return false;
+		std::cerr << "Failed to init hadamard matrix of size " << requested_length << std::endl;
 	}
-
-	CUDA_NULL_FREE(*dev_ptr);
-
-	size_t matrix_size = (size_t)size * size * sizeof(float);
-	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)dev_ptr, matrix_size));
-
-	uint grid_length;
-	dim3 block_dim;
-
-	if (size <= MAX_2D_BLOCK_DIM)
+		
+	// Check if the requested length is valid and set up the base case.
+	if (ISPOWEROF2(requested_length))
 	{
-		grid_length = 1;
-		block_dim = { size, size, 1 };
+		base_length = 1;
+		iterations = (int)log2(requested_length);
+		cpu_hadamard[0] = 1;
+	}
+	else if( requested_length % 12 == 0 && ISPOWEROF2(requested_length / 12))
+	{
+		base_length = 12;
+		iterations = (int)log2(requested_length / 12);
+		for (int i = 0; i < base_length; i++)
+		{
+			int source_offset = i * base_length;
+			int dest_offset = i * requested_length;
+			memcpy(cpu_hadamard + dest_offset, hadamard_12_transpose + source_offset, base_length * sizeof(float));
+		}
+	}
+	else if (requested_length % 20 == 0 && ISPOWEROF2(requested_length / 20))
+	{
+		base_length = 20;
+		iterations = (int)log2(requested_length / 20);
+		for (int i = 0; i < base_length; i++)
+		{
+			int source_offset = i * base_length;
+			int dest_offset = i * requested_length;
+			memcpy(cpu_hadamard + dest_offset, hadamard_20_transpose + source_offset, base_length * sizeof(float));
+		}
 	}
 	else
 	{
-		grid_length = (uint)ceil((double)size / MAX_2D_BLOCK_DIM);
-		block_dim = { MAX_2D_BLOCK_DIM, MAX_2D_BLOCK_DIM, 1 };
+		std::cerr << "Hadamard: Size '" << requested_length << "' not supported" << std::endl;
+		std::cerr << "System only supports sizes of 2^n, 12 * 2^n or 20 * 2^n" << std::endl;
+		return false;
 	}
-
-	dim3 grid_dim = { grid_length, grid_length, 1 };
-
-	_kernels::init_hadamard_matrix << <grid_dim, block_dim >> > (*dev_ptr, size);
-
-	CUDA_RETURN_IF_ERROR(cudaGetLastError());
-	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
-
-	for (uint i = 2; i <= size; i *= 2)
+		
+	// Recursively take the kroneker product of the matrix with H2 until we reach the desired size
+	for (uint current_length = base_length; current_length < requested_length; current_length *= 2)
 	{
-		if (i <= MAX_2D_BLOCK_DIM)
+		int right_half_offset = current_length; // Offset to top right half
+		int bottom_half_offset = current_length * requested_length; // Offset to bottom left half
+		for (int row_idx = 0; row_idx < current_length; row_idx++)
 		{
-			block_dim = { i, i, 1 };
-			grid_dim = { 1, 1, 1 };
+			int row_offset = row_idx * requested_length;
+			// Quadrants 1, 2, and 3 are copies of the base case, quadrant 4 is the negative of the base case
+			for (int col_idx = 0; col_idx < current_length; col_idx++)
+			{
+				cpu_hadamard[col_idx + row_offset + right_half_offset] = cpu_hadamard[col_idx + row_offset];
+				cpu_hadamard[col_idx + row_offset + bottom_half_offset] = cpu_hadamard[col_idx + row_offset];
+				cpu_hadamard[col_idx + row_offset + bottom_half_offset + right_half_offset] = -1 * cpu_hadamard[col_idx + row_offset];
+			}
 		}
-		else
-		{
-			grid_length = (uint)ceil((double)i / MAX_2D_BLOCK_DIM);
-
-			block_dim = { MAX_2D_BLOCK_DIM, MAX_2D_BLOCK_DIM, 1 };
-			grid_dim = { grid_length, grid_length, 1 };
-		}
-
-		_kernels::generate_hadamard << <grid_dim, block_dim >> > (*dev_ptr, i / 2, size);
-
-		CUDA_RETURN_IF_ERROR(cudaGetLastError());
-		CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	}
+
+
+	CUDA_NULL_FREE(*dev_ptr);
+	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)dev_ptr, element_count * sizeof(float)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*dev_ptr, cpu_hadamard, element_count * sizeof(float), cudaMemcpyHostToDevice));
+	free(cpu_hadamard);
 
 	return true;
 }
 
-__host__ bool 
+__host__ bool
 hadamard::hadamard_decode(const float* d_input, float* d_output)
 {
 
@@ -217,18 +218,17 @@ hadamard::hadamard_decode(const float* d_input, float* d_output)
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;
 
-	float alpha = 1.0f;
-	//float alpha = 1/((float)dims.x/2);
+	float alpha = 1/((float)dims.z); // Counters the N scaling of hadamard decoding 
 	float beta = 0.0f;
 
 	CUBLAS_THROW_IF_ERR(cublasSgemm(
-							Session.cublas_handle, 
-							CUBLAS_OP_N, 
-							CUBLAS_OP_N, 
-							tx_size, dims.z, dims.z, 
-							&alpha, d_input, tx_size, 
-							Session.d_hadamard, dims.z, 
-							&beta, d_output, tx_size));
+		Session.cublas_handle,
+		CUBLAS_OP_N,
+		CUBLAS_OP_N,
+		tx_size, dims.z, dims.z,
+		&alpha, d_input, tx_size,
+		Session.d_hadamard, dims.z,
+		&beta, d_output, tx_size));
 
 	return true;
 }
@@ -242,15 +242,14 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 	float* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));
 
-	uint hadamard_offset = group_number * group_size * row_count; 
+	uint hadamard_offset = group_number * group_size * row_count;
 
 	uint3 dims = Session.decoded_dims;
 	uint tx_size = dims.x * dims.y;
 
 	cudaMemcpy(d_hadamard_slice, Session.d_hadamard + hadamard_offset, group_size * row_count * sizeof(float), cudaMemcpyDeviceToDevice);
 
-	float alpha = 1.0f;
-	//float alpha = 1/((float)dims.x/2);
+	float alpha = 1 / ((float)dims.z); // Counters the N scaling of hadamard decoding 
 	float beta = 0.0f;
 
 	CUBLAS_THROW_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
@@ -286,4 +285,6 @@ hadamard::c_readi_decode(const cuComplex* d_input, cuComplex* d_output, uint gro
 
 	return true;
 }
+
+
 

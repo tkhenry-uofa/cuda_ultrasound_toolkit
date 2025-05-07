@@ -29,13 +29,6 @@ namespace hadamard
 
 	namespace _kernels
 	{
-		__global__ void
-		generate_hadamard(float* hadamard, int prev_size, int final_size);
-
-		__global__ void
-		init_hadamard_matrix(float* matrix, uint size);
-
-
 		/**
 		* Takes in (S samples x C channels x T encoded transmits),
 		* Sorts each transmit into a group by (T % group_size = group_number)
@@ -60,12 +53,6 @@ namespace hadamard
 		*/
 		__global__ void
 		readi_staggered_decode_kernel(const float* d_input, float* d_output, const float* d_hadamard, uint readi_group, uint total_transmits);
-	}
-
-	namespace _host
-	{
-		__host__ void 
-		print_array(const float* out_array, uint size);
 	}
 }
 
