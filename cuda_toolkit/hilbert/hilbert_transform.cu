@@ -38,7 +38,7 @@ hilbert::kernels::scale_and_filter(cuComplex* spectrums, cuComplex* filter_kerne
 	if (sample_idx == 0 || sample_idx == (sample_count >> 1)) scale_factor *= 0.5f; 
 
 	uint channel_offset = blockIdx.y * sample_count;
-	spectrums[channel_offset + sample_idx] = SCALE_F2(spectrums[channel_offset + sample_idx], 1.0f / (float)sample_count);
+	spectrums[channel_offset + sample_idx] = SCALE_F2(spectrums[channel_offset + sample_idx], scale_factor);
 
 	if (!filter_kernel) return; // No filter kernel, just scale the spectrum
 
@@ -48,7 +48,7 @@ hilbert::kernels::scale_and_filter(cuComplex* spectrums, cuComplex* filter_kerne
 }
 
 __host__ bool
-hilbert::setup_filter(int signal_length, int filter_length, float* filter)
+hilbert::setup_filter(int signal_length, int filter_length, const float* filter)
 {
 	size_t final_size = signal_length * sizeof(cuComplex);
 	cuComplex* d_filter;
@@ -114,7 +114,7 @@ hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
-	//hilbert::f_domain_filter(d_output, 1350);
+	hilbert::f_domain_filter(d_output);
 	CUFFT_RETURN_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());

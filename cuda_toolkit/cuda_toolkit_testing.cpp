@@ -7,6 +7,47 @@
 #include "cuda_toolkit_testing.h"
 
 
+int 
+generate_sin_match_filter(float** waveform, int cycles, int fs, int fc)
+{
+
+	int samples_per_wave = fs / fc;
+	int pulse_samples = (int)floor(samples_per_wave * cycles) + 1;
+
+	// Model the xdc impulse response as a 1 cycle sin with a hamming envelope
+	// Convolve the waveform with it
+	int h_samples = (int)floor(samples_per_wave) + 1; // +1 for the 0 sample
+	double* h_waveform = (double*)malloc(h_samples * sizeof(double));
+
+	for (int i = 0; i < h_samples; i++)
+	{
+		h_waveform[i] = hamming_coef(i, h_samples) * sin(2 * PI_D * (double)fc * i / (double)fs);
+	}
+
+	int total_samples = h_samples + pulse_samples - 1;
+
+	std::cout << std::endl << std::endl;
+
+	*waveform = (float*)calloc(total_samples, sizeof(float)); // Pad 0's after the pulse
+	for (int i = 0; i < pulse_samples; i++)
+	{
+		(*waveform)[i] = (float)sin(2 * PI_D * (double)fc * i / (double)fs);
+	}
+
+	// Convolves in place back to front
+	for (int i = total_samples - 1; i >= 0; i--) {
+		double acc = 0.0f;
+		for (int j = 0; j < h_samples; j++) {
+			if (i - j >= 0 && i - j < pulse_samples) {
+				acc += (double)(*waveform)[i - j] * h_waveform[j];
+			}
+		}
+		(*waveform)[i] = (float)acc;
+	}
+
+	return total_samples;
+}
+
 bool
 raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const i16* channel_mapping )
 {
@@ -131,24 +172,16 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	float fc = params.array_params.center_freq;
 	float fs = params.array_params.sample_freq;
 	float samples_per_wave = fs/fc;
-	int sin_cycles = 2;
-	int pulse_samples = (int)floor(samples_per_wave * sin_cycles);
+	int sin_cycles = 8;
+	int pulse_samples = (int)floor(samples_per_wave * sin_cycles) + 1; // +1 for the 0 sample
 
-	float* filter_waveform = (float*)malloc(pulse_samples * sizeof(float));
+	float* filter_waveform = nullptr;
+	int filter_length = generate_sin_match_filter(&filter_waveform, sin_cycles, fs, fc);
 
-	for (int i = 0; i < pulse_samples; i++)
-	{
-		filter_waveform[i] = sinf(2 * PI_F * fc * i/fs);
-
-		std::cout << filter_waveform[i] << std::endl;
-	}
-
-
-	cuda_set_match_filter(filter_waveform, pulse_samples);
+	cuda_set_match_filter(filter_waveform, filter_length);
 
 	free(filter_waveform);
 	
-
 	hilbert::plan_hilbert((int)Session.decoded_dims.x, (int)Session.decoded_dims.y * (int)Session.decoded_dims.z);
 
 	i16_to_f::convert_data(d_input, Session.d_converted);

@@ -174,6 +174,7 @@ cuda_set_match_filter(const float* match_filter, uint length)
 	else
 	{
 		Session.match_filter_length = length;
+		hilbert::setup_filter(Session.decoded_dims.x ,length, match_filter);
 	}
 	return true;
 }

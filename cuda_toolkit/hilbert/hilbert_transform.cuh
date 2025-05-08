@@ -28,7 +28,7 @@ namespace hilbert
 	plan_hilbert(int sample_count, int channel_count);
 
 	__host__ bool
-	setup_filter(int signal_length, int filter_length, float* filter);
+	setup_filter(int signal_length, int filter_length, const float* filter);
 
 	__host__ bool 
 	hilbert_transform(float* d_input, cuComplex* d_output);
