@@ -78,6 +78,9 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 
 	memcpy(params.mixes_rows, bp.mixes_rows, sizeof(bp.mixes_rows));
 
+	params.filter_length = bp.filter_length;
+	memcpy(params.match_filter, bp.match_filter, sizeof(bp.match_filter));
+
 	return params;
 }
 
@@ -183,5 +186,6 @@ int main()
 	bool result = false;
 
 	result = readi_beamform();
+
 	return !result;
 }

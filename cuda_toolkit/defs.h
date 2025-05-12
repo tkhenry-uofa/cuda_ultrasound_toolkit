@@ -13,6 +13,8 @@
 #include <vector>
 #include <complex>
 
+#include <iostream>
+
 #include <cufft.h>
 #include <cublas_v2.h>
 #include <cuda_gl_interop.h>
@@ -291,6 +293,48 @@ inline std::string format_cplx(const cuComplex& value)
                                       sizeof(float), COUNT, cudaMemcpyDefault));            \
 }   while (0)                                                                               \
 
+
+
+//int
+//generate_sin_match_filter(float** waveform, int cycles, int fs, int fc)
+//{
+//
+//    int samples_per_wave = fs / fc;
+//    int pulse_samples = (int)floor(samples_per_wave * cycles) + 1;
+//
+//    // Model the xdc impulse response as a 1 cycle sin with a hamming envelope
+//    // Convolve the waveform with it
+//    int h_samples = (int)floor(samples_per_wave) + 1; // +1 for the 0 sample
+//    double* h_waveform = (double*)malloc(h_samples * sizeof(double));
+//
+//    for (int i = 0; i < h_samples; i++)
+//    {
+//        h_waveform[i] = hamming_coef(i, h_samples) * sin(2 * PI_D * (double)fc * i / (double)fs);
+//    }
+//
+//    int total_samples = h_samples + pulse_samples - 1;
+//
+//    std::cout << std::endl << std::endl;
+//
+//    *waveform = (float*)calloc(total_samples, sizeof(float)); // Pad 0's after the pulse
+//    for (int i = 0; i < pulse_samples; i++)
+//    {
+//        (*waveform)[i] = (float)sin(2 * PI_D * (double)fc * i / (double)fs);
+//    }
+//
+//    // Convolves in place back to front
+//    for (int i = total_samples - 1; i >= 0; i--) {
+//        double acc = 0.0f;
+//        for (int j = 0; j < h_samples; j++) {
+//            if (i - j >= 0 && i - j < pulse_samples) {
+//                acc += (double)(*waveform)[i - j] * h_waveform[j];
+//            }
+//        }
+//        (*waveform)[i] = (float)acc;
+//    }
+//
+//    return total_samples;
+//}
 
 #endif // !DEFS_H
 

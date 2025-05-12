@@ -172,7 +172,9 @@ typedef struct {
 	u32 data_type;          /* 0: i16, 1: f32 */
     u8 mixes_count;
     u8 mixes_offset;
-	u8 mixes_rows[128];         
+	u8 mixes_rows[128]; 
+    f32 match_filter[1024];
+    u8 filter_length;
     f32 _pad[3];
 } BeamformerParameters;
 

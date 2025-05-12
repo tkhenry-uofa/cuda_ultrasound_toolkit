@@ -58,7 +58,7 @@ hilbert::setup_filter(int signal_length, int filter_length, const float* filter)
 
 	cufftHandle plan;
 	CUFFT_RETURN_IF_ERR(cufftPlan1d(&plan, signal_length, CUFFT_C2C, 1));
-	CUFFT_RETURN_IF_ERR(cufftExecC2C(plan, d_filter, d_filter, CUFFT_INVERSE));
+	CUFFT_RETURN_IF_ERR(cufftExecC2C(plan, d_filter, d_filter, CUFFT_FORWARD));
 	Session.d_match_filter = d_filter;
 	cufftDestroy(plan);
 

@@ -335,6 +335,7 @@ beamformer::_kernels::per_voxel_beamform(const cuComplex* rfData, cuComplex* vol
 	uint hadamard_offset = Constants.channel_count * readi_group_id;
 	int delay_samples = Constants.delay_samples;
 
+
 	cuComplex total = { 0.0f, 0.0f }, value;
 	float incoherent_sum = 0.0f;
 
