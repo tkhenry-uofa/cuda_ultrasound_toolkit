@@ -70,7 +70,7 @@ typedef struct {
 	uint8_t mixes_rows[128];
 
 	float match_filter[1024];
-	uint8_t filter_length;
+	uint filter_length;
 
 } PipelineParams;
 

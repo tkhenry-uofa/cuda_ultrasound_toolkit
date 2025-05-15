@@ -78,7 +78,7 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 
 	memcpy(params.mixes_rows, bp.mixes_rows, sizeof(bp.mixes_rows));
 
-	params.filter_length = bp.filter_length;
+	params.filter_length = (uint)bp.filter_length;
 	memcpy(params.match_filter, bp.match_filter, sizeof(bp.match_filter));
 
 	return params;
