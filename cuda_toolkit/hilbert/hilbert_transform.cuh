@@ -31,8 +31,10 @@ namespace hilbert
 	__host__ bool 
 	hilbert_transform_r2c(float* d_input, cuComplex* d_output);
 
+	// Actually still R2C but the input is already spaced out with 0's in the complex spot
+	// R2C with a strided input is faster than C2C
 	__host__ bool
-	hilbert_transform_c2c(float* d_input, cuComplex* d_output);
+	hilbert_transform_c2c(cuComplex* d_input, cuComplex* d_output);
 
 }
 

@@ -266,7 +266,7 @@ cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
 	CUDA_RETURN_IF_ERROR(cudaGraphicsMapResources(1, &output_resource));
 
 	size_t num_bytes;
-	float* d_input = nullptr;
+	cuComplex* d_input = nullptr;
 	cuComplex* d_output = nullptr;
 	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_input, &num_bytes, input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
