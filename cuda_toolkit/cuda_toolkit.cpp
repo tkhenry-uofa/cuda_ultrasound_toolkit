@@ -271,7 +271,7 @@ cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
 	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_input, &num_bytes, input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&d_output, &num_bytes, output_resource));
 
-	hilbert::hilbert_transform_strided(d_input, d_output);
+	hilbert::hilbert_transform_c2c(d_input, d_output);
 
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &input_resource));
 	CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &output_resource));

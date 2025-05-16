@@ -56,7 +56,7 @@ fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** vo
 	bool do_hilbert = true;
 	if (do_hilbert)
 	{
-		hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+		hilbert::hilbert_transform_r2c(Session.d_decoded, Session.d_complex);
 	}
 	else
 	{
@@ -146,7 +146,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	bool do_hilbert = true;
 	if (do_hilbert)
 	{
-		hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+		hilbert::hilbert_transform_r2c(Session.d_decoded, Session.d_complex);
 	}
 	else
 	{
@@ -226,7 +226,7 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	bool do_hilbert = true;
 	if (do_hilbert)
 	{
-		hilbert::hilbert_transform(Session.d_decoded, Session.d_complex);
+		hilbert::hilbert_transform_r2c(Session.d_decoded, Session.d_complex);
 	}
 	else
 	{

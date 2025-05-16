@@ -11,31 +11,15 @@ __device__ inline float2 complex_multiply_f2(float2 a, float2 b) {
 		a.x * b.y + a.y * b.x);
 }
 
-
-__global__ void
-hilbert::kernels::filter(cuComplex* data, uint sample_count, uint cutoff_sample)
-{
-	uint sample_idx = threadIdx.x + blockIdx.x * blockDim.x;
-	if (sample_idx < sample_count && sample_idx > cutoff_sample)
-	{
-		data[blockIdx.y * sample_count + sample_idx] = { 0.0f, 0.0f };
-	}
-	else if (sample_idx == 0 || sample_idx == cutoff_sample)
-	{
-		cuComplex value = data[blockIdx.y * sample_count + sample_idx];
-		data[blockIdx.y * sample_count + sample_idx] = SCALE_F2(value, 0.5f);
-	}
-}
-
 __global__ void
 hilbert::kernels::scale_and_filter(cuComplex* spectrums, cuComplex* filter_kernel, uint sample_count)
 {
 	uint sample_idx = threadIdx.x + blockIdx.x * blockDim.x;
-	if (sample_idx > (sample_count >> 1)) return; // We only need to process the first half of the spectrum.
+	if (sample_idx > (sample_count / 2)) return; // We only need to process the first half of the spectrum.
 
-	float scale_factor = 1.0f / (float)sample_count;
+	float scale_factor = 1.5f / ((float)sample_count);
 	// Scale the DC and Nyquist components by 0.5 compared to the rest of the spectrum (analytic signal)
-	if (sample_idx == 0 || sample_idx == (sample_count >> 1)) scale_factor *= 0.5f; 
+	if (sample_idx == 0 || sample_idx == (sample_count / 2)) scale_factor *= 0.5f; 
 
 	uint channel_offset = blockIdx.y * sample_count;
 	spectrums[channel_offset + sample_idx] = SCALE_F2(spectrums[channel_offset + sample_idx], scale_factor);
@@ -104,7 +88,7 @@ hilbert::plan_hilbert(int sample_count, int channel_count)
 }
 
 __host__ bool 
-hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
+hilbert::hilbert_transform_r2c(float* d_input, cuComplex* d_output)
 {
 	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
@@ -123,23 +107,25 @@ hilbert::hilbert_transform(float* d_input, cuComplex* d_output)
 }
 
 __host__ bool
-hilbert::hilbert_transform_strided(float* d_input, cuComplex* d_output)
+hilbert::hilbert_transform_c2c(float* d_input, cuComplex* d_output)
 {
 	size_t output_size = (size_t)Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
+
+	float* input_sample = (float*)malloc(output_size);
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(input_sample, d_input, output_size, cudaMemcpyDeviceToHost));
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
 	CUFFT_RETURN_IF_ERR(cufftExecR2C(Session.strided_plan, d_input, d_output));
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
-	float scale = 1 / ((float)Session.decoded_dims.x / 2);
-
-	float* sample = (float*)d_output;
-	///std::cout << "First input value: Re:" << sample_value(d_input+ Session.decoded_dims.x) << " Im: " << sample_value(d_input+1+ Session.decoded_dims.x) << std::endl;
-	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
-	//hilbert::f_domain_filter(d_output, Session.decoded_dims.x/2);
-	//std::cout << "First output value: Re:" << sample_value(sample + Session.decoded_dims.x) * scale << " Im: " << sample_value(sample + 1 + Session.decoded_dims.x) * scale << std::endl;
-	//hilbert::f_domain_filter(d_output, 1350);
+	hilbert::f_domain_filter(d_output);
+	
 	CUFFT_RETURN_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
+	CUDA_RETURN_IF_ERROR(cudaGetLastError());
+	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
 	return true;
 }
 

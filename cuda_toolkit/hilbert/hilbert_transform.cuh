@@ -14,8 +14,6 @@ namespace hilbert
 {
 	namespace kernels
 	{
-		__global__ void
-		filter(cuComplex* data, uint sample_count, uint cutoff_sample);
 
 		__global__ void
 		scale_and_filter(cuComplex* signals, cuComplex* filter_kernel, uint sample_count);
@@ -31,10 +29,10 @@ namespace hilbert
 	setup_filter(int signal_length, int filter_length, const float* filter);
 
 	__host__ bool 
-	hilbert_transform(float* d_input, cuComplex* d_output);
+	hilbert_transform_r2c(float* d_input, cuComplex* d_output);
 
 	__host__ bool
-	hilbert_transform_strided(float* d_input, cuComplex* d_output);
+	hilbert_transform_c2c(float* d_input, cuComplex* d_output);
 
 }
 
