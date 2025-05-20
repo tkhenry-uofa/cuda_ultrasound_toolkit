@@ -21,24 +21,24 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 
 	params.pulse_delay = bp.time_offset;
 
-	params.decoded_dims[0] = bp.dec_data_dim.x;
-	params.decoded_dims[1] = bp.dec_data_dim.y;
-	params.decoded_dims[2] = bp.dec_data_dim.z;
+	params.decoded_dims[0] = bp.dec_data_dim[0];
+	params.decoded_dims[1] = bp.dec_data_dim[1];
+	params.decoded_dims[2] = bp.dec_data_dim[2];
 
-	params.raw_dims[0] = bp.rf_raw_dim.x;
-	params.raw_dims[1] = bp.rf_raw_dim.y;
+	params.raw_dims[0] = bp.rf_raw_dim[0];
+	params.raw_dims[1] = bp.rf_raw_dim[1];
 
-	params.vol_mins[0] = bp.output_min_coordinate.x;
-	params.vol_mins[1] = bp.output_min_coordinate.y;
-	params.vol_mins[2] = bp.output_min_coordinate.z;
+	params.vol_mins[0] = bp.output_min_coordinate[0];
+	params.vol_mins[1] = bp.output_min_coordinate[1];
+	params.vol_mins[2] = bp.output_min_coordinate[2];
 
-	params.vol_maxes[0] = bp.output_max_coordinate.x;
-	params.vol_maxes[1] = bp.output_max_coordinate.y;
-	params.vol_maxes[2] = bp.output_max_coordinate.z;
+	params.vol_maxes[0] = bp.output_max_coordinate[0];
+	params.vol_maxes[1] = bp.output_max_coordinate[1];
+	params.vol_maxes[2] = bp.output_max_coordinate[2];
 
-	params.vol_counts[0] = bp.output_points.x;
-	params.vol_counts[1] = bp.output_points.y;
-	params.vol_counts[2] = bp.output_points.z;
+	params.vol_counts[0] = bp.output_points[0];
+	params.vol_counts[1] = bp.output_points[1];
+	params.vol_counts[2] = bp.output_points[2];
 
 	params.vol_resolutions[0] = (params.vol_maxes[0] - params.vol_mins[0]) / params.vol_counts[0];
 	params.vol_resolutions[1] = (params.vol_maxes[1] - params.vol_mins[1]) / params.vol_counts[1];
@@ -53,8 +53,8 @@ PipelineParams convert_params(BeamformerParametersFull* full_bp)
 	params.array_params.center_freq = bp.center_frequency;
 	params.array_params.sample_freq = bp.sampling_frequency;
 
-	params.array_params.row_count = bp.dec_data_dim.y; // Assuming square arrays for now
-	params.array_params.col_count = bp.dec_data_dim.y;
+	params.array_params.row_count = bp.dec_data_dim[2]; // Assuming square arrays for now
+	params.array_params.col_count = bp.dec_data_dim[2];
 
 	params.array_params.xdc_mins[0] = -bp.xdc_transform[12];
 	params.array_params.xdc_mins[1] = -bp.xdc_transform[13];
@@ -152,7 +152,7 @@ bool readi_beamform()
 		PipelineParams params = convert_params(full_bp);
 
 		cuComplex* volume = nullptr;
-		size_t output_size = (size_t)full_bp->raw.output_points.x * full_bp->raw.output_points.y * full_bp->raw.output_points.z * sizeof(cuComplex);
+		size_t output_size = (size_t)full_bp->raw.output_points[0] * full_bp->raw.output_points[1] * full_bp->raw.output_points[2] * sizeof(cuComplex);
 
 		std::cout << "Starting pipeline " << g + 1 << std::endl;
 

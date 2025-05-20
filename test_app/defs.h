@@ -151,12 +151,12 @@ typedef struct {
     f32 focal_depths[256];      /* [m] Focal Depths for each transmit of a RCA imaging scheme*/
     f32 transmit_angles[256];   /* [radians] Transmit Angles for each transmit of a RCA imaging scheme*/
     f32 xdc_transform[16];      /* IMPORTANT: column major order */
-    uv4 dec_data_dim;           /* Samples * Channels * Acquisitions; last element ignored */
-    uv4 output_points;          /* Width * Height * Depth * (Frame Average Count) */
-    v4  output_min_coordinate;  /* [m] Back-Top-Left corner of output region (w ignored) */
-    v4  output_max_coordinate;  /* [m] Front-Bottom-Right corner of output region (w ignored)*/
+    u32 dec_data_dim[4];           /* Samples * Channels * Acquisitions; last element ignored */
+    u32 output_points[4];          /* Width * Height * Depth * (Frame Average Count) */
+    f32  output_min_coordinate[4];  /* [m] Back-Top-Left corner of output region (w ignored) */
+    f32  output_max_coordinate[4];  /* [m] Front-Bottom-Right corner of output region (w ignored)*/
     f32 xdc_element_pitch[2];   /* [m] Transducer Element Pitch {row, col} */
-    uv2 rf_raw_dim;             /* Raw Data Dimensions */
+    u32 rf_raw_dim[2];             /* Raw Data Dimensions */
     i32 transmit_mode;          /* Method/Orientation of Transmit */
     u32 decode;                 /* Decode or just reshape data */
     f32 speed_of_sound;         /* [m/s] */
