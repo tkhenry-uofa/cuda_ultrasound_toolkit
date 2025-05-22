@@ -114,9 +114,6 @@ hilbert::hilbert_transform_c2c(cuComplex* d_input, cuComplex* d_output)
 {
 	size_t output_size = (size_t)Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
 
-
-	float* input_sample = (float*)malloc(output_size);
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(input_sample, (float*)d_input, output_size, cudaMemcpyDeviceToHost));
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
 	CUFFT_RETURN_IF_ERR(cufftExecR2C(Session.strided_plan, (float*)d_input, d_output));
