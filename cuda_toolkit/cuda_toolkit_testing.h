@@ -75,12 +75,6 @@ typedef struct {
 } PipelineParams;
 
 /**
-* Test functions
-*/
-
-EXPORT_FN bool raw_data_to_cuda(const int16_t* input, const uint* input_dims, const uint* decoded_dims, const i16* channel_mapping);
-
-/**
 * Full pipeline
 * 1. Convert to floats
 * 2. Decode
@@ -94,10 +88,6 @@ EXPORT_FN bool readi_beamform_raw(const int16_t* input, PipelineParams params, c
 */
 EXPORT_FN bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** volume);
 
-/**
-* Just hilbert and beamform
-*/
-EXPORT_FN bool fully_sampled_beamform(const float* input, PipelineParams params, cuComplex** volume);
 
 
 
