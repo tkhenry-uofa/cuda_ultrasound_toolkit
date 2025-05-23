@@ -6,9 +6,8 @@
 #include <string>
 #include <cufft.h>
 
-#define PIPE_INPUT_NAME "\\\\.\\pipe\\beamformer_data_fifo"
-#define PIPE_OUTPUT_NAME "\\\\.\\pipe\\beamformer_output_fifo"
-#define SMEM_NAME "Local\\ogl_beamformer_parameters"
+#include "parameter_defs.h"
+
 
 #define INPUT_MAX_BUFFER 1000000000 // 1 Gb
 

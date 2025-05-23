@@ -1,19 +1,21 @@
 #ifndef PARAMETER_DEFS_H
 #define PARAMETER_DEFS_H
 
-#include <stdint.h>
+#define PIPE_INPUT_NAME "\\\\.\\pipe\\beamformer_data_fifo"
+#define PIPE_OUTPUT_NAME "\\\\.\\pipe\\beamformer_output_fifo"
+#define SMEM_NAME "Local\\ogl_beamformer_parameters"
 
 /*
 * What test function we're calling from MATLAB
 */
-enum CudaCommand
+typedef enum
 {
 	ERR = -1,
 	ACK = 0,
 	BEAMFORM_VOLUME = 1,
 	SVD_FILTER = 2,
 	NCC_MOTION_DETECT = 3,
-};
+} CudaCommand;
 
 enum TxRxDirection
 {
@@ -64,9 +66,10 @@ enum ReadiOrdering
 struct CommandPipeMessage
 {
 	CudaCommand opcode;
-	ptrdiff_t data_size;
+	long long data_size;
 	int frame_count;
 };
+
 
 struct BeamformerParameters
 {
@@ -76,8 +79,8 @@ struct BeamformerParameters
 	float xdc_transform[16];		// 4x4 Orientation Matrix for the transducer, (column major order)
 	float xdc_element_pitch[2];		// [m] Transducer Element Pitch {row, col}
 
-	uint32_t rf_raw_dim[2];			// Raw Data Dimensions [samples * transmits + padding, total_channels (rows + cols)]
-	uint32_t dec_data_dim[4];		// Expected dimensions after decoding [samples, rx_channels, transmits]; last element ignored
+	unsigned int rf_raw_dim[2];		// Raw Data Dimensions [samples * transmits + padding, total_channels (rows + cols)]
+	unsigned int dec_data_dim[4];	// Expected dimensions after decoding [samples, rx_channels, transmits]; last element ignored
 
 	bool decode;					// Decode or just reshape data
 	TxRxDirection transmit_mode;	// TX and RX directions
@@ -87,7 +90,7 @@ struct BeamformerParameters
 	/*
 	*	BP UI (Beamforming settings)
 	*/
-	uint32_t output_points[4];		// [X, Y, Z, Frames]
+	unsigned int output_points[4];	// [X, Y, Z, Frames]
 	float output_min_coordinate[4];	// [m] Min XYZ positions, 4th value ignored
 	float output_max_coordinate[4];	// [m] Max XYZ positions, 4th value ignored
 
@@ -105,23 +108,23 @@ struct BeamformerParameters
 	/*
 	*	Large arrays seperate from the main BP
 	*/
-	int16_t channel_mapping[256];	// Maps the ordering of the raw channel data to the physical channels
-	int16_t sparse_elements[256];	// Channels used for virtual UFORCES elements
+	short channel_mapping[256];		// Maps the ordering of the raw channel data to the physical channels
+	short sparse_elements[256];		// Channels used for virtual UFORCES elements
 	float focal_depths[256];		// [m] Focal Depths for each transmit
 	float transmit_angles[256];		// [radians] Transmit Angles for each transmit
 
 	/*
 	*	Extra parameters (not part of the standard BP)
 	*/
-	uint32_t readi_group_count;     // Number of READI groups in the scheme
-	uint32_t readi_group_id;        // Which READI group this represents
+	unsigned int readi_group_count;	// Number of READI groups in the scheme
+	unsigned int readi_group_id;	// Which READI group this represents
 	ReadiOrdering readi_ordering;	// Ordering of the READI groups
 
-	uint32_t mixes_count;           // Number of mixes crosses
-	uint32_t mixes_offset;          // Cross offset at the center of the array
-	uint32_t mixes_rows[128];       // Cross row IDs (same for columns)
+	unsigned int mixes_count;		// Number of mixes crosses
+	unsigned int mixes_offset;		// Cross offset at the center of the array
+	unsigned int mixes_rows[128];	// Cross row IDs (same for columns)
 
-	uint32_t filter_length;			// Length of the filter
+	unsigned int filter_length;		// Length of the filter
 	float rf_filter[1024];			// Time domain kernel of the filter (assumed to be sampled at fs)
 
 	DataType data_type;				// Type of the raw data being passed in
@@ -136,7 +139,7 @@ struct SVDParameters
 struct NCCMotionParameters
 {
 	int frame_count;
-	uint32_t frame_dims[3];		// [X, Y, Z]
+	unsigned int  frame_dims[3];		// [X, Y, Z]
 	int reference_frame;
 };
 

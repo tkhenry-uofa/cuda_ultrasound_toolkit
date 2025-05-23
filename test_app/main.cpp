@@ -181,6 +181,11 @@ bool readi_beamform()
 	return true;
 }
 
+bool message_loop()
+{
+
+}
+
 int main()
 {
 	bool result = false;
