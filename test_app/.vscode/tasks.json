@@ -6,13 +6,13 @@
       "type": "shell",
       "command": "${config:workspace.msbuildPath}",
       "args": [
-        "${workspaceFolder}\\cuda_toolkit.sln",
+        "${workspaceFolder}\\test_app.vcxproj",
         "/p:Configuration=Release",
         "/p:Platform=x64"
       ],
       "group": {
         "kind": "build",
-        "isDefault": true
+        "isDefault": false
       },
       "presentation": {
         "reveal": "always",
@@ -27,34 +27,13 @@
       "type": "shell",
       "command": "${config:workspace.msbuildPath}",
       "args": [
-        "${workspaceFolder}\\cuda_toolkit.sln",
+        "${workspaceFolder}\\test_app.vcxproj",
         "/p:Configuration=Debug",
         "/p:Platform=x64"
       ],
       "group": {
         "kind": "build",
-        "isDefault": false
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
-      "problemMatcher": [
-        "$msCompile"
-      ]
-    },
-    {
-      "label": "Build Test App",
-      "type": "shell",
-      "command": "${config:workspace.msbuildPath}",
-      "args": [
-        "${workspaceFolder}\\test_app\\test_app.vcxproj",
-        "/p:Configuration=Debug",
-        "/p:Platform=x64"
-      ],
-      "group": {
-        "kind": "build",
-        "isDefault": false
+        "isDefault": true
       },
       "presentation": {
         "reveal": "always",

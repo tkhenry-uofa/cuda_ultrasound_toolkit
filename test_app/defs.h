@@ -1,15 +1,15 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+#include <windows.h>
+
+#include <iostream>
+
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
-#include <cufft.h>
 
 #include "parameter_defs.h"
-
-
-#define INPUT_MAX_BUFFER 1000000000 // 1 Gb
 
 
 typedef void* Handle;

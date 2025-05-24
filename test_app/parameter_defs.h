@@ -1,9 +1,11 @@
 #ifndef PARAMETER_DEFS_H
 #define PARAMETER_DEFS_H
 
-#define PIPE_INPUT_NAME "\\\\.\\pipe\\beamformer_data_fifo"
-#define PIPE_OUTPUT_NAME "\\\\.\\pipe\\beamformer_output_fifo"
-#define SMEM_NAME "Local\\ogl_beamformer_parameters"
+#define COMMAND_PIPE_NAME "\\\\.\\pipe\\cuda_command"
+#define DATA_SMEM_NAME "Local\\cuda_data"
+#define HEADER_SMEM_NAME "Local\\cuda_parameters"
+
+#define DATA_SMEM_SIZE GIGABYTE
 
 /*
 * What test function we're calling from MATLAB
@@ -71,7 +73,7 @@ struct CommandPipeMessage
 };
 
 
-struct BeamformerParameters
+struct CudaBeamformerParameters
 {
 	/*
 	*	BP Head (Transducer and sequence information)
@@ -143,9 +145,9 @@ struct NCCMotionParameters
 	int reference_frame;
 };
 
-struct SharedMemoryRegion
+struct SharedMemoryHeader
 {
-	BeamformerParameters bp;
+	CudaBeamformerParameters bp;
 	SVDParameters svd;
 	NCCMotionParameters ncc;
 };

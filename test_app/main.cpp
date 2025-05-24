@@ -183,7 +183,7 @@ bool readi_beamform()
 
 bool message_loop()
 {
-
+	return true;
 }
 
 int main()
