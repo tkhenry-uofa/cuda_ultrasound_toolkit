@@ -11,7 +11,7 @@ namespace matlab_transfer
 
 	bool write_to_pipe(Handle pipe, void* data, size_t len);
 
-	void* _open_shared_memory_area(char* name, size cap);
+	void* _open_shared_memory_area(const char* name, size cap);
 
 	int _poll_pipe(Handle* p);
 

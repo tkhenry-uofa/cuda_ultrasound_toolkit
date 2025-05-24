@@ -89,7 +89,7 @@ matlab_transfer::write_to_pipe(Handle pipe, void* data, size_t len)
 
 
 void*
-matlab_transfer::_open_shared_memory_area(char* name, size cap)
+matlab_transfer::_open_shared_memory_area(const char* name, size cap)
 {
 
 	HANDLE h = CreateFileMappingA(INVALID_HANDLE_VALUE, 0, PAGE_READWRITE, 0, cap, name);
