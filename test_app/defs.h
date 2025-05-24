@@ -32,6 +32,10 @@ typedef ptrdiff_t iptr;
 
 #define TOTAL_TOBE_CHANNELS 256
 
+#define PIPE_INPUT_NAME "\\\\.\\pipe\\beamformer_data_fifo"
+#define PIPE_OUTPUT_NAME "\\\\.\\pipe\\beamformer_output_fifo"
+#define SMEM_NAME "Local\\ogl_beamformer_parameters"
+
 #ifdef _DEBUG
 #include <assert.h>
 #define ASSERT(x) assert(x);
@@ -119,6 +123,8 @@ typedef enum {
 
 #define MEGABYTE (1024ULL * 1024ULL)
 #define GIGABYTE (1024ULL * 1024ULL * 1024ULL)
+
+#define INPUT_MAX_BUFFER 1000000000 // 1 Gb
 
 
 #define ERROR_MSG(err_code) \

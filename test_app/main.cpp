@@ -8,6 +8,7 @@
 #include "parser/mat_parser.h"
 
 #include "transfer_server/matlab_transfer.h"
+#include "transfer_server/TransferServer.h"
 
 
 PipelineParams convert_params(BeamformerParametersFull* full_bp)
@@ -181,9 +182,76 @@ bool readi_beamform()
 	return true;
 }
 
-bool message_loop()
+void message_loop()
 {
-	return true;
+	TransferServer* server = nullptr;
+	try
+	{
+		server = new TransferServer(PIPE_INPUT_NAME, SMEM_NAME, PIPE_OUTPUT_NAME);
+	}
+	catch(const std::runtime_error& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+
+	while(true)
+	{
+		auto command_opt = server->wait_for_command();
+		if(!command_opt.has_value())
+		{
+			std::cerr << "Error waiting for command." << std::endl;
+			break;
+		}
+
+		CommandPipeMessage command = command_opt.value();
+
+		switch(command.opcode)
+		{
+			case CudaCommand::BEAMFORM_VOLUME:
+				std::cout << "Beamforming volume." << std::endl;
+
+				SharedMemoryParams* smem_params = server->get_parameters_smem();
+				CudaBeamformerParameters bp = smem_params->BeamformerParameters;
+
+				size_t data_size = command.data_size;
+
+				cuComplex* volume = nullptr;
+				size_t output_size = (size_t)bp.output_points[0] * bp.output_points[1] * bp.output_points[2] * sizeof(cuComplex);
+				if (bp.rf_data_type == RfDataType::INT_16)
+					readi_beamform_raw((i16*)server->get_data_smem(), bp, &volume);
+				else if (bp.rf_data_type == RfDataType::FLOAT_32)
+					readi_beamform_fii((f32*)server->get_data_smem(), bp, &volume);
+				else
+				{
+					std::cerr << "Invalid data type." << std::endl;
+					break;
+				}
+
+				
+				break;
+
+			case CudaCommand::SVD_FILTER:
+				std::cout << "SVD filter command." << std::endl;
+				break;
+
+			case CudaCommand::NCC_MOTION_DETECT:
+				std::cout << "NCC motion detect command." << std::endl;
+				break;
+
+			case CudaCommand::ACK:
+				std::cout << "Acknowledged command." << std::endl;
+				break;
+
+			case CudaCommand::ERR:
+				std::cerr << "Error command received." << std::endl;
+			break;
+
+			default:
+				std::cerr << "Unknown command opcode (" << command.opcode << ") received." << std::endl;
+		}
+	}
+
+	delete server;
 }
 
 int main()

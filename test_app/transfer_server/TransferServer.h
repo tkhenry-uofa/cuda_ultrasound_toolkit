@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include "../defs.h"
 class TransferServer
@@ -15,17 +16,23 @@ public:
 	TransferServer& operator=( const TransferServer& ) = delete;
 	TransferServer& operator=( TransferServer&& ) = delete;
 
-	void* get_data_smem() const
+	const void* get_data_smem() const
 	{
 		return _data_smem;
 	}
 
-	SharedMemoryHeader* get_parameters_smem() const
+	const SharedMemoryParams* get_parameters_smem() const
 	{
 		return _parameters_smem;
 	}
 
-	CudaCommand get_command() const;
+	std::optional<CommandPipeMessage> wait_for_command();
+	bool write_output( const void* data, size_t size );
+
+	// Stubs
+	bool respond_ack() {assert( false ); return false;};
+	bool respond_error() {assert( false ); return false;};
+
 
 private:
 
@@ -36,7 +43,7 @@ private:
 	HANDLE _data_smem_h;
 	HANDLE _params_smem_h;
 
-	SharedMemoryHeader* _parameters_smem = nullptr;
+	SharedMemoryParams* _parameters_smem = nullptr;
 	void* _data_smem = nullptr;
 
 };

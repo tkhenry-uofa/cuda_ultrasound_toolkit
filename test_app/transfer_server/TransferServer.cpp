@@ -1,5 +1,7 @@
 #include "TransferServer.h"
 
+#define COMMAND_WAIT_TIMEOUT 60 * 60 * 1000 // 1 hour
+#define COMMAND_POLL_PERIOD 100 // 100ms
 
 TransferServer::TransferServer( const char* command_pipe_name,
                                 const char* data_smem_name,
@@ -9,7 +11,7 @@ TransferServer::TransferServer( const char* command_pipe_name,
     , _params_smem_name( header_smem_name )
 {
 
-    _command_pipe_h = CreateNamedPipeA( _command_pipe_name, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_NOWAIT,
+    _command_pipe_h = CreateNamedPipeA( _command_pipe_name, PIPE_ACCESS_DUPLEX, PIPE_TYPE_MESSAGE | PIPE_NOWAIT,
                                         1, 0, MEGABYTE, 0, 0 );
 
     if( _command_pipe_h == INVALID_HANDLE_VALUE )
@@ -36,15 +38,15 @@ TransferServer::TransferServer( const char* command_pipe_name,
     }
 
     _params_smem_h = CreateFileMappingA( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
-                                         0, sizeof( SharedMemoryHeader ), _params_smem_name );
+                                         0, sizeof( SharedMemoryParams ), _params_smem_name );
     if( _params_smem_h == NULL )
     {
         DWORD error = GetLastError();
         std::cerr << "Error creating header shared memory: " << ERROR_MSG(error) << std::endl;
         throw std::runtime_error( "Failed to create header shared memory" );
     }
-    _parameters_smem = static_cast< SharedMemoryHeader* >( MapViewOfFile( _params_smem_h, FILE_MAP_ALL_ACCESS,
-                                                                          0, 0, sizeof( SharedMemoryHeader ) ) );
+    _parameters_smem = static_cast< SharedMemoryParams* >( MapViewOfFile( _params_smem_h, FILE_MAP_ALL_ACCESS,
+                                                                          0, 0, sizeof( SharedMemoryParams ) ) );
 
 }
 
@@ -79,4 +81,61 @@ TransferServer::~TransferServer()
         CloseHandle( _command_pipe_h );
         _command_pipe_h = nullptr;
     }
+}
+
+std::optional<CommandPipeMessage> TransferServer::wait_for_command()
+{
+    DWORD bytes_read = 0;
+    CommandPipeMessage command;
+
+    uint elapsed = 0;
+
+    while( elapsed < COMMAND_WAIT_TIMEOUT )
+    {
+        if( ReadFile( _command_pipe_h, &command, sizeof( command ), &bytes_read, NULL ) )
+        {
+            if( bytes_read == sizeof( command ) )
+            {
+                if( command.opcode == CudaCommand::ERR )
+                {
+                    std::cerr << "Error in command pipe: " << command.opcode << std::endl;
+                    respond_error();
+                    return std::nullopt;
+                }
+                if( command.data_size > DATA_SMEM_SIZE )
+                {
+                    std::cerr << "Data size too large: " << command.data_size << ", Max: " << DATA_SMEM_SIZE << std::endl;
+                    respond_error();
+                    return std::nullopt;
+                }
+                return command;
+            }
+        }
+
+        DWORD error = GetLastError();
+        if( error != ERROR_NO_DATA && error != ERROR_MORE_DATA && error != ERROR_PIPE_LISTENING)
+        {
+            std::cerr << "Error reading from command pipe: " << ERROR_MSG(error) << std::endl;
+            return std::nullopt;
+        }
+
+        Sleep( COMMAND_POLL_PERIOD );
+        elapsed += COMMAND_POLL_PERIOD;
+    }
+
+    std::cerr << "Command wait timed out" << std::endl;
+    return std::nullopt;
+}
+
+bool TransferServer::write_output( const void* data, size_t size )
+{
+    DWORD bytes_written = 0;
+    if( !WriteFile( _command_pipe_h, data, static_cast< DWORD >( size ), &bytes_written, NULL ) )
+    {
+        DWORD error = GetLastError();
+        std::cerr << "Error writing to command pipe: " << ERROR_MSG(error) << std::endl;
+        return false;
+    }
+
+    return true;
 }
