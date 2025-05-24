@@ -11,11 +11,6 @@ cc=${CC:-cc}
 build=release
 
 
-glfw="libglfw.dll"
-glfw_flags="-lgdi32 -lwinmm"
-raylib="libraylib.dll"
-main="main_w32.c"
-libname="beamformer.dll"
 ldflags="${ldflags} -lgdi32 -lwinmm"
 
 libcflags="${libcflags} -DMATLAB_CONSOLE"

@@ -187,7 +187,7 @@ void message_loop()
 	TransferServer* server = nullptr;
 	try
 	{
-		server = new TransferServer(PIPE_INPUT_NAME, SMEM_NAME, PIPE_OUTPUT_NAME);
+		server = new TransferServer(PIPE_INPUT_NAME, PARAMETERS_SMEM_NAME, PIPE_OUTPUT_NAME);
 	}
 	catch(const std::runtime_error& e)
 	{
@@ -208,24 +208,24 @@ void message_loop()
 		switch(command.opcode)
 		{
 			case CudaCommand::BEAMFORM_VOLUME:
-				std::cout << "Beamforming volume." << std::endl;
+				//std::cout << "Beamforming volume." << std::endl;
 
-				SharedMemoryParams* smem_params = server->get_parameters_smem();
-				CudaBeamformerParameters bp = smem_params->BeamformerParameters;
+				//const SharedMemoryParams* smem_params = server->get_parameters_smem();
+				//CudaBeamformerParameters bp = smem_params->BeamformerParameters;
 
-				size_t data_size = command.data_size;
+				//size_t data_size = command.data_size;
 
-				cuComplex* volume = nullptr;
-				size_t output_size = (size_t)bp.output_points[0] * bp.output_points[1] * bp.output_points[2] * sizeof(cuComplex);
-				if (bp.rf_data_type == RfDataType::INT_16)
-					readi_beamform_raw((i16*)server->get_data_smem(), bp, &volume);
-				else if (bp.rf_data_type == RfDataType::FLOAT_32)
-					readi_beamform_fii((f32*)server->get_data_smem(), bp, &volume);
-				else
-				{
-					std::cerr << "Invalid data type." << std::endl;
-					break;
-				}
+				//cuComplex* volume = nullptr;
+				//size_t output_size = (size_t)bp.output_points[0] * bp.output_points[1] * bp.output_points[2] * sizeof(cuComplex);
+				//if (bp.data_type == RfDataType::INT_16)
+				//	//readi_beamform_raw((i16*)server->get_data_smem(), bp, &volume);
+				//else if (bp.data_type == RfDataType::FLOAT_32)
+				//	//readi_beamform_fii((f32*)server->get_data_smem(), bp, &volume);
+				//else
+				//{
+				//	std::cerr << "Invalid data type." << std::endl;
+				//	break;
+				//}
 
 				
 				break;

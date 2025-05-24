@@ -5,24 +5,24 @@
 extern "C" {
 #endif
 
-enum TxRxDirection
+typedef enum TxRxDirection
 {
 	TX_ROW_RX_ROW = 0,
 	TX_ROW_RX_COL = 1,
 	TX_COL_RX_ROW = 2,
 	TX_COL_RX_COL = 3,
 	INVALID = -1,
-};
+} TxRxDirection;
 
-enum BeamformPlane
+typedef enum BeamformPlane
 {
 	PLANE_XZ = 0,
 	PLANE_YZ = 1,
 	PLANE_XY = 2,
 	PLANE_ARBITRARY = 3,
-};
+} BeamformPlane;
 
-enum SequenceId
+typedef enum SequenceId
 {
 	FORCES = 0,
 	UFORCES = 1,
@@ -36,22 +36,22 @@ enum SequenceId
 	EPIC_UHERCULES = 9,
 	FLASH = 10,
 	MIXES = 100,
-};
+} SequenceId;
 
-enum DataType
+typedef enum DataType
 {
-	I16 = 0,
-	F32 = 1,
-	F32C = 2,
-};
+    I16 = 0,
+    F32 = 1,
+    F32C = 2,
+} DataType;
 
-enum ReadiOrdering
+typedef enum ReadiOrdering
 {
-	HADAMARD = 0,
-	WALSH = 1,
-};
+    HADAMARD = 0,
+    WALSH = 1,
+} ReadiOrdering;
 
-struct CudaBeamformerParameters
+typedef struct
 {
 	/*
 	*	BP Head (Transducer and sequence information)
@@ -74,7 +74,7 @@ struct CudaBeamformerParameters
 	float output_min_coordinate[4];	// [m] Min XYZ positions, 4th value ignored
 	float output_max_coordinate[4];	// [m] Max XYZ positions, 4th value ignored
 
-	float sampling_frequency;		// [Hz] 
+	float sampling_frequency;		// [Hz] Sampling frequency
 	float center_frequency;			// [Hz]  Frequency of the transmit, not the transducer reasonance
 	float speed_of_sound;			// [m/s] In the imaged volume
 
@@ -107,8 +107,8 @@ struct CudaBeamformerParameters
 	unsigned int filter_length;		// Length of the filter
 	float rf_filter[1024];			// Time domain kernel of the filter (assumed to be sampled at fs)
 
-	DataType data_type;				// Type of the raw data being passed in
-};
+	DataType data_type;		// Type of the raw data being passed in
+} CudaBeamformerParameters;
 
 #ifdef __cplusplus
 }

@@ -1,3 +1,7 @@
 {
   "workspace.msbuildPath": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\MSBuild.exe",
+  "files.associations": {
+    "cuda_transfer_new.h": "c",
+    "parameter_defs.h": "c"
+  },
 }

@@ -121,9 +121,6 @@ typedef enum {
 #define DAS_ID_UFORCES  0
 #define DAS_ID_HERCULES 1
 
-#define MEGABYTE (1024ULL * 1024ULL)
-#define GIGABYTE (1024ULL * 1024ULL * 1024ULL)
-
 #define INPUT_MAX_BUFFER 1000000000 // 1 Gb
 
 
