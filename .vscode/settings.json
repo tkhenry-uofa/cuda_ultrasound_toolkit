@@ -73,7 +73,10 @@
     "xtr1common": "cpp",
     "xutility": "cpp",
     "__nullptr": "cpp",
-    "cuda_beamformer_parameters.h": "c"
+    "cuda_beamformer_parameters.h": "c",
+    "map": "cpp",
+    "set": "cpp",
+    "xtree": "cpp"
   },
   "C_Cpp.default.compilerPath": "cl.exe",
 }

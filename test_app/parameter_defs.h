@@ -33,7 +33,7 @@ typedef enum CudaCommand
 typedef struct CommandPipeMessage
 {
 	CudaCommand opcode;
-	long long data_size;
+	unsigned long long data_size;
 	int frame_count;
 } CommandPipeMessage;
 

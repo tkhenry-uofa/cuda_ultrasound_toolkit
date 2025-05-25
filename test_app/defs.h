@@ -125,6 +125,8 @@ typedef enum {
 
 #define INPUT_MAX_BUFFER 1000000000 // 1 Gb
 
+#define IS_HANDLE_INVALID(h) ((h) == INVALID_HANDLE_VALUE || (h) == NULL)
+
 
 inline const char* format_windows_error_message(DWORD code) {
     static char message[512];

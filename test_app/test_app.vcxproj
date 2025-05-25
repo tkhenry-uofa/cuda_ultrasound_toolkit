@@ -54,7 +54,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
-      <AdditionalIncludeDirectories>C:\Program Files\MATLAB\R2024a\extern\include;$(SolutionDir)include\cuda_toolkit;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\MATLAB\R2024a\extern\include;$(ProjectDir);$(SolutionDir)include\cuda_toolkit;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -79,7 +79,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
-      <AdditionalIncludeDirectories>C:\Program Files\MATLAB\R2024a\extern\include;$(SolutionDir)include\cuda_toolkit;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\MATLAB\R2024a\extern\include;$(ProjectDir);$(SolutionDir)include\cuda_toolkit;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -101,14 +101,17 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="parser\mat_parser.cpp" />
+    <ClCompile Include="test_app.cpp" />
+    <ClCompile Include="transfer_server\transfer_server.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="defs.h" />
     <ClInclude Include="matlab_lib\cuda_transfer.h" />
     <ClInclude Include="parameter_defs.h" />
-    <ClInclude Include="transfer_server\TransferServer.h" />
+    <ClInclude Include="test_app.h" />
     <ClInclude Include="transfer_server\matlab_transfer.h" />
     <ClInclude Include="parser\mat_parser.h" />
+    <ClInclude Include="transfer_server\transfer_server.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="MatlabPath.props">
@@ -121,7 +124,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="transfer_server\TransferServer.cpp" />
     <ClCompile Include="transfer_server\matlab_transfer.cpp" />
   </ItemGroup>
   <ItemGroup>

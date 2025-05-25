@@ -98,11 +98,6 @@ open_smem(char* name, void** smem, size_t size)
                     name, error, format_error_message(error));
         return false;
     }
-    else
-    {
-        DWORD error = GetLastError();
-        warning_msg("Opened shared memory '%s' with handle '%p' and error: %i, '%s'", name, h, error, format_error_message(error));
-    }
 
     *smem = MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, size);
 
@@ -115,11 +110,6 @@ open_smem(char* name, void** smem, size_t size)
                     name, error, format_error);
         CloseHandle(h);
         return false;
-    }
-    else
-    {
-        DWORD error = GetLastError();
-        warning_msg("Mapped shared memory '%s' to pointer '%p' and error: %i, '%s'", name, *smem, error, format_error_message(error));
     }
 
     CloseHandle(h);
@@ -135,7 +125,6 @@ bool setup_shared_resources()
 
             return false;
         }
-        
     }
     memset(g_data, 0, DATA_SMEM_SIZE);
 
@@ -249,13 +238,14 @@ beamform(const void* data, size_t data_size,
         return;
     }
 
+    warning_msg("Created shared resources, sending data");
     // Load the beamformer parameters
     memcpy(g_params, bp, sizeof(CudaBeamformerParameters)); 
 
     // Copy the raw data to shared memory
     memcpy(g_data, data, data_size);
 
-    // Send the command to the CUDA server
+    warning_msg("Data copied to shared memory, sending command");
     if (!send_command(BEAMFORM_VOLUME, data_size))
     {
         cleanup_shared_resources();
@@ -263,7 +253,7 @@ beamform(const void* data, size_t data_size,
         return;
     }
 
-    // Wait for an ack
+    warning_msg("Command sent, waiting for ack");
     if (!wait_for_ack())
     {
         cleanup_shared_resources();
@@ -271,7 +261,7 @@ beamform(const void* data, size_t data_size,
         return;
     }
 
-    // Wait for a result
+    warning_msg("Ack received, waiting for result");
     CommandPipeMessage result = wait_for_result();
     if (result.opcode == ERR)
     {

@@ -8,7 +8,9 @@
 #include "parser/mat_parser.h"
 
 #include "transfer_server/matlab_transfer.h"
-#include "transfer_server/TransferServer.h"
+#include "transfer_server/transfer_server.h"
+
+#include "test_app.h"
 
 
 PipelineParams convert_params(BeamformerParametersFull* full_bp)
@@ -183,111 +185,21 @@ bool readi_beamform()
 }
 
 
-bool handle_beamform_command(TransferServer* server, const CommandPipeMessage& command)
+void
+run_test_app()
 {
-	const CudaBeamformerParameters* bp = &((server->get_parameters_smem())->BeamformerParameters);
-
-	if (!bp)
-	{
-		std::cerr << "Error: Beamformer parameters not set." << std::endl;
-		return false;
-	}
-
-	size_t data_size = command.data_size;
-	if (data_size > DATA_SMEM_SIZE)
-	{
-		std::cerr << "Error: Data size too large." << std::endl;
-		return false;
-	}
-	if (data_size == 0)
-	{
-		std::cerr << "Error: Data size is zero." << std::endl;
-		return false;
-	}
-
-	const void* data_buffer = server->get_data_smem();
-	if (!data_buffer)
-	{
-		std::cerr << "Error: Data buffer not set." << std::endl;
-		return false;
-	}
-
-	return true;
+	TestApp app;
+	app.run();
+	app.cleanup();
 }
 
-void message_loop()
-{
-
-	TransferServer* server = nullptr;
-	try
-	{
-		server = new TransferServer(COMMAND_PIPE_NAME, DATA_SMEM_NAME, PARAMETERS_SMEM_NAME);
-	}
-	catch(const std::runtime_error& e)
-	{
-		std::cerr << e.what() << '\n';
-		throw e;
-	}
-
-	std::cout << "Server created." << std::endl;
-	int commands_received = 0;
-	while(true)
-	{
-		std::cout << "Waiting for command..." << std::endl;
-		auto command_opt = server->wait_for_command();
-		if(!command_opt.has_value())
-		{
-			std::cerr << "Error waiting for command." << std::endl;
-			break;
-		}
-		commands_received++;
-		std::cout << "Command received: " << commands_received << std::endl;
-
-		CommandPipeMessage command = command_opt.value();
-
-		switch(command.opcode)
-		{
-			case CudaCommand::BEAMFORM_VOLUME:
-				std::cout << "Beamforming volume." << std::endl;
-
-				if(!handle_beamform_command(server, command))
-					throw std::runtime_error("Error handling beamform command");
-
-				break;
-
-			case CudaCommand::SVD_FILTER:
-				std::cout << "SVD filter command." << std::endl;
-				break;
-
-			case CudaCommand::NCC_MOTION_DETECT:
-				std::cout << "NCC motion detect command." << std::endl;
-				break;
-
-			case CudaCommand::ACK:
-				std::cout << "Acknowledged command." << std::endl;
-				break;
-
-			case CudaCommand::ERR:
-				std::cerr << "Error command received." << std::endl;
-			break;
-
-			default:
-				std::cerr << "Unknown command opcode (" << command.opcode << ") received." << std::endl;
-		}
-
-
-		std::cout << "Command completed." << std::endl;
-	}
-
-	delete server;
-}
 
 int main()
 {
 	// bool result = false;
 	// result = readi_beamform();
 
-	message_loop();
+	run_test_app();
 
 	return 0;
 }
