@@ -2,7 +2,7 @@
 #include <string>
 #include <chrono>
 
-#include "../cuda_toolkit/cuda_toolkit_testing.h"
+#include <cuda_toolkit_testing.h>
 
 #include "defs.h"
 #include "parser/mat_parser.h"
@@ -184,36 +184,40 @@ bool readi_beamform()
 
 void message_loop()
 {
-	TransferServer* server = nullptr;
-	try
-	{
-		server = new TransferServer(PIPE_INPUT_NAME, PARAMETERS_SMEM_NAME, PIPE_OUTPUT_NAME);
-	}
-	catch(const std::runtime_error& e)
-	{
-		std::cerr << e.what() << '\n';
-	}
 
+	TransferServer* server = nullptr;
+//	try
+//	{
+		server = new TransferServer(COMMAND_PIPE_NAME, DATA_SMEM_NAME, PARAMETERS_SMEM_NAME);
+	// }
+	// catch(const std::runtime_error& e)
+	// {
+	// 	std::cerr << e.what() << '\n';
+	// 	throw e;
+	// }
+
+	std::cout << "Server created." << std::endl;
+	int commands_received = 0;
 	while(true)
 	{
+		std::cout << "Waiting for command..." << std::endl;
 		auto command_opt = server->wait_for_command();
 		if(!command_opt.has_value())
 		{
 			std::cerr << "Error waiting for command." << std::endl;
 			break;
 		}
+		commands_received++;
+		std::cout << "Command received: " << commands_received << std::endl;
 
 		CommandPipeMessage command = command_opt.value();
 
+		size_t data_size = command.data_size;
+		const SharedMemoryParams* smem_params = server->get_parameters_smem();
 		switch(command.opcode)
 		{
 			case CudaCommand::BEAMFORM_VOLUME:
-				//std::cout << "Beamforming volume." << std::endl;
-
-				//const SharedMemoryParams* smem_params = server->get_parameters_smem();
-				//CudaBeamformerParameters bp = smem_params->BeamformerParameters;
-
-				//size_t data_size = command.data_size;
+				std::cout << "Beamforming volume." << std::endl;
 
 				//cuComplex* volume = nullptr;
 				//size_t output_size = (size_t)bp.output_points[0] * bp.output_points[1] * bp.output_points[2] * sizeof(cuComplex);
@@ -249,6 +253,9 @@ void message_loop()
 			default:
 				std::cerr << "Unknown command opcode (" << command.opcode << ") received." << std::endl;
 		}
+
+
+		std::cout << "Command completed." << std::endl;
 	}
 
 	delete server;
@@ -256,9 +263,10 @@ void message_loop()
 
 int main()
 {
-	bool result = false;
+	// bool result = false;
+	// result = readi_beamform();
 
-	result = readi_beamform();
+	message_loop();
 
-	return !result;
+	return 0;
 }

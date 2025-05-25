@@ -15,35 +15,38 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp">
+    <ClCompile Include="source\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cuda_toolkit.cpp">
+    <ClCompile Include="source\cuda_toolkit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cuda_toolkit_testing.cpp">
+    <ClCompile Include="source\cuda_toolkit_testing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cuda_toolkit.h">
+    <ClInclude Include="source\cuda_toolkit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="defs.h">
+    <ClInclude Include="source\defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hilbert\hilbert_transform.cuh" />
-    <ClInclude Include="hadamard\hadamard.cuh" />
-    <ClInclude Include="data_conversion\int16_to_float.cuh" />
-    <ClInclude Include="cuda_toolkit_testing.h">
+    <ClInclude Include="source\hilbert\hilbert_transform.cuh" />
+    <ClInclude Include="source\hadamard\hadamard.cuh" />
+    <ClInclude Include="source\data_conversion\int16_to_float.cuh" />
+    <ClInclude Include="source\cuda_toolkit_testing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cuda_beamformer_parameters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="hilbert\hilbert_transform.cu" />
-    <CudaCompile Include="hadamard\hadamard.cu" />
-    <CudaCompile Include="data_conversion\int16_to_float.cu" />
-    <CudaCompile Include="beamformer\beamformer.cu" />
-    <CudaCompile Include="beamformer\beamformer.cuh" />
+    <CudaCompile Include="source\hilbert\hilbert_transform.cu" />
+    <CudaCompile Include="source\hadamard\hadamard.cu" />
+    <CudaCompile Include="source\data_conversion\int16_to_float.cu" />
+    <CudaCompile Include="source\beamformer\beamformer.cu" />
+    <CudaCompile Include="source\beamformer\beamformer.cuh" />
   </ItemGroup>
 </Project>
