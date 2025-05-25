@@ -371,3 +371,5 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /test_app/matlab_lib/cuda_transfer.dll
+
+*/output/

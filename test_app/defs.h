@@ -1,6 +1,7 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include <iostream>
@@ -10,6 +11,7 @@
 #include <string>
 
 #include "parameter_defs.h"
+
 
 
 typedef void* Handle;
@@ -124,23 +126,41 @@ typedef enum {
 #define INPUT_MAX_BUFFER 1000000000 // 1 Gb
 
 
-#define ERROR_MSG(err_code) \
-    ([](DWORD code) { \
-        LPSTR messageBuffer = nullptr; \
-        size_t size = FormatMessageA( \
-            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
-            NULL, \
-            code, \
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), \
-            (LPSTR)&messageBuffer, \
-            0, \
-            NULL \
-        ); \
-        if (size == 0) return std::string("Unknown error code: ") + std::to_string(code); \
-        std::string message(messageBuffer, size); \
-        LocalFree(messageBuffer); \
-        return message; \
-    })(err_code)
+inline const char* format_windows_error_message(DWORD code) {
+    static char message[512];
+    DWORD size = FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        code,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        message,
+        sizeof(message),
+        NULL
+    );
+
+    if (size == 0) {
+        snprintf(message, sizeof(message), "Unknown error code: %lu", (unsigned long)code);
+    }
+    else {
+        // Remove trailing newline if present
+        size_t len = strlen(message);
+        if (len > 0 && message[len - 1] == '\n') {
+            message[len - 1] = '\0';
+        }
+    }
+
+    return message;
+}
+
+
+
+#define WINDOWS_ERROR_MESSAGE(MSG, CODE)                                                        \
+do                                                                                              \
+{                                                                                               \
+    std::cerr << MSG << ", Error code: " << CODE << " (" << format_windows_error_message(CODE) << ")" << std::endl; \
+} while (0);                                                                                    \
+
+
 
 
 #define MAX_BEAMFORMED_SAVED_FRAMES 16
@@ -251,6 +271,6 @@ namespace defs
         struct uint3;
 
     } RfDataDims;
-}
+};
 
 #endif // !DEFS_H

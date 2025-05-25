@@ -164,7 +164,7 @@ matlab_transfer::wait_for_data(Handle pipe, void* data, uint* bytes_read, uint t
 		{
 			if (error != ERROR_NO_DATA && error != ERROR_PIPE_LISTENING)
 			{
-				std::cout << "Input pipe error: " << error << " Message: " << ERROR_MSG(error);
+				std::cout << "Input pipe error: " << error << " Message: " << format_windows_error_message(error);
 				return false;
 			}
 		}

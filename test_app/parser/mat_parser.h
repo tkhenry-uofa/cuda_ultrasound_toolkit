@@ -5,9 +5,10 @@
 #include <vector>
 #include <complex>
 #include <string>
+#include <cuda_toolkit_testing.h>
 
 #include "../defs.h"
-#include "../../cuda_toolkit/cuda_toolkit_testing.h"
+
 
 extern "C" {
 	#include <mat.h>

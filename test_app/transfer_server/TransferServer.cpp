@@ -11,42 +11,51 @@ TransferServer::TransferServer( const char* command_pipe_name,
     , _params_smem_name( header_smem_name )
 {
 
+    //SIZE_T large_page_min = GetLargePageMinimum();
+
     _command_pipe_h = CreateNamedPipeA( _command_pipe_name, PIPE_ACCESS_DUPLEX, PIPE_TYPE_MESSAGE | PIPE_NOWAIT,
                                         1, 0, MEGABYTE, 0, 0 );
 
     if( _command_pipe_h == INVALID_HANDLE_VALUE )
     {
-        DWORD error = GetLastError();
-        std::cerr << "Error creating command pipe: " << ERROR_MSG(error) << std::endl;
+        WINDOWS_ERROR_MESSAGE( "Error creating command pipe", GetLastError() );
         throw std::runtime_error( "Failed to create command pipe" );
     }
 
     _data_smem_h = CreateFileMappingA( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, DATA_SMEM_SIZE, _data_smem_name );
-    if( _data_smem_h == NULL )  
+    if( _data_smem_h == NULL )
     {
-        DWORD error = GetLastError();
-        std::cerr << "Error creating data shared memory: " << ERROR_MSG(error) << std::endl;
+        WINDOWS_ERROR_MESSAGE( "Error creating data shared memory", GetLastError() );
         throw std::runtime_error( "Failed to create data shared memory" );
     }
 
-    _data_smem = static_cast< char* >( MapViewOfFile( _data_smem_h, FILE_MAP_ALL_ACCESS, 0, 0, DATA_SMEM_SIZE ) );
-    if( _data_smem == NULL )
+    _data_smem = static_cast<char*>(MapViewOfFile( _data_smem_h, FILE_MAP_ALL_ACCESS, 0, 0, DATA_SMEM_SIZE ));
+    if( _data_smem == nullptr )
     {
-        DWORD error = GetLastError();
-        std::cerr << "Error mapping data shared memory: " << ERROR_MSG(error) << std::endl;
+        WINDOWS_ERROR_MESSAGE( "Error mapping data shared memory", GetLastError() );
         throw std::runtime_error( "Failed to map data shared memory" );
     }
+
+    // Test writing to the shared memory
+    memset( _data_smem, 1, DATA_SMEM_SIZE );
+
+    _data_smem[0x40000000u] = 0xFFu; // Test writing to the shared memory
 
     _params_smem_h = CreateFileMappingA( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
                                          0, sizeof( SharedMemoryParams ), _params_smem_name );
     if( _params_smem_h == NULL )
     {
-        DWORD error = GetLastError();
-        std::cerr << "Error creating header shared memory: " << ERROR_MSG(error) << std::endl;
+        WINDOWS_ERROR_MESSAGE( "Error creating header shared memory", GetLastError() );
         throw std::runtime_error( "Failed to create header shared memory" );
     }
     _parameters_smem = static_cast< SharedMemoryParams* >( MapViewOfFile( _params_smem_h, FILE_MAP_ALL_ACCESS,
                                                                           0, 0, sizeof( SharedMemoryParams ) ) );
+
+    if( _parameters_smem == NULL )
+    {
+        WINDOWS_ERROR_MESSAGE( "Error mapping header shared memory", GetLastError() );
+        throw std::runtime_error( "Failed to map header shared memory" );
+    }
 
 }
 
@@ -115,7 +124,7 @@ std::optional<CommandPipeMessage> TransferServer::wait_for_command()
         DWORD error = GetLastError();
         if( error != ERROR_NO_DATA && error != ERROR_MORE_DATA && error != ERROR_PIPE_LISTENING)
         {
-            std::cerr << "Error reading from command pipe: " << ERROR_MSG(error) << std::endl;
+            std::cerr << "Error reading from command pipe: " << format_windows_error_message(error) << std::endl;
             return std::nullopt;
         }
 
@@ -133,7 +142,7 @@ bool TransferServer::write_output( const void* data, size_t size )
     if( !WriteFile( _command_pipe_h, data, static_cast< DWORD >( size ), &bytes_written, NULL ) )
     {
         DWORD error = GetLastError();
-        std::cerr << "Error writing to command pipe: " << ERROR_MSG(error) << std::endl;
+        std::cerr << "Error writing to command pipe: " << format_windows_error_message(error) << std::endl;
         return false;
     }
 

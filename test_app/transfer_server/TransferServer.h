@@ -2,6 +2,8 @@
 
 #include <optional>
 #include <string>
+#include <cassert>
+
 #include "../defs.h"
 class TransferServer
 {
@@ -44,7 +46,7 @@ private:
 	HANDLE _params_smem_h;
 
 	SharedMemoryParams* _parameters_smem = nullptr;
-	void* _data_smem = nullptr;
+	char* _data_smem = nullptr;
 
 };
 
