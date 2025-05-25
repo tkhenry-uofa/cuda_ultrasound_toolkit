@@ -372,4 +372,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /test_app/matlab_lib/cuda_transfer.dll
 
-*/output/
+output/
+test_app/client_lib/output/
