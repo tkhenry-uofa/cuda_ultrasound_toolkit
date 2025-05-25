@@ -182,19 +182,52 @@ bool readi_beamform()
 	return true;
 }
 
+
+bool handle_beamform_command(TransferServer* server, const CommandPipeMessage& command)
+{
+	const CudaBeamformerParameters* bp = &((server->get_parameters_smem())->BeamformerParameters);
+
+	if (!bp)
+	{
+		std::cerr << "Error: Beamformer parameters not set." << std::endl;
+		return false;
+	}
+
+	size_t data_size = command.data_size;
+	if (data_size > DATA_SMEM_SIZE)
+	{
+		std::cerr << "Error: Data size too large." << std::endl;
+		return false;
+	}
+	if (data_size == 0)
+	{
+		std::cerr << "Error: Data size is zero." << std::endl;
+		return false;
+	}
+
+	const void* data_buffer = server->get_data_smem();
+	if (!data_buffer)
+	{
+		std::cerr << "Error: Data buffer not set." << std::endl;
+		return false;
+	}
+
+	return true;
+}
+
 void message_loop()
 {
 
 	TransferServer* server = nullptr;
-//	try
-//	{
+	try
+	{
 		server = new TransferServer(COMMAND_PIPE_NAME, DATA_SMEM_NAME, PARAMETERS_SMEM_NAME);
-	// }
-	// catch(const std::runtime_error& e)
-	// {
-	// 	std::cerr << e.what() << '\n';
-	// 	throw e;
-	// }
+	}
+	catch(const std::runtime_error& e)
+	{
+		std::cerr << e.what() << '\n';
+		throw e;
+	}
 
 	std::cout << "Server created." << std::endl;
 	int commands_received = 0;
@@ -212,26 +245,14 @@ void message_loop()
 
 		CommandPipeMessage command = command_opt.value();
 
-		size_t data_size = command.data_size;
-		const SharedMemoryParams* smem_params = server->get_parameters_smem();
 		switch(command.opcode)
 		{
 			case CudaCommand::BEAMFORM_VOLUME:
 				std::cout << "Beamforming volume." << std::endl;
 
-				//cuComplex* volume = nullptr;
-				//size_t output_size = (size_t)bp.output_points[0] * bp.output_points[1] * bp.output_points[2] * sizeof(cuComplex);
-				//if (bp.data_type == RfDataType::INT_16)
-				//	//readi_beamform_raw((i16*)server->get_data_smem(), bp, &volume);
-				//else if (bp.data_type == RfDataType::FLOAT_32)
-				//	//readi_beamform_fii((f32*)server->get_data_smem(), bp, &volume);
-				//else
-				//{
-				//	std::cerr << "Invalid data type." << std::endl;
-				//	break;
-				//}
+				if(!handle_beamform_command(server, command))
+					throw std::runtime_error("Error handling beamform command");
 
-				
 				break;
 
 			case CudaCommand::SVD_FILTER:
