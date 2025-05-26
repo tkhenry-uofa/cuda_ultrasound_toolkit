@@ -20,14 +20,14 @@ public:
         void* d_raw = nullptr;
         float* d_converted = nullptr;
         float* d_decoded = nullptr;
-        cuComplex* d_complex = nullptr;
+        cuComplex* d_hilbert = nullptr;
         cuComplex* d_volume = nullptr;
     };
 
 private:
 	CudaBeamformerParameters* _beamformer_params = nullptr;
 
-    CudaBuffers _cuda_buffers;
+    CudaBuffers _device_buffers;
     std::map<uint, cudaGraphicsResource_t> _ogl_buffers;
 
     cublasHandle_t _cublas_handle = nullptr;

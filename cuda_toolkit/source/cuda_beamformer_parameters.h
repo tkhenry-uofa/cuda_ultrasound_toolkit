@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#define MAX_CHANNEL_COUNT 256
+
 typedef enum TxRxDirection
 {
 	TX_ROW_RX_ROW = 0,
@@ -38,12 +40,13 @@ typedef enum SequenceId
 	MIXES_S = 100,
 } SequenceId;
 
-typedef enum DataType
+typedef enum InputDataType
 {
-    I16 = 0,
-    F32 = 1,
-    F32C = 2,
-} DataType;
+	INVALID = 0,
+    I16 = 1,
+    F32 = 2,
+    F32C = 3,
+} InputDataType;
 
 typedef enum ReadiOrdering
 {
@@ -107,7 +110,7 @@ typedef struct
 	unsigned int filter_length;		// Length of the filter
 	float rf_filter[1024];			// Time domain kernel of the filter (assumed to be sampled at fs)
 
-	DataType data_type;		// Type of the raw data being passed in
+	InputDataType data_type;		// Type of the raw data being passed in
 } CudaBeamformerParameters;
 
 #ifdef __cplusplus
