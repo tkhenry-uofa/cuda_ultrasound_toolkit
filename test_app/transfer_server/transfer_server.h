@@ -1,8 +1,10 @@
 #pragma once
 
 #include <optional>
+#include <span>
 #include <string>
 #include <cassert>
+#include <cstddef>
 
 #include "../defs.h"
 class TransferServer
@@ -19,7 +21,7 @@ public:
 	TransferServer& operator=( const TransferServer& ) = delete;
 	TransferServer& operator=( TransferServer&& ) = delete;
 
-	const void* get_data_smem() const
+	std::span<u8 const> get_data_smem() const
 	{
 		return _data_smem;
 	}
@@ -30,15 +32,19 @@ public:
 	}
 
 	std::optional<CommandPipeMessage> wait_for_command();
-	bool write_output( const void* data, size_t size );
+	
 
 	// Stubs
-	bool respond_ack() {assert( false ); return false;};
-	bool respond_error() {assert( false ); return false;};
+	bool respond_ack();
+	bool respond_success(u32 output_size);
+	bool respond_error();
+
+	bool write_output_data(std::span<const u8> output_data);
 
 
 private:
 
+	bool _send_command_response( CommandPipeMessage message );
 	bool _create_command_pipe();
 	bool _cleanup_command_pipe();
 	inline bool _restart_command_pipe() { return _cleanup_command_pipe() && _create_command_pipe(); }
@@ -54,10 +60,10 @@ private:
 	HANDLE _data_smem_h;
 	HANDLE _params_smem_h;
 
-	uint _data_smem_size;
+	const SharedMemoryParams* _parameters_smem = nullptr;
 
-	SharedMemoryParams* _parameters_smem = nullptr;
-	char* _data_smem = nullptr;
+	uint _data_smem_size;
+	u8* _data_smem_raw = nullptr;
+	std::span<u8> _data_smem;
 
 };
-

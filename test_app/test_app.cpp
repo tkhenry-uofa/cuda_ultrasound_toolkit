@@ -1,4 +1,6 @@
+#include <vector>
 #include "test_app.h"
+
 
 
 TestApp::TestApp()
@@ -101,23 +103,36 @@ TestApp::_handle_beamform_command(const CommandPipeMessage& command)
 	}
 
 	size_t data_size = command.data_size;
-	if (data_size > DATA_SMEM_SIZE)
-	{
-		std::cerr << "Error: Data size too large." << std::endl;
-		return false;
-	}
-	if (data_size == 0)
-	{
-		std::cerr << "Error: Data size is zero." << std::endl;
-		return false;
-	}
-
-	const void* data_buffer = _transfer_server->get_data_smem();
-	if (!data_buffer)
+	auto data_buffer = _transfer_server->get_data_smem();
+	if (data_buffer.empty())
 	{
 		std::cerr << "Error: Data buffer not set." << std::endl;
+        _transfer_server->respond_error();
 		return false;
 	}
 
+    _transfer_server->respond_ack();
+    std::cout << "Beamforming with data size: " << data_size << std::endl;
+    // Beamform the data
+
+    uint output_size = bp->output_points[0] * bp->output_points[1] * bp->output_points[2] * sizeof(float) * 2; // Assuming output is float2
+    if (output_size > _transfer_server->get_data_smem().size())
+    {
+        std::cerr << "Error: Output size exceeds shared memory size." << std::endl;
+        _transfer_server->respond_error();
+        return false;
+    }
+
+    u8* output_data = new u8[output_size];
+
+    std::cout << "Output size: " << output_size << std::endl;
+    _transfer_server->write_output_data(std::span<const u8>(output_data, output_size));
+    if (!_transfer_server->respond_success(output_size))
+    {
+        std::cerr << "Error: Failed to respond with success." << std::endl;
+        return false;
+    }
+
+	delete[] output_data;
 	return true;
 }

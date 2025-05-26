@@ -35,7 +35,7 @@ typedef enum SequenceId
 	EPIC_UFORCES = 8,
 	EPIC_UHERCULES = 9,
 	FLASH = 10,
-	MIXES = 100,
+	MIXES_S = 100,
 } SequenceId;
 
 typedef enum DataType

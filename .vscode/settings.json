@@ -76,7 +76,9 @@
     "cuda_beamformer_parameters.h": "c",
     "map": "cpp",
     "set": "cpp",
-    "xtree": "cpp"
+    "xtree": "cpp",
+    "span": "c",
+    "stdint.h": "c"
   },
   "C_Cpp.default.compilerPath": "cl.exe",
 }

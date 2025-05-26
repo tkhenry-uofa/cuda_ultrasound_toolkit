@@ -17,7 +17,7 @@ TransferServer::TransferServer( const char* command_pipe_name,
     , _data_smem_h( INVALID_HANDLE_VALUE )
     , _params_smem_h( INVALID_HANDLE_VALUE )
     , _parameters_smem( nullptr )
-    , _data_smem( nullptr )
+	, _data_smem_raw(nullptr)
 {
 
     if( _data_smem_size > MAX_DATA_SIZE )
@@ -41,8 +41,8 @@ TransferServer::TransferServer( const char* command_pipe_name,
     }
 
     // Test writing to the shared memory
-    memset( _data_smem, 1, _data_smem_size );
-    _data_smem[0x40000000u] = 0xFFu; 
+    memset( _data_smem_raw, 1, _data_smem_size );
+    _data_smem[0x40000000u] = 0xFFu; // Test writing to a large offset
 }
 
 TransferServer::~TransferServer()
@@ -99,15 +99,18 @@ bool TransferServer::_create_data_smem()
         return false;
     }
 
-    _data_smem = static_cast<char*>(MapViewOfFile( _data_smem_h, FILE_MAP_ALL_ACCESS, 0, 0, _data_smem_size ));
-    if( _data_smem == nullptr )
+    _data_smem_raw = static_cast<u8*>(MapViewOfFile( _data_smem_h, FILE_MAP_ALL_ACCESS, 0, 0, _data_smem_size ));
+    if( _data_smem_raw == nullptr )
     {
         WINDOWS_ERROR_MESSAGE( "Error mapping data shared memory", GetLastError() );
         return false;
     }
+    _data_smem = std::span<u8>(_data_smem_raw, _data_smem_size);
     return true;
 }
-bool TransferServer::_create_params_smem()
+
+bool 
+TransferServer::_create_params_smem()
 {
     _params_smem_h = CreateFileMappingA( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
                                          0, sizeof( SharedMemoryParams ), _params_smem_name );
@@ -127,12 +130,15 @@ bool TransferServer::_create_params_smem()
     return true;
 }
 
-bool TransferServer::_cleanup_smem()
+bool 
+TransferServer::_cleanup_smem()
 {
-    if( _data_smem )
+    if( _data_smem_raw )
     {
-        UnmapViewOfFile( _data_smem );
-        _data_smem = nullptr;
+        UnmapViewOfFile( _data_smem_raw );
+        _data_smem_raw = nullptr;
+
+		_data_smem = std::span<u8>();
 
         CloseHandle( _data_smem_h );
         _data_smem_h = nullptr;
@@ -150,6 +156,36 @@ bool TransferServer::_cleanup_smem()
     return true;
 }
 
+bool
+TransferServer::respond_ack()
+{
+    CommandPipeMessage ack_message = { CudaCommand::ACK, 0, 0 };
+    return _send_command_response( ack_message );
+}
+bool
+TransferServer::respond_success( u32 output_size )
+{
+    CommandPipeMessage success_message = { CudaCommand::SUCCESS, output_size, 0 };
+    return _send_command_response( success_message );
+}
+bool
+TransferServer::respond_error()
+{
+    CommandPipeMessage error_message = { CudaCommand::ERR, 0, 0 };
+    return _send_command_response( error_message );
+}
+
+bool
+TransferServer::write_output_data( std::span<const u8> output_data )
+{
+    if( output_data.size() > _data_smem_size )
+    {
+        std::cerr << "Output data size exceeds shared memory size: " << output_data.size() << " > " << _data_smem_size << std::endl;
+        return false;
+    }
+    memcpy( _data_smem.data(), output_data.data(), output_data.size() );
+    return true;
+}
 
 std::optional<CommandPipeMessage> 
 TransferServer::wait_for_command()
@@ -209,10 +245,10 @@ TransferServer::wait_for_command()
 
 
 bool 
-TransferServer::write_output( const void* data, size_t size )
+TransferServer::_send_command_response( CommandPipeMessage message )
 {
     DWORD bytes_written = 0;
-    if( !WriteFile( _command_pipe_h, data, static_cast< DWORD >( size ), &bytes_written, NULL ) )
+    if( !WriteFile( _command_pipe_h, &message, sizeof( message ), &bytes_written, NULL ) )
     {
         DWORD error = GetLastError();
         std::cerr << "Error writing to command pipe: " << format_windows_error_message(error) << std::endl;

@@ -186,3 +186,10 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	return true;
 }
+
+
+bool 
+beamform(const void* data, uint data_size, CudaBeamformerParameters* bp, void* output)
+{
+	return true;
+}

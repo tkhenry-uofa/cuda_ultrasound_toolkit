@@ -5,9 +5,7 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-
-#include <parameter_defs.h>
+#include "parameter_defs.h"
 
 #if defined(_WIN32)
     #define LIB_FN __declspec(dllexport)
@@ -16,7 +14,7 @@ extern "C" {
 #endif
 
 
-LIB_FN void beamform_i16( const int16_t* data, CudaBeamformerParameters bp, float* output);
+LIB_FN void beamform_i16( const short* data, CudaBeamformerParameters bp, float* output);
 
 LIB_FN void beamform_f32( const float* data, CudaBeamformerParameters bp, float* output);
 

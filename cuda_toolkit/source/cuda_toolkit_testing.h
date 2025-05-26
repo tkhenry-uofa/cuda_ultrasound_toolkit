@@ -5,9 +5,8 @@
 #include <cuComplex.h>
 
 #include "cuda_toolkit.h"
+#include "cuda_beamformer_parameters.h"
 
-
-typedef unsigned int uint;
 
 typedef struct {
 	float re;
@@ -88,7 +87,7 @@ EXPORT_FN bool readi_beamform_raw(const int16_t* input, PipelineParams params, c
 */
 EXPORT_FN bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** volume);
 
-
+EXPORT_FN bool beamform(const void* data, uint data_size, CudaBeamformerParameters* bp, void* output);
 
 
 #endif // !CUDA_TOOLKIT_TESTING_H

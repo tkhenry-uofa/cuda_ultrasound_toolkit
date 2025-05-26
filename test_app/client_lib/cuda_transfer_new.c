@@ -3,8 +3,12 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "cuda_transfer_new.h"
+
+#define RESPONSE_POLL_PERIOD 100 // 100 ms
+#define RESPONSE_POLL_TIMEOUT 1200000 // 20 minutes
 
 #ifdef MATLAB_CONSOLE  // Define this in the makefile
 #define mexErrMsgIdAndTxt  mexErrMsgIdAndTxt_800
@@ -167,21 +171,49 @@ bool send_command(CudaCommand command, size_t data_size)
     return true;
 }
 
+bool wait_for_response(CommandPipeMessage* message)
+{
+    DWORD bytes_read = 0;
+    uint32_t elapsed = 0;
+    while(elapsed < RESPONSE_POLL_TIMEOUT)
+    {
+        if (!ReadFile(g_command_pipe, message, sizeof(*message), &bytes_read, NULL))
+        {
+            DWORD error = GetLastError();
+            warning_msg("Failed to read from command pipe with error: %i", error);
+            return false;
+        }
+
+        if (bytes_read == 0)
+        {
+            Sleep(RESPONSE_POLL_PERIOD);
+            elapsed += RESPONSE_POLL_PERIOD;
+            continue;
+        }
+
+        if (bytes_read != sizeof(*message))
+        {
+            warning_msg("Invalid message size read from command pipe: %zu", bytes_read);
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    warning_msg("Timed out waiting for response from command pipe after %u ms", RESPONSE_POLL_TIMEOUT);
+    return false;
+}
+
 bool wait_for_ack()
 {
     CommandPipeMessage message;
     DWORD bytes_read = 0;
 
-    if (!ReadFile(g_command_pipe, &message, sizeof(message), &bytes_read, NULL))
+    if (!wait_for_response(&message))
     {
-        DWORD error = GetLastError();
-        warning_msg("Failed to read from command pipe with error: %i", error);
-        return false;
-    }
-
-    if (bytes_read != sizeof(message))
-    {
-        warning_msg("Invalid message size read from command pipe: %zu", bytes_read);
+        warning_msg("Failed to receive response from command pipe");
         return false;
     }
 
@@ -200,23 +232,10 @@ wait_for_result()
     CommandPipeMessage message;
     DWORD bytes_read = 0;
 
-    if (!ReadFile(g_command_pipe, &message, sizeof(message), &bytes_read, NULL))
+    if (!wait_for_response(&message))
     {
-        DWORD error = GetLastError();
-        warning_msg("Failed to read from command pipe with error: %i", error);
-        message.opcode = ERR;
-    }
-
-    if (bytes_read != sizeof(message))
-    {
-        warning_msg("Invalid message size read from command pipe: %zu", bytes_read);
-        message.opcode = ERR;
-    }
-
-    if (message.opcode != SUCCESS)
-    {
-        warning_msg("Invalid command received from command pipe: %d", message.opcode);
-        message.opcode = ERR;
+        warning_msg("Failed to receive response from command pipe");
+        return message;
     }
 
     return message;
@@ -270,15 +289,16 @@ beamform(const void* data, size_t data_size,
         return;
     }
 
+    warning_msg("Result received, data size: %zu", result.data_size);
     size_t output_size = result.data_size;
     memcpy(output, g_data, output_size);
 
     cleanup_shared_resources();
 }
 
-void beamform_i16( const int16_t* data, CudaBeamformerParameters bp, float* output)
+void beamform_i16( const short* data, CudaBeamformerParameters bp, float* output)
 {
-    size_t data_size = bp.rf_raw_dim[0] * bp.rf_raw_dim[1] * sizeof(int16_t);
+    size_t data_size = bp.rf_raw_dim[0] * bp.rf_raw_dim[1] * sizeof(short);
     beamform(data, data_size, &bp, output);
 }
 

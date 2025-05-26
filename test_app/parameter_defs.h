@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include <cuda_beamformer_parameters.h>
+#include "cuda_beamformer_parameters.h"
 
 #define COMMAND_PIPE_NAME "\\\\.\\pipe\\cuda_command"
 #define DATA_SMEM_NAME "Local\\cuda_data"
