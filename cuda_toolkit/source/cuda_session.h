@@ -15,6 +15,11 @@ public:
 	CudaSession();
 	~CudaSession();
 
+
+    bool update_parameters(const CudaBeamformerParameters& new_params);
+
+
+
     struct CudaBuffers 
     {
         void* d_raw = nullptr;
@@ -35,6 +40,6 @@ private:
     cufftHandle _inverse_plan;
 
     float* _d_hadamard = nullptr;
-    
+
 
 };
