@@ -34,6 +34,7 @@ namespace data_conversion
 
         kernels::convert_to_f32<int16_t><<<grid_dim, block_dim >>>(d_input, d_output, input_dims, output_dims, _d_channel_mapping);
         CUDA_RETURN_IF_ERROR(cudaGetLastError());
+        CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
         return true;
     }
@@ -52,6 +53,7 @@ namespace data_conversion
 
         kernels::convert_to_f32<float><<<grid_dim, block_dim >>>(d_input, d_output, input_dims, output_dims, _d_channel_mapping);
         CUDA_RETURN_IF_ERROR(cudaGetLastError());
+        CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
         return true;
     }
