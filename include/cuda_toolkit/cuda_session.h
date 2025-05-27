@@ -34,12 +34,12 @@ public:
     bool beamform(std::span<u8> input_data, const CudaBeamformerParameters* params, std::span<u8> volume);
     struct CudaBuffers 
     {
-        InputDataType data_type = InputDataType::INVALID; 
+        InputDataType data_type = InputDataType::INVALID_TYPE; 
         size_t raw_data_size = 0;
         size_t decoded_data_size = 0;
         size_t output_data_size = 0;
         void* d_raw = nullptr;
-        cuComplex* d_converted = nullptr;
+        float* d_converted = nullptr;
         cuComplex* d_decoded = nullptr;
         cuComplex* d_hilbert = nullptr;
         cuComplex* d_volume = nullptr;
@@ -59,8 +59,6 @@ private:
     CudaBuffers _device_buffers;
     std::map<uint, cudaGraphicsResource_t> _ogl_raw_buffers;
     std::map<uint, cudaGraphicsResource_t> _ogl_rf_buffers;
-
-    cublasHandle_t _cublas_handle = nullptr;
     cufftHandle _forward_plan;
     cufftHandle _inverse_plan;
 

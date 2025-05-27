@@ -55,7 +55,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.4.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.9.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -139,6 +139,10 @@
     <PostBuildEvent>
       <Command>xcopy /Y /I "$(ProjectDir)source\*.h" "$(SolutionDir)include\cuda_toolkit\" </Command>
     </PostBuildEvent>
+    <CudaCompile>
+      <AdditionalOptions>-std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
+      <CodeGeneration>compute_86,sm_86</CodeGeneration>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -164,10 +168,15 @@
     <PostBuildEvent>
       <Command>xcopy /Y /I "$(ProjectDir)source\*.h" "$(SolutionDir)include\cuda_toolkit\" </Command>
     </PostBuildEvent>
+    <CudaCompile>
+      <AdditionalOptions>-std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
+      <CodeGeneration>compute_86,sm_86</CodeGeneration>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="source\beamformer\beamformer.cu" />
     <CudaCompile Include="source\beamformer\beamformer.cuh" />
+    <CudaCompile Include="source\data_conversion\data_converter.cu" />
     <CudaCompile Include="source\data_conversion\int16_to_float.cu" />
     <CudaCompile Include="source\hadamard\hadamard.cu" />
     <CudaCompile Include="source\hilbert\hilbert_transform.cu" />
@@ -176,13 +185,17 @@
     <ClCompile Include="source\cuda_toolkit.cpp" />
     <ClCompile Include="source\cuda_toolkit_testing.cpp" />
     <ClCompile Include="source\dllmain.cpp" />
+    <ClCompile Include="source\hadamard\hadamard_decoder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\cuda_beamformer_parameters.h" />
     <ClInclude Include="source\cuda_toolkit.h" />
     <ClInclude Include="source\cuda_toolkit_testing.h" />
+    <ClInclude Include="source\data_conversion\data_conversion_kernels.cuh" />
+    <ClInclude Include="source\data_conversion\data_converter.h" />
     <ClInclude Include="source\data_conversion\int16_to_float.cuh" />
     <ClInclude Include="source\hadamard\hadamard.cuh" />
+    <ClInclude Include="source\hadamard\hadamard_decoder.h" />
     <ClInclude Include="source\hilbert\hilbert_transform.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
@@ -190,6 +203,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.4.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.9.targets" />
   </ImportGroup>
 </Project>
