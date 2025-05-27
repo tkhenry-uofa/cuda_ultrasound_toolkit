@@ -66,7 +66,7 @@ namespace rf_fft
 
         int signal_length = _fft_dims.x;
         size_t final_filter_size = signal_length * sizeof(cuComplex);
-        int filter_length = match_filter.size();
+        int filter_length = static_cast<int>(match_filter.size());
 
         CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&_d_filter, final_filter_size));
         CUDA_RETURN_IF_ERROR(cudaMemset(_d_filter, 0x00, final_filter_size)); // Padded with zeros to signal_length

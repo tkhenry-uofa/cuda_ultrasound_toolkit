@@ -14,7 +14,7 @@ namespace rf_fft
         HilbertHandler() :  _forward_packed_plan(0), 
                             _forward_strided_plan(0), 
                             _inverse_plan(0), 
-                            _fft_dims(0, 0), 
+                            _fft_dims({0,0}),
                             _d_filter(nullptr) {}
 
         HilbertHandler(const HilbertHandler&) = delete;

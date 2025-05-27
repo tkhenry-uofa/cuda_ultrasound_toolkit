@@ -51,6 +51,10 @@
     <ClInclude Include="source\hadamard\hadamard_decoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\rf_ffts\hilbert_handler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\rf_ffts\hilbert_kernels.cuh" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\hilbert\hilbert_transform.cu" />
@@ -59,5 +63,6 @@
     <CudaCompile Include="source\beamformer\beamformer.cu" />
     <CudaCompile Include="source\beamformer\beamformer.cuh" />
     <CudaCompile Include="source\data_conversion\data_converter.cu" />
+    <CudaCompile Include="source\rf_ffts\hilbert_handler.cu" />
   </ItemGroup>
 </Project>
