@@ -42,7 +42,7 @@ typedef enum SequenceId
 
 typedef enum InputDataType
 {
-	INVALID = 0,
+	INVALID_TYPE = 0,
     I16 = 1,
     F32 = 2,
     F32C = 3,
