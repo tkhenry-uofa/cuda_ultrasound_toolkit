@@ -190,18 +190,34 @@ CudaSession::ogl_convert_decode(size_t raw_buffer_offset, uint output_buffer_idx
     d_input = d_input + raw_buffer_offset / sizeof(i16);
     size_t data_count = _decoded_data_count();
 
+    
+
+    uint offset_first_nonzero_sample = 110;
+    uint raw_first_channel_col = 216;
+	uint raw_first_channel_offset = raw_first_channel_col * _rf_raw_dim.x + offset_first_nonzero_sample;
+
+    i16 first_sample = sample_value_i16(d_input + raw_first_channel_offset);
+
+    float first_decoded_sample, first_converted_sample;
+
     bool result = _data_converter->convert_i16(d_input, _device_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
     if (!result)
     {
         std::cerr << "Failed to convert data." << std::endl;
         goto unmap; // I promise this is a valid use
     }
+
+	first_converted_sample = sample_value(_device_buffers.d_converted + offset_first_nonzero_sample);
+
     result = _hadamard_decoder->decode(_device_buffers.d_converted, _device_buffers.d_decoded, _dec_data_dim);
     if (!result)
     {
         std::cerr << "Failed to decode Hadamard data." << std::endl;
         goto unmap;
     }
+
+	first_decoded_sample = sample_value(_device_buffers.d_decoded + offset_first_nonzero_sample);
+
     // Decode output is packed real floats, but OGL expects complex 
     // so do a strided copy to fit interleaved complex 
     cudaMemset(d_output, 0x00, data_count);

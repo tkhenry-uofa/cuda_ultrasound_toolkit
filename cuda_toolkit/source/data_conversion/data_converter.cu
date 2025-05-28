@@ -28,7 +28,9 @@ namespace data_conversion
             return false; // Channel mapping not set
         }
 
-        dim3 block_dim(input_dims.y, 1, 1);
+        short first_channel_value = sample_value_i16(_d_channel_mapping);
+
+        dim3 block_dim(MAX_THREADS_PER_BLOCK, 1, 1);
         uint grid_length = (uint)ceil((double)input_dims.x / MAX_THREADS_PER_BLOCK);
         dim3 grid_dim(grid_length, output_dims.y, 1);
 
