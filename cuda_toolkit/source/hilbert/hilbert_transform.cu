@@ -38,7 +38,7 @@ hilbert::setup_filter(int signal_length, int filter_length, const float* filter)
 	cuComplex* d_filter;
 	CUDA_RETURN_IF_ERROR(cudaMalloc((void**)&d_filter, final_size));
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_filter, 0x00, final_size)); // Padded with zeros to signal_length
-	CUDA_FLOAT_TO_COMPLEX(filter, d_filter, filter_length);
+	CUDA_FLOAT_TO_COMPLEX_COPY(filter, d_filter, filter_length);
 
 	cufftHandle plan;
 	CUFFT_RETURN_IF_ERR(cufftPlan1d(&plan, signal_length, CUFFT_C2C, 1));

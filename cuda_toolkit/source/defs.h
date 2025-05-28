@@ -78,7 +78,7 @@ struct VolumeConfiguration
 	float lateral_resolution;
 };
 
-struct CudaSession
+struct CudaSessionStruct
 {
     bool init = false;
 
@@ -131,7 +131,7 @@ struct CudaSession
     cuComplex* d_match_filter = nullptr;
 };
 
-extern CudaSession Session;
+extern CudaSessionStruct Session;
 
 struct PositionTextures {
 	cudaTextureObject_t x, y, z;
@@ -287,7 +287,7 @@ inline std::string format_cplx(const cuComplex& value)
         " seconds." << std::endl;                                                           \
 }  
 
-#define CUDA_FLOAT_TO_COMPLEX(SOURCE, DEST, COUNT) \
+#define CUDA_FLOAT_TO_COMPLEX_COPY(SOURCE, DEST, COUNT) \
 {                                                                                           \
     CUDA_RETURN_IF_ERROR(cudaMemcpy2D(DEST, 2 * sizeof(float), SOURCE, sizeof(float),       \
                                       sizeof(float), COUNT, cudaMemcpyDefault));            \

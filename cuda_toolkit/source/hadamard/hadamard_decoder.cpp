@@ -73,6 +73,15 @@ bool decoding::HadamardDecoder::decode(float* d_input, float* d_output, uint3 de
 
 bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOrdering readi_ordering)
 {
+	if( !_cublas_handle )
+	{
+		if( !_create_cublas_handle() )
+		{
+			std::cerr << "Failed to create cuBLAS handle." << std::endl;
+			return false; // Failed to create cuBLAS handle
+		}
+	}
+
     if (requested_length == 0 || requested_length > HADAMARD_MAX_SIZE) // Arbitrary limit for size
     {
         std::cerr << "Maximum hadamard size (" << HADAMARD_MAX_SIZE << ") exceeded. " << requested_length << " requested." << std::endl;

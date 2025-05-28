@@ -27,6 +27,9 @@
     <ClCompile Include="source\hadamard\hadamard_decoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\cuda_session.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\cuda_toolkit.h">
@@ -55,6 +58,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\rf_ffts\hilbert_kernels.cuh" />
+    <ClInclude Include="source\cuda_session.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\hilbert\hilbert_transform.cu" />

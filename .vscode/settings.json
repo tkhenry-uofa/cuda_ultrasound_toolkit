@@ -78,7 +78,8 @@
     "set": "cpp",
     "xtree": "cpp",
     "span": "c",
-    "stdint.h": "c"
+    "stdint.h": "c",
+    "expected": "cpp"
   },
   "C_Cpp.default.compilerPath": "cl.exe",
 }

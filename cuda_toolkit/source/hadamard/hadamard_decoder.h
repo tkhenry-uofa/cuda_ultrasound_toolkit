@@ -12,14 +12,7 @@ namespace decoding
     class HadamardDecoder
     {
     public:
-        HadamardDecoder() : _d_hadamard(nullptr), _hadamard_size(0), _readi_ordering(ReadiOrdering::HADAMARD) 
-        {
-            cublasStatus_t status = cublasCreate(&_cublas_handle);
-            if (status != CUBLAS_STATUS_SUCCESS)
-            {
-                std::cerr << "Failed to create cublas handle" << std::endl;
-            }
-        };
+        HadamardDecoder() : _d_hadamard(nullptr), _hadamard_size(0), _readi_ordering(ReadiOrdering::HADAMARD) {};
         ~HadamardDecoder() 
         { 
             _cleanup_hadamard(); 
@@ -48,6 +41,18 @@ namespace decoding
             }
             return false;
         }
+
+        bool _create_cublas_handle() {
+            if (_cublas_handle) {
+                cublasStatus_t status = cublasCreate(&_cublas_handle);
+                if (status != CUBLAS_STATUS_SUCCESS) {
+                    std::cerr << "Failed to create cublas handle" << std::endl;
+                    return false;
+                }
+            }
+            return true;
+        }
+
 
         ReadiOrdering _readi_ordering;
         float* _d_hadamard;

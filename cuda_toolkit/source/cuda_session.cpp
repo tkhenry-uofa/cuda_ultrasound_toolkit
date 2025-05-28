@@ -1,14 +1,23 @@
 #include "cuda_session.h"
 
-
-
 bool
-CudaSession::init(float2 rf_daw_dim, float3 dec_data_dim, InputDataType data_type)
+CudaSession::init(uint2 rf_daw_dim, uint3 dec_data_dim)
 {
-    if (_init)
+
+    if (_init && !_dims_changed(rf_daw_dim, dec_data_dim))
     {
-        std::cout << "Session already initialized." << std::endl;
+        std::cerr << "Session already initialized with the same dimensions and data type." << std::endl;
         return true;
+    }
+
+    int sample_count = static_cast<int>(dec_data_dim.x);
+    int channel_count = static_cast<int>(dec_data_dim.y * dec_data_dim.z);
+
+    if ( sample_count <= 0 || channel_count <= 0)
+    {
+        std::cerr << "Invalid dimensions for RF raw data: " << sample_count << " samples, " << channel_count << " channels." << std::endl;
+        std::cerr << "Sample and channel count must both fit under int32 max." << std::endl;
+        return false;
     }
 
     _rf_raw_dim = rf_daw_dim;
@@ -28,37 +37,122 @@ CudaSession::init(float2 rf_daw_dim, float3 dec_data_dim, InputDataType data_typ
         return false;
     }
 
-    // Initialize cuBLAS and cuFFT
-    cublasCreate(&_cublas_handle);
-    cufftCreate(&_forward_plan);
-    cufftCreate(&_inverse_plan);
+    _data_converter = std::make_unique<data_conversion::DataConverter>();
+    _hilbert_handler = std::make_unique<rf_fft::HilbertHandler>();
+    _hadamard_decoder = std::make_unique<decoding::HadamardDecoder>();
+    if (!_data_converter || !_hilbert_handler || !_hadamard_decoder)
+    {
+        std::cerr << "Failed to allocate CUDA resources." << std::endl;
+        return false;
+    }
+
+    if (!_hadamard_decoder->generate_hadamard(dec_data_dim.z, ReadiOrdering::HADAMARD))
+    {
+        std::cerr << "Failed to generate Hadamard matrix." << std::endl;
+        return false;
+    }
+
+    
+    if (!_hilbert_handler->plan_ffts({static_cast<int>(_rf_raw_dim.x), static_cast<int>(_rf_raw_dim.y)}))
+    {
+        std::cerr << "Failed to plan FFTs." << std::endl;
+        return false;
+    }
 
     _init = true;
 }
 
 bool
-CudaSession::register_ogl_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_data_ssbo)
+CudaSession::deinit()
 {
-    _unregister_ogl_buffers();
+    if (!_init)
+    {
+        std::cerr << "Session not initialized." << std::endl;
+        return false;
+    }
+
+    unregister_ogl_buffers();
+    _cleanup_device_buffers();
+
+    _data_converter.reset();
+    _hilbert_handler.reset();
+    _hadamard_decoder.reset();
+
+    _init = false;
+
+    return true;
+}
+
+bool 
+CudaSession::set_channel_mapping(std::span<const int16_t> channel_mapping)
+{
+    if (!_init)
+    {
+        std::cerr << "Session not initialized." << std::endl;
+        return false;
+    }
+
+    if (channel_mapping.empty())
+    {
+        std::cerr << "Channel mapping cannot be empty." << std::endl;
+        return false;
+    }
+
+    if (!_data_converter->copy_channel_mapping(channel_mapping))
+    {
+        std::cerr << "Failed to load channel mapping." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool 
+CudaSession::set_match_filter(std::span<const float> match_filter)
+{
+    if (!_init)
+    {
+        std::cerr << "Session not initialized." << std::endl;
+        return false;
+    }
+
+    if (match_filter.empty())
+    {
+        std::cerr << "Match filter cannot be empty." << std::endl;
+        return false;
+    }
+
+    if (!_hilbert_handler->load_filter(match_filter))
+    {
+        std::cerr << "Failed to load match filter." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool
+CudaSession::register_ogl_buffers(std::span<const uint> rf_data_ssbos, uint raw_data_ssbo)
+{
+    unregister_ogl_buffers();
 
     cudaGraphicsResource_t raw_resource;
     CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&raw_resource, raw_data_ssbo, cudaGraphicsRegisterFlagsNone));
     _ogl_raw_buffers[raw_data_ssbo] = raw_resource;
 
-    for (uint i = 0; i < rf_buffer_count; ++i)
+    for (const auto& ssbo : rf_data_ssbos)
     {
         cudaGraphicsResource_t rf_resource;
-        CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&rf_resource, rf_data_ssbos[i], cudaGraphicsRegisterFlagsNone));
-        _ogl_rf_buffers[rf_data_ssbos[i]] = rf_resource;
+        CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&rf_resource, ssbo, cudaGraphicsRegisterFlagsNone));
+        _ogl_rf_buffers[ssbo] = rf_resource;
     }
 
     return true;
     
 }
 
-
 bool
-CudaSession::_unregister_ogl_buffers()
+CudaSession::unregister_ogl_buffers()
 {
     for (auto& pair : _ogl_raw_buffers)
     {
@@ -83,40 +177,137 @@ CudaSession::_unregister_ogl_buffers()
     return true;
 }
 
+bool
+CudaSession::ogl_convert_decode(size_t raw_buffer_offset, uint output_buffer_idx)
+{
+    if (!_init)
+    {
+        std::cerr << "Session not initialized." << std::endl;
+        return false;
+    }
 
+    auto it = _ogl_rf_buffers.find(output_buffer_idx);
+    if (it == _ogl_rf_buffers.end())
+    {
+        std::cerr << "OGL Buffers not registered." << std::endl;
+        return false;
+    }
+
+    auto output_resource = it->second;
+    // Right now we only support one input buffer
+    auto input_resource = _ogl_raw_buffers.begin()->second;
+
+    i16* d_input = nullptr;
+    cuComplex* d_output = nullptr;
+
+    // From this point we MUST unmap the buffers before exiting, hence the goto's 
+    _map_ogl_buffer((void**)&d_input, input_resource);
+    _map_ogl_buffer((void**)&d_output, output_resource);
+
+    d_input = d_input + raw_buffer_offset / sizeof(i16);
+    size_t data_count = _decoded_data_count();
+
+    bool result = _data_converter->convert_i16(d_input, _device_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
+    if (!result)
+    {
+        std::cerr << "Failed to convert data." << std::endl;
+        goto unmap; // I promise this is a valid use
+    }
+    result = _hadamard_decoder->decode(_device_buffers.d_converted, _device_buffers.d_decoded, _dec_data_dim);
+    if (!result)
+    {
+        std::cerr << "Failed to decode Hadamard data." << std::endl;
+        goto unmap;
+    }
+    // Decode output is packed real floats, but OGL expects complex 
+    // so do a strided copy to fit interleaved complex 
+    cudaMemset(d_output, 0x00, data_count);
+    CUDA_FLOAT_TO_COMPLEX_COPY(_device_buffers.d_decoded, d_output, data_count);
+
+unmap:
+    _unmap_ogl_buffer(input_resource);
+    _unmap_ogl_buffer(output_resource);
+
+    return result;
+}
+
+bool
+CudaSession::ogl_hilbert(uint intput_buffer_idx, uint output_buffer_idx)
+{
+    if (!_init)
+    {
+        std::cerr << "Session not initialized." << std::endl;
+        return false;
+    }
+
+    auto end = _ogl_rf_buffers.end();
+    auto it = _ogl_rf_buffers.find(intput_buffer_idx);
+    if (it == end)
+    {
+        std::cerr << "OGL Buffers not registered." << std::endl;
+        return false;
+    }
+    auto input_resource = it->second;
+
+    it = _ogl_rf_buffers.find(output_buffer_idx);
+    if (it == end)
+    {
+        std::cerr << "OGL Buffers not registered." << std::endl;
+        return false;
+    }
+
+    auto output_resource = it->second;
+
+    cuComplex* d_input = nullptr;
+    cuComplex* d_output = nullptr; 
+
+    // From this point we MUST unmap the buffers before exiting 
+    _map_ogl_buffer((void**)&d_input, input_resource);
+    _map_ogl_buffer((void**)&d_output, output_resource);
+
+    bool result = _hilbert_handler->strided_hilbert_and_filter(d_input, d_output);
+    if (!result)
+    {
+        std::cerr << "Failed to apply Hilbert transform and filter." << std::endl;
+    }
+
+    _unmap_ogl_buffer(input_resource);
+    _unmap_ogl_buffer(output_resource);
+
+    return result;
+}
+
+inline bool
+CudaSession::_map_ogl_buffer(void** d_ptr, cudaGraphicsResource_t ogl_resource)
+{
+    if (!ogl_resource)
+    {
+        std::cerr << "OpenGL resource is null." << std::endl;
+        return false;
+    }
+
+    size_t num_bytes;
+    CUDA_RETURN_IF_ERROR(cudaGraphicsMapResources(1, &ogl_resource));
+    CUDA_RETURN_IF_ERROR(cudaGraphicsResourceGetMappedPointer(d_ptr, &num_bytes, ogl_resource));
+    
+    if (*d_ptr == nullptr)
+    {
+        std::cerr << "Failed to map OpenGL buffer." << std::endl;
+        return false;
+    }
+
+    return true;
+}
 
 bool
 CudaSession::_setup_device_buffers()
 {
     uint raw_type_size = 0;
 
-    switch (_device_buffers.data_type)
-    {
-        case InputDataType::I16:
-            raw_type_size = sizeof(i16);
-            break;
-        case InputDataType::F32:
-            raw_type_size = sizeof(float);
-            break;
-        default:
-            std::cerr << "Invalid data type." << std::endl;
-            return false;
-    }
-
-    size_t raw_data_size = static_cast<size_t>(_rf_raw_dim.x * _rf_raw_dim.y) * raw_type_size;
-    size_t decoded_data_size = static_cast<size_t>(_dec_data_dim.x * _dec_data_dim.y * _dec_data_dim.z) * sizeof(cuComplex);
-
-    if (_device_buffers.raw_data_size != raw_data_size)
-    {
-        if (_device_buffers.d_raw)
-        {
-            CUDA_NULL_FREE(_device_buffers.d_raw);
-        }
-        _device_buffers.raw_data_size = raw_data_size;
-        CUDA_RETURN_IF_ERROR(cudaMalloc(&_device_buffers.d_raw, raw_data_size));
-    }
+    size_t float_data_size = (size_t)(_dec_data_dim.x) * _dec_data_dim.y * _dec_data_dim.z * sizeof(float);
+    size_t cplx_data_size = float_data_size * 2;
     
-    if (_device_buffers.decoded_data_size != decoded_data_size)
+    if (_device_buffers.decoded_data_size != float_data_size)
     {
         if (_device_buffers.d_decoded)
         {
@@ -124,21 +315,16 @@ CudaSession::_setup_device_buffers()
             CUDA_NULL_FREE(_device_buffers.d_decoded);
             CUDA_NULL_FREE(_device_buffers.d_hilbert);
         }
-        _device_buffers.decoded_data_size = decoded_data_size;
-        CUDA_RETURN_IF_ERROR(cudaMalloc(&_device_buffers.d_converted, decoded_data_size));
-        CUDA_RETURN_IF_ERROR(cudaMalloc(&_device_buffers.d_decoded, decoded_data_size));
-        CUDA_RETURN_IF_ERROR(cudaMalloc(&_device_buffers.d_hilbert, decoded_data_size));
+        _device_buffers.decoded_data_size = float_data_size;
+        CUDA_RETURN_IF_ERROR(cudaMalloc(&_device_buffers.d_converted, float_data_size));
+        CUDA_RETURN_IF_ERROR(cudaMalloc(&_device_buffers.d_decoded, float_data_size));
+        CUDA_RETURN_IF_ERROR(cudaMalloc(&_device_buffers.d_hilbert, cplx_data_size));
     }
 }
-
 
 bool
 CudaSession::_cleanup_device_buffers()
 {
-    if (_device_buffers.d_raw)
-    {
-        CUDA_NULL_FREE(_device_buffers.d_raw);
-    }
     if (_device_buffers.d_converted)
     {
         CUDA_NULL_FREE(_device_buffers.d_converted);
@@ -156,7 +342,6 @@ CudaSession::_cleanup_device_buffers()
         CUDA_NULL_FREE(_device_buffers.d_volume);
     }
 
-    _device_buffers.raw_data_size = 0;
     _device_buffers.decoded_data_size = 0;
 
     return true;

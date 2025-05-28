@@ -6,7 +6,7 @@
 
 #include "cuda_toolkit.h"
 
-CudaSession Session;
+CudaSessionStruct Session;
 
 /*****************************************************************************************************************************
 * Internal helpers
