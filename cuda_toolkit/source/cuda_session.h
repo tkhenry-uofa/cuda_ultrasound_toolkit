@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <span>
 #include <memory>
+#include <vector>
 
 #include <cuda_runtime.h>
 #include <cufft.h>
@@ -21,7 +22,7 @@ public:
 
     
     
-	CudaSession() =  default;
+	CudaSession();
     CudaSession(const CudaSession&) = delete;
     CudaSession& operator=(const CudaSession&) = delete;
     CudaSession(CudaSession&&) = delete;
@@ -85,8 +86,9 @@ private:
     uint2 _rf_raw_dim;
     uint3 _dec_data_dim;
 
-    std::map<uint, cudaGraphicsResource_t> _ogl_raw_buffers; // Original input buffers, could be any type
-    std::map<uint, cudaGraphicsResource_t> _ogl_rf_buffers;  // Pipeline buffers, all are float2 (complex)
+    std::pair<uint, cudaGraphicsResource_t> _ogl_raw_buffer; // Original input buffer, could be any type
+
+    std::vector<std::pair<uint, cudaGraphicsResource_t>> _ogl_rf_buffers;  // Pipeline buffers, all are float2 (complex)
 	
     CudaBuffers _device_buffers;
 

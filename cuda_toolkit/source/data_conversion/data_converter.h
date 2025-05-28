@@ -11,7 +11,7 @@ namespace data_conversion
     class DataConverter
     {
     public:
-        DataConverter() : _d_channel_mapping(nullptr) {};
+        DataConverter() : _d_channel_mapping(nullptr) { std::cout << "Creating data Converter" << std::endl << std::endl; };
         ~DataConverter()
         {
             if (_d_channel_mapping)

@@ -184,7 +184,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\cuda_session.cpp" />
-    <ClCompile Include="source\cuda_toolkit.cpp" />
+    <ClCompile Include="source\cuda_toolkit_new.cpp" />
     <ClCompile Include="source\cuda_toolkit_testing.cpp" />
     <ClCompile Include="source\dllmain.cpp" />
     <ClCompile Include="source\hadamard\hadamard_decoder.cpp" />

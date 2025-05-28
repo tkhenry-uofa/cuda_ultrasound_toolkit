@@ -51,7 +51,8 @@ namespace rf_fft
         CUFFT_RETURN_IF_ERR(cufftPlanMany(&_inverse_plan, rank, n, nullptr, 1, 0, nullptr, 1, 0, CUFFT_C2C, fft_dims.y));
 
         // This tells cufft to only grab every other float in the input (skipping the blank imaginary part)
-        CUFFT_RETURN_IF_ERR(cufftPlanMany(&_forward_strided_plan, rank, n, &double_signal_length, 2, double_signal_length, nullptr, 1, 0, CUFFT_R2C, fft_dims.y));
+
+        CUFFT_RETURN_IF_ERR(cufftPlanMany(&_forward_strided_plan, rank, n, &double_signal_length, 2, double_signal_length, &signal_length, 1, signal_length, CUFFT_R2C, fft_dims.y));
 
         return true;
     }
@@ -84,7 +85,7 @@ namespace rf_fft
     HilbertHandler::_filter_and_scale(cuComplex* d_data)
     {
         uint sample_count = _fft_dims.x;
-        uint cutoff = sample_count / 2;
+        uint cutoff = sample_count / 2 + 1;
         uint grid_length = ceil((float)cutoff / MAX_THREADS_PER_BLOCK);
         uint channel_count = _fft_dims.y;
 

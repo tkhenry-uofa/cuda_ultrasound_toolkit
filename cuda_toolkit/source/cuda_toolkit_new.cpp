@@ -1,6 +1,8 @@
 #include "cuda_session.h"
 #include "cuda_toolkit.h"
 
+CudaSessionStruct Session;
+
 static CudaSession& get_session()
 {
     static CudaSession session;

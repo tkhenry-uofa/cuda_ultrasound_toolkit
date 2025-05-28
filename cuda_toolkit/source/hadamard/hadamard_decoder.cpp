@@ -65,7 +65,7 @@ bool decoding::HadamardDecoder::decode(float* d_input, float* d_output, uint3 de
 		CUBLAS_OP_N,
 		tx_size, decoded_dims.z, decoded_dims.z,
 		&alpha, d_input, tx_size,
-		Session.d_hadamard, decoded_dims.z,
+		_d_hadamard, decoded_dims.z,
 		&beta, d_output, tx_size));
 
 	return true;

@@ -43,7 +43,7 @@ namespace decoding
         }
 
         bool _create_cublas_handle() {
-            if (_cublas_handle) {
+            if (!_cublas_handle) {
                 cublasStatus_t status = cublasCreate(&_cublas_handle);
                 if (status != CUBLAS_STATUS_SUCCESS) {
                     std::cerr << "Failed to create cublas handle" << std::endl;
