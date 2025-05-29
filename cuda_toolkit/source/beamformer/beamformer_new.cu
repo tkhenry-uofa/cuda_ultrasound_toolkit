@@ -16,7 +16,8 @@ namespace beamform
 
         constants.xdc_mins = {-bp.xdc_transform[12], -bp.xdc_transform[13]};
         constants.xdc_maxes = {bp.xdc_transform[12], bp.xdc_transform[13]};
-        constants.samples_per_meter = bp.speed_of_sound / bp.sampling_frequency;
+
+        constants.samples_per_meter = bp.sampling_frequency / bp.speed_of_sound;
 
         constants.pitches = {bp.xdc_element_pitch[0], bp.xdc_element_pitch[1]};
         constants.delay_samples = (int)(bp.time_offset * bp.sampling_frequency);

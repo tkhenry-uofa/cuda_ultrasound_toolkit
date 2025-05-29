@@ -49,3 +49,5 @@ cp -f cuda_transfer.h ${output_dir}/cuda_transfer.h
 cp -f cuda_transfer_new.h ${output_dir}/cuda_transfer_new.h
 cp -f cuda_transfer_new.h ${output_dir}/cuda_transfer_new_matlab.h
 cp -f ../parameter_defs.h ${output_dir}/parameter_defs.h
+
+cp -f ../../include/cuda_toolkit/cuda_beamformer_parameters.h ${output_dir}/cuda_beamformer_parameters.h

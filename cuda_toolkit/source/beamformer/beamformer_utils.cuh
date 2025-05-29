@@ -38,6 +38,12 @@ namespace beamform::kernels::utils
         return (abs(vox_loc.x) < x_extent && abs(vox_loc.y) < y_extent);
     }
 
+    __device__ inline float
+	clampf(float value, float min_value, float max_value)
+	{
+		return fmaxf(min_value, fminf(value, max_value));
+	}
+
     __device__ inline cuComplex 
     cubic_spline(int channel_offset, float x, const cuComplex* rf_data)
     {
