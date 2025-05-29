@@ -135,10 +135,8 @@ CudaManager::set_match_filter(std::span<const float> match_filter)
 }
 
 bool
-CudaManager::i16_convert_decode(i16* d_input, cuComplex* d_output)
+CudaManager::_i16_convert_decode(i16* d_input, float* d_output)
 {
-    size_t data_count = _decoded_data_count();
-
     bool result = _data_converter->convert_i16(d_input, _decode_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
     if (!result)
     {
@@ -146,18 +144,32 @@ CudaManager::i16_convert_decode(i16* d_input, cuComplex* d_output)
         return false;
     }
 
-    result = _hadamard_decoder->decode(_decode_buffers.d_converted, _decode_buffers.d_decoded, _dec_data_dim);
+    result = _hadamard_decoder->decode(_decode_buffers.d_converted, d_output, _dec_data_dim);
     if (!result)
     {
         std::cerr << "Failed to decode Hadamard data." << std::endl;
         return false;
     }
 
+    return true;
+}
+
+bool
+CudaManager::i16_convert_decode_strided(i16* d_input, cuComplex* d_output)
+{
+	if (!_init)
+	{
+		std::cerr << "Session not initialized." << std::endl;
+		return false;
+	}
+
+	bool result = _i16_convert_decode(d_input, _decode_buffers.d_decoded);
+
     // Decode output is packed real floats, but OGL expects complex 
     // so do a strided copy to fit interleaved complex 
+    size_t data_count = _decoded_data_count();
     cudaMemset(d_output, 0x00, data_count);
     CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, d_output, data_count);
-    return true;
 }
 
 bool
@@ -200,25 +212,7 @@ CudaManager::beamform(void* d_input, cuComplex* d_volume,
 		return false;
 	}
 
-    if (input_type == InputDataType::I16)
-    {
-        if (!i16_convert_decode(static_cast<i16*>(d_input), _beamformer_rf_buffer))
-        {
-            std::cerr << "Failed to decode I16 data." << std::endl;
-            return false;
-        }
-    }
-    else if (input_type == InputDataType::F32)
-    {
-        CUDA_FLOAT_TO_COMPLEX_COPY(static_cast<float*>(d_input), _beamformer_rf_buffer, _decoded_data_count());
-    }
-    else
-    {
-        std::cerr << "Unsupported input data type." << std::endl;
-        return false;
-    }
-
-    if(bp.filter_length > 0)
+    if (bp.filter_length > 0)
     {
         if (!_hilbert_handler->load_filter(std::span<const float>(bp.rf_filter, bp.filter_length)))
         {
@@ -227,20 +221,55 @@ CudaManager::beamform(void* d_input, cuComplex* d_volume,
         }
     }
 
-    if (!_hilbert_handler->strided_hilbert_and_filter((float*)_beamformer_rf_buffer, _beamformer_rf_buffer))
+
+    if (input_type == InputDataType::I16)
     {
-        std::cerr << "Failed to apply Hilbert transform." << std::endl;
+        if (!_i16_convert_decode(static_cast<i16*>(d_input), _decode_buffers.d_decoded))
+        {
+            std::cerr << "Failed to decode I16 data." << std::endl;
+            return false;
+        }
+    }
+    else if (input_type == InputDataType::F32)
+    {
+		if (!_hadamard_decoder->decode(static_cast<float*>(d_input), _decode_buffers.d_decoded, dec_data_dim))
+		{
+			std::cerr << "Failed to decode F32 data." << std::endl;
+			return false;
+		}
+    }
+    else
+    {
+        std::cerr << "Unsupported input data type." << std::endl;
         return false;
     }
 
-    if (!_beamformer->per_voxel_beamform(_beamformer_rf_buffer, static_cast<cuComplex*>(d_volume), bp, 
+    bool hilbert = true;
+
+    if (hilbert)
+    {
+        if (!_hilbert_handler->packed_hilbert_and_filter(_decode_buffers.d_decoded, _beamformer_rf_buffer))
+        {
+            std::cerr << "Failed to apply Hilbert transform." << std::endl;
+            return false;
+        }
+    }
+    else
+    {
+		CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, _beamformer_rf_buffer, _decoded_data_count());
+    }
+    
+    if (!_beamformer->per_voxel_beamform(_beamformer_rf_buffer, d_volume, bp, 
                                           _hadamard_decoder->get_hadamard()))
     {
         std::cerr << "Beamforming failed." << std::endl;
         return false;
     }
 
-
+    cuComplex data_sample = sample_value_cplx(_beamformer_rf_buffer);
+    cuComplex output_sample = sample_value_cplx(d_volume);
+    std::cout << "Sampled data: " << data_sample.x << " + " << data_sample.y << "i" << std::endl;
+    std::cout << "Sampled output: " << output_sample.x << " + " << output_sample.y << "i" << std::endl;
     return true;
 }
 

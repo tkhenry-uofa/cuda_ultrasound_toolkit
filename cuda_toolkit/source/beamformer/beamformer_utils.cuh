@@ -1,7 +1,7 @@
 #pragma once
 #include "beamformer_constants.cuh"
 
-#define PATH_LENGTH_SIGN(FOCUS, VOXAL) round((FOCUS.z - VOXAL.z) / abs(FOCUS.z - VOXAL.z))
+#define PATH_LENGTH_SIGN(FOCUS, VOXAL) round((VOXAL.z - FOCUS.z) / abs(VOXAL.z - FOCUS.z))
 
 namespace beamform::kernels::utils
 {
@@ -143,8 +143,7 @@ namespace beamform::kernels::utils
     __device__ inline float
     total_path_length(float3 tx_vec, float3 rx_vec, float focal_depth, float sign)
     {
-        // If the voxel is shallower than the focus sign should be -1
-	    return focal_depth + NORM_F3(rx_vec) + NORM_F3(tx_vec) * sign;
+        return focal_depth + NORM_F3(rx_vec) + NORM_F3(tx_vec) * sign;
     }
 
 }

@@ -34,7 +34,8 @@ public:
     bool set_channel_mapping(std::span<const int16_t> channel_mapping);
     bool set_match_filter(std::span<const float> match_filter);
 
-    bool i16_convert_decode(i16* d_input, cuComplex* d_output);
+	bool i16_convert_decode_strided(i16* d_input, cuComplex* d_output);
+    
     bool hilbert_transform_strided(float* d_input, cuComplex* d_output);
 
     
@@ -42,10 +43,11 @@ public:
                   const CudaBeamformerParameters& bp);
 
 private:
+    bool _i16_convert_decode(i16* d_input, float* d_output);
+
     bool _setup_decode_buffers();
 
     bool _cleanup_decode_buffers();
-    bool _cleanup_beamformer_buffers();
 
     bool _dims_changed(uint2 rf_raw_dim, uint3 dec_data_dim) const
     {

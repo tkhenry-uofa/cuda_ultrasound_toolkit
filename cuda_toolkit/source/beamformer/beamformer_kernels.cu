@@ -58,7 +58,7 @@ namespace beamform::kernels
         int total_used_channels = 0;
 
 
-        float path_length_sign = PATH_LENGTH_SIGN(src_pos, vox_loc);
+        float focal_distance_sign = copysignf(1.0f, vox_loc.z - src_pos.z);
 
         for (int i = 0; i < mixes_count; i++)
         {
@@ -76,7 +76,7 @@ namespace beamform::kernels
                 rx_vec.x = starting_rx.x + Beamformer_Constants.pitches.x * e;
 
                 size_t channel_offset = channel_count * sample_count * t + sample_count * e;
-                total_distance = utils::total_path_length(tx_vec, rx_vec, src_pos.z, path_length_sign);
+                total_distance = utils::total_path_length(tx_vec, rx_vec, src_pos.z, focal_distance_sign);
                 scan_index = (int)(total_distance * samples_per_meter) + delay_samples;
                 value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
@@ -113,7 +113,7 @@ namespace beamform::kernels
                 rx_vec.x = starting_rx.x + Beamformer_Constants.pitches.x * e;
 
                 size_t channel_offset = channel_count * sample_count * t + sample_count * e;
-                total_distance = utils::total_path_length(tx_vec, rx_vec, src_pos.z, path_length_sign);
+                total_distance = utils::total_path_length(tx_vec, rx_vec, src_pos.z, focal_distance_sign);
                 scan_index = (int)(total_distance * samples_per_meter) + delay_samples;
                 value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
@@ -191,14 +191,14 @@ namespace beamform::kernels
         float incoherent_total = 0.0f;
         float total_distance = 0.0f;
         float samples_per_meter = Beamformer_Constants.samples_per_meter;
-        float path_length_sign = PATH_LENGTH_SIGN(src_pos, vox_loc);
+        float focal_distance_sign = copysignf(1.0f, vox_loc.z - src_pos.z);
         for (int t = 0; t < transmit_count; t++)
         {
             channel_offset = channel_count * sample_count * t + sample_count * channel_id;
 
             for (int g = 0; g < readi_group_size; g++)
             {
-                total_distance = utils::total_path_length(tx_vec, rx_vec, Beamformer_Constants.src_pos.z, path_length_sign);
+				total_distance = utils::total_path_length(tx_vec, rx_vec, Beamformer_Constants.src_pos.z, focal_distance_sign);
                 scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
                 value = __ldg(&rfData[channel_offset + scan_index - 1]);
 
@@ -297,7 +297,7 @@ namespace beamform::kernels
             uint channel_count = Beamformer_Constants.channel_count;
             float samples_per_meter = Beamformer_Constants.samples_per_meter;
 
-            float path_length_sign = PATH_LENGTH_SIGN(src_pos, vox_loc);
+            float focal_distance_sign = copysignf(1.0f, vox_loc.z - src_pos.z);
 
             int total_used_channels = 0;
             float total_distance = 0.0f;
@@ -309,17 +309,17 @@ namespace beamform::kernels
                     //for (int g = 0; g < readi_group_size; g++)
                     {
 
-                        total_distance = utils::total_path_length(tx_vec, rx_vec, src_pos.z, path_length_sign);
+                        total_distance = utils::total_path_length(tx_vec, rx_vec, src_pos.z, focal_distance_sign);
                         scan_index = total_distance * samples_per_meter + delay_samples;
 
-                        value = utils::cubic_spline(channel_offset, scan_index, rfData);
-                        //value = __ldg(&rfData[channel_offset + (uint)scan_index - 1]);
+                        //value = utils::cubic_spline(channel_offset, scan_index, rfData);
+                        value = __ldg(&rfData[channel_offset + (uint)scan_index - 1]);
 
                         if (t == 0)
                         {
                             //value = SCALE_F2(value, I_SQRT_128);
-                            value = SCALE_F2(value, I_SQRT_64);
-                            //value = { 0,0 };
+                            //value = SCALE_F2(value, I_SQRT_64);
+                            value = { 0,0 };
                         }
 
                         apo = utils::f_num_apodization(NORM_F2(rx_vec), vox_loc.z, Beamformer_Constants.f_number);
