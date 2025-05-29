@@ -137,7 +137,8 @@
       <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </CudaLink>
     <PostBuildEvent>
-      <Command>xcopy /Y /I "$(ProjectDir)source\*.h" "$(SolutionDir)include\cuda_toolkit\" </Command>
+      <Command>xcopy /Y /I "$(ProjectDir)source\*.h*" "$(SolutionDir)include\cuda_toolkit\" 
+</Command>
     </PostBuildEvent>
     <CudaCompile>
       <AdditionalOptions>-std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
@@ -166,7 +167,8 @@
       <AdditionalDependencies>cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /I "$(ProjectDir)source\*.h" "$(SolutionDir)include\cuda_toolkit\" </Command>
+      <Command>xcopy /Y /I "$(ProjectDir)source\*.h*" "$(SolutionDir)include\cuda_toolkit\" 
+</Command>
     </PostBuildEvent>
     <CudaCompile>
       <AdditionalOptions>-std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
@@ -174,8 +176,8 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="source\beamformer\beamformer.cu" />
-    <CudaCompile Include="source\beamformer\beamformer.cuh" />
+    <CudaCompile Include="source\beamformer\beamformer_kernels.cu" />
+    <CudaCompile Include="source\beamformer\beamformer_new.cu" />
     <CudaCompile Include="source\data_conversion\data_converter.cu" />
     <CudaCompile Include="source\data_conversion\int16_to_float.cu" />
     <CudaCompile Include="source\hadamard\hadamard.cu" />
@@ -190,6 +192,10 @@
     <ClCompile Include="source\hadamard\hadamard_decoder.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\beamformer\beamformer.h" />
+    <ClInclude Include="source\beamformer\beamformer_constants.cuh" />
+    <ClInclude Include="source\beamformer\beamformer_kernels.cuh" />
+    <ClInclude Include="source\beamformer\beamformer_utils.cuh" />
     <ClInclude Include="source\cuda_beamformer_parameters.h" />
     <ClInclude Include="source\cuda_manager.h" />
     <ClInclude Include="source\cuda_session.h" />

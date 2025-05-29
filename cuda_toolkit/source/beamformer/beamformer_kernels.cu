@@ -142,7 +142,7 @@ namespace beamform::kernels
     }
 
     __global__ void
-    per_channel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard)
+    per_channel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, const float* hadamard)
     {
         uint tid = threadIdx.x;
 
@@ -239,7 +239,7 @@ namespace beamform::kernels
     }
 
     __global__ void
-    per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, float* hadamard)
+    per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, const float* hadamard)
     {
         	uint xy_voxel = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -262,7 +262,7 @@ namespace beamform::kernels
             };
 
             // If the voxel is out of the f_number defined range for all elements skip it
-            if (!utils::check_ranges(vox_loc, Beamformer_Constants.f_number, Beamformer_Constants.xdc_maxes)) return;
+           // if (!utils::check_ranges(vox_loc, Beamformer_Constants.f_number, Beamformer_Constants.xdc_maxes)) return;
             
             float3 src_pos = Beamformer_Constants.src_pos;
             if (Beamformer_Constants.sequence == SequenceId::FORCES)
@@ -357,6 +357,13 @@ namespace beamform::kernels
 
             volume[volume_offset] = total;
     }
+
+	__host__ bool
+	copy_kernel_constants(const BeamformerConstants& constants)
+	{
+		CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Beamformer_Constants, &constants, sizeof(constants)));
+		std::cout << "Beamformer constants copied to device." << std::endl;
+	}
 
 }
 

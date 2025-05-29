@@ -95,7 +95,7 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims)
 {
     CudaManager& cuda_manager = get_session_().cuda_manager;
 
-    if (!cuda_manager.init({input_dims[0], input_dims[1]}, {decoded_dims[0], decoded_dims[1], decoded_dims[2]}))
+    if (!cuda_manager.init({input_dims[0], input_dims[1]}, {decoded_dims[0], decoded_dims[1], decoded_dims[2]}, false))
     {
         std::cerr << "Failed to initialize CUDA session." << std::endl;
         return false;

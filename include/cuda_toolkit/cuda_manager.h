@@ -12,6 +12,7 @@
 #include "data_conversion/data_converter.h"
 #include "hadamard/hadamard_decoder.h"
 #include "rf_ffts/hilbert_handler.h"
+#include "beamformer/beamformer.h"
 
 #include "cuda_beamformer_parameters.h"
 #include "defs.h"
@@ -27,7 +28,7 @@ public:
     CudaManager& operator=(CudaManager&&) = delete;
 	~CudaManager() { deinit(); }
 
-    bool init(uint2 rf_raw_dim, uint3 dec_data_dim);
+    bool init(uint2 rf_raw_dim, uint3 dec_data_dim, bool beamformer);
     bool deinit();
 
     bool set_channel_mapping(std::span<const int16_t> channel_mapping);
@@ -37,10 +38,10 @@ public:
     bool hilbert_transform_strided(float* d_input, cuComplex* d_output);
 
     
-    bool beamform(std::span<u8> input_data, std::span<u8> volume);
+    bool beamform(void* d_input, cuComplex* d_volume, 
+                  const CudaBeamformerParameters& bp);
 
 private:
-    bool configure_beamformer(const CudaBeamformerParameters* params);
     bool _setup_decode_buffers();
 
     bool _cleanup_decode_buffers();
@@ -63,6 +64,7 @@ private:
     std::unique_ptr<data_conversion::DataConverter> _data_converter;
     std::unique_ptr<rf_fft::HilbertHandler> _hilbert_handler;
     std::unique_ptr<decoding::HadamardDecoder> _hadamard_decoder;
+    std::unique_ptr<beamform::Beamformer> _beamformer;
 
     uint2 _rf_raw_dim;
     uint3 _dec_data_dim;

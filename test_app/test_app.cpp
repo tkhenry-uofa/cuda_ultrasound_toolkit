@@ -1,4 +1,6 @@
 #include <vector>
+#include <cuda_toolkit.hpp>
+
 #include "test_app.h"
 
 
@@ -126,6 +128,18 @@ TestApp::_handle_beamform_command(const CommandPipeMessage& command)
     u8* output_data = new u8[output_size];
 
     std::cout << "Output size: " << output_size << std::endl;
+
+	if (!cuda_toolkit::beamform(
+			std::span<const u8>(data_buffer.data(), data_size),
+			std::span<u8>(output_data, output_size),
+			*bp))
+	{
+		std::cerr << "Error: Beamforming failed." << std::endl;
+		delete[] output_data;
+		_transfer_server->respond_error();
+		return false;
+	}
+
     _transfer_server->write_output_data(std::span<const u8>(output_data, output_size));
     if (!_transfer_server->respond_success(output_size))
     {

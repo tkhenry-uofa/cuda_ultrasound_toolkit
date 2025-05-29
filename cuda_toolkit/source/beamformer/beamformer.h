@@ -15,9 +15,10 @@ namespace beamform
             Beamformer() = default;
             ~Beamformer() = default;
 
-            bool beamform(std::span<const uint8_t> input_data, 
-                          std::span<uint8_t> output_data, 
-                          const CudaBeamformerParameters& params);
+            bool per_voxel_beamform(cuComplex* d_input,
+                          cuComplex* d_volume,
+                          const CudaBeamformerParameters& bp,
+                          const float* hadamard);
     };
 }
 

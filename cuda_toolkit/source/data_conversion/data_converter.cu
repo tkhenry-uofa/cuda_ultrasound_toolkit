@@ -25,6 +25,7 @@ namespace data_conversion
     {
         if (!_d_channel_mapping)
         {
+			std::cerr << "Channel mapping not set." << std::endl;
             return false; // Channel mapping not set
         }
 

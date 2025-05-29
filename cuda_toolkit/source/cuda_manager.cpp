@@ -10,14 +10,16 @@ CudaManager::CudaManager() : _init(false),
     _data_converter = std::make_unique<data_conversion::DataConverter>();
     _hilbert_handler = std::make_unique<rf_fft::HilbertHandler>();
     _hadamard_decoder = std::make_unique<decoding::HadamardDecoder>();
-    if (!_data_converter || !_hilbert_handler || !_hadamard_decoder)
+    _beamformer = std::make_unique<beamform::Beamformer>();
+
+    if (!_data_converter || !_hilbert_handler || !_hadamard_decoder || !_beamformer)
     {
         std::cerr << "ERROR: Failed to setup CUDA resources." << std::endl;
     }
 }
 
 bool
-CudaManager::init(uint2 rf_raw_dim, uint3 dec_data_dim)
+CudaManager::init(uint2 rf_raw_dim, uint3 dec_data_dim, bool beamformer)
 {
 
     if (_init && !_dims_changed(rf_raw_dim, dec_data_dim))
@@ -63,6 +65,12 @@ CudaManager::init(uint2 rf_raw_dim, uint3 dec_data_dim)
     {
         std::cerr << "Failed to plan FFTs." << std::endl;
         return false;
+    }
+
+    if (beamformer)
+    {
+        size_t rf_size = _decoded_data_count() * sizeof(cuComplex);
+        CUDA_RETURN_IF_ERROR(cudaMalloc(&_beamformer_rf_buffer, rf_size));
     }
 
     _init = true;
@@ -167,6 +175,71 @@ CudaManager::hilbert_transform_strided(float* d_input, cuComplex* d_output)
         std::cerr << "Failed to apply Hilbert transform and filter." << std::endl;
         return false;
     }
+
+    return true;
+}
+
+bool
+CudaManager::beamform(void* d_input, cuComplex* d_volume, 
+                  const CudaBeamformerParameters& bp)
+{
+    auto input_type = bp.data_type;
+    uint3 dec_data_dim = {bp.dec_data_dim[0], bp.dec_data_dim[1], bp.dec_data_dim[2]};
+    uint2 rf_raw_dim = {bp.rf_raw_dim[0], bp.rf_raw_dim[1]};
+    uint4 output_points = {bp.output_points[0], bp.output_points[1], bp.output_points[2], bp.output_points[3]};
+
+    if (!init(rf_raw_dim, dec_data_dim, true))
+    {
+        std::cerr << "Failed to initialize CUDA session." << std::endl;
+        return false;
+    }
+
+	if (!_data_converter->copy_channel_mapping(std::span<const int16_t>(bp.channel_mapping, MAX_CHANNEL_COUNT)))
+	{
+		std::cerr << "Failed to copy channel mapping." << std::endl;
+		return false;
+	}
+
+    if (input_type == InputDataType::I16)
+    {
+        if (!i16_convert_decode(static_cast<i16*>(d_input), _beamformer_rf_buffer))
+        {
+            std::cerr << "Failed to decode I16 data." << std::endl;
+            return false;
+        }
+    }
+    else if (input_type == InputDataType::F32)
+    {
+        CUDA_FLOAT_TO_COMPLEX_COPY(static_cast<float*>(d_input), _beamformer_rf_buffer, _decoded_data_count());
+    }
+    else
+    {
+        std::cerr << "Unsupported input data type." << std::endl;
+        return false;
+    }
+
+    if(bp.filter_length > 0)
+    {
+        if (!_hilbert_handler->load_filter(std::span<const float>(bp.rf_filter, bp.filter_length)))
+        {
+            std::cerr << "Failed to load match filter." << std::endl;
+            return false;
+        }
+    }
+
+    if (!_hilbert_handler->strided_hilbert_and_filter((float*)_beamformer_rf_buffer, _beamformer_rf_buffer))
+    {
+        std::cerr << "Failed to apply Hilbert transform." << std::endl;
+        return false;
+    }
+
+    if (!_beamformer->per_voxel_beamform(_beamformer_rf_buffer, static_cast<cuComplex*>(d_volume), bp, 
+                                          _hadamard_decoder->get_hadamard()))
+    {
+        std::cerr << "Beamforming failed." << std::endl;
+        return false;
+    }
+
 
     return true;
 }
