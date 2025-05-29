@@ -14,7 +14,6 @@ namespace beamformer
 		__device__ inline float
 		total_path_length(float3 tx_vec, float3 rx_vec, float focal_depth, float vox_depth);
 
-
 		// Any voxels outside of the f# defined range of all channels are skipped
 		__device__ inline bool
 		check_ranges(float3 vox_loc, float f_number, float2 array_edges);

@@ -131,7 +131,7 @@ struct CudaSessionStruct
     cuComplex* d_match_filter = nullptr;
 };
 
-extern CudaSessionStruct Session;
+extern CudaSessionStruct Sessions;
 
 struct PositionTextures {
 	cudaTextureObject_t x, y, z;

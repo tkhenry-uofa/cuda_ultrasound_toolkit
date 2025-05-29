@@ -32,7 +32,7 @@ namespace rf_fft
         bool packed_hilbert_and_filter(float* d_input, cuComplex* d_output);
 
         // Real to complex hilbert transform with real input already in complex format
-        bool strided_hilbert_and_filter(cuComplex* d_input, cuComplex* d_output);
+        bool strided_hilbert_and_filter(float* d_input, cuComplex* d_output);
         
     private:
 

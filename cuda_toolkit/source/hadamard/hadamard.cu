@@ -117,10 +117,10 @@ hadamard::_kernels::readi_staggered_decode_kernel(const float* d_input, float* d
 __host__ bool
 hadamard::readi_staggered_decode(const float* d_input, float* d_output, float* d_hadamard)
 {
-	dim3 grid_dim = { Session.decoded_dims.x, Session.decoded_dims.y, 1 };
-	dim3 block_dim = { Session.readi_group_size, 1, 1 };
+	dim3 grid_dim = { Sessions.decoded_dims.x, Sessions.decoded_dims.y, 1 };
+	dim3 block_dim = { Sessions.readi_group_size, 1, 1 };
 
-	_kernels::readi_staggered_decode_kernel << <grid_dim, block_dim >> > (d_input, d_output, d_hadamard, Session.readi_group, 128);
+	_kernels::readi_staggered_decode_kernel << <grid_dim, block_dim >> > (d_input, d_output, d_hadamard, Sessions.readi_group, 128);
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -209,25 +209,25 @@ __host__ bool
 hadamard::hadamard_decode(const float* d_input, float* d_output)
 {
 
-	if (!Session.hadamard_generated)
+	if (!Sessions.hadamard_generated)
 	{
 		std::cerr << "Hadamard: Attempted to decode without a valid hadamard matrix" << std::endl;
 		return false;
 	}
 
-	uint3 dims = Session.decoded_dims;
+	uint3 dims = Sessions.decoded_dims;
 	uint tx_size = dims.x * dims.y;
 
 	float alpha = 1/((float)dims.z); // Counters the N scaling of hadamard decoding 
 	float beta = 0.0f;
 
 	CUBLAS_RETURN_IF_ERR(cublasSgemm(
-		Session.cublas_handle,
+		Sessions.cublas_handle,
 		CUBLAS_OP_N,
 		CUBLAS_OP_N,
 		tx_size, dims.z, dims.z,
 		&alpha, d_input, tx_size,
-		Session.d_hadamard, dims.z,
+		Sessions.d_hadamard, dims.z,
 		&beta, d_output, tx_size));
 
 	return true;
@@ -237,22 +237,22 @@ __host__ bool
 hadamard::readi_decode(const float* d_input, float* d_output, uint group_number, uint group_size)
 {
 
-	uint row_count = Session.decoded_dims.z;
+	uint row_count = Sessions.decoded_dims.z;
 
 	float* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(float));
 
 	uint hadamard_offset = group_number * group_size * row_count;
 
-	uint3 dims = Session.decoded_dims;
+	uint3 dims = Sessions.decoded_dims;
 	uint tx_size = dims.x * dims.y;
 
-	cudaMemcpy(d_hadamard_slice, Session.d_hadamard + hadamard_offset, group_size * row_count * sizeof(float), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(d_hadamard_slice, Sessions.d_hadamard + hadamard_offset, group_size * row_count * sizeof(float), cudaMemcpyDeviceToDevice);
 
 	float alpha = 1 / ((float)dims.z); // Counters the N scaling of hadamard decoding 
 	float beta = 0.0f;
 
-	CUBLAS_RETURN_IF_ERR(cublasSgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
+	CUBLAS_RETURN_IF_ERR(cublasSgemm(Sessions.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
 
 	return true;
 }
@@ -260,7 +260,7 @@ hadamard::readi_decode(const float* d_input, float* d_output, uint group_number,
 __host__ bool
 hadamard::c_readi_decode(const cuComplex* d_input, cuComplex* d_output, uint group_number, uint group_size)
 {
-	uint row_count = Session.decoded_dims.z;
+	uint row_count = Sessions.decoded_dims.z;
 
 	cuComplex* d_hadamard_slice;
 	cudaMalloc(&d_hadamard_slice, row_count * group_size * sizeof(cuComplex));
@@ -269,17 +269,17 @@ hadamard::c_readi_decode(const cuComplex* d_input, cuComplex* d_output, uint gro
 
 	std::cout << "Hadamard offset " << hadamard_offset << std::endl;
 
-	uint3 dims = Session.decoded_dims;
+	uint3 dims = Sessions.decoded_dims;
 	uint tx_size = dims.x * dims.y;
 
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_hadamard_slice, Session.d_c_hadamard + hadamard_offset, group_size * row_count * sizeof(cuComplex), cudaMemcpyDefault));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_hadamard_slice, Sessions.d_c_hadamard + hadamard_offset, group_size * row_count * sizeof(cuComplex), cudaMemcpyDefault));
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	cuComplex alpha = { 1.0f, 0.0f };
 	cuComplex beta = { 0.0f, 0.0f };
 
-	CUBLAS_RETURN_IF_ERR(cublasCgemm(Session.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
+	CUBLAS_RETURN_IF_ERR(cublasCgemm(Sessions.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T, tx_size, dims.z, group_size, &alpha, d_input, tx_size, d_hadamard_slice, dims.z, &beta, d_output, tx_size));
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 

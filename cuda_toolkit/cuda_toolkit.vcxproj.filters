@@ -18,16 +18,16 @@
     <ClCompile Include="source\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\cuda_toolkit_testing.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\hadamard\hadamard_decoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\cuda_session.cpp">
+    <ClCompile Include="source\cuda_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\cuda_toolkit_new.cpp">
+    <ClCompile Include="source\cuda_toolkit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\cuda_toolkit_ogl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -38,9 +38,6 @@
     <ClInclude Include="source\hilbert\hilbert_transform.cuh" />
     <ClInclude Include="source\hadamard\hadamard.cuh" />
     <ClInclude Include="source\data_conversion\int16_to_float.cuh" />
-    <ClInclude Include="source\cuda_toolkit_testing.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\cuda_beamformer_parameters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -59,6 +56,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\cuda_toolkit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cuda_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cuda_toolkit.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cuda_toolkit_ogl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

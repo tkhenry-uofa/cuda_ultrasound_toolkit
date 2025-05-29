@@ -133,7 +133,7 @@ namespace rf_fft
     }
 
     bool
-    HilbertHandler::strided_hilbert_and_filter(cuComplex* d_input, cuComplex* d_output)
+    HilbertHandler::strided_hilbert_and_filter(float* d_input, cuComplex* d_output)
     {
         if (!_forward_strided_plan || !_inverse_plan) {
             return false; // FFTs not planned
@@ -142,7 +142,7 @@ namespace rf_fft
         size_t output_size = _fft_dims.x * _fft_dims.y * sizeof(cuComplex);
         CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size)); // Clear output buffer
 
-        CUFFT_RETURN_IF_ERR(cufftExecR2C(_forward_strided_plan, reinterpret_cast<float*>(d_input), d_output));
+        CUFFT_RETURN_IF_ERR(cufftExecR2C(_forward_strided_plan, d_input, d_output));
         CUDA_RETURN_IF_ERROR(cudaGetLastError());
 
         if (!_filter_and_scale(d_output)) 

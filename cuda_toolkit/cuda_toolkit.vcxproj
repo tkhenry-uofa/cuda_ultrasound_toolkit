@@ -183,17 +183,19 @@
     <CudaCompile Include="source\rf_ffts\hilbert_handler.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\cuda_session.cpp" />
-    <ClCompile Include="source\cuda_toolkit_new.cpp" />
-    <ClCompile Include="source\cuda_toolkit_testing.cpp" />
+    <ClCompile Include="source\cuda_manager.cpp" />
+    <ClCompile Include="source\cuda_toolkit.cpp" />
+    <ClCompile Include="source\cuda_toolkit_ogl.cpp" />
     <ClCompile Include="source\dllmain.cpp" />
     <ClCompile Include="source\hadamard\hadamard_decoder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\cuda_beamformer_parameters.h" />
+    <ClInclude Include="source\cuda_manager.h" />
     <ClInclude Include="source\cuda_session.h" />
     <ClInclude Include="source\cuda_toolkit.h" />
-    <ClInclude Include="source\cuda_toolkit_testing.h" />
+    <ClInclude Include="source\cuda_toolkit.hpp" />
+    <ClInclude Include="source\cuda_toolkit_ogl.h" />
     <ClInclude Include="source\data_conversion\data_conversion_kernels.cuh" />
     <ClInclude Include="source\data_conversion\data_converter.h" />
     <ClInclude Include="source\data_conversion\int16_to_float.cuh" />

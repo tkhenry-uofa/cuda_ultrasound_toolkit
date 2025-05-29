@@ -26,24 +26,24 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 	vol_config.voxel_counts = *(uint3*)&params.vol_counts;
 	vol_config.total_voxels = (size_t)vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
 
-	Session.volume_configuration = vol_config;
+	Sessions.volume_configuration = vol_config;
 
-	Session.pitches.x = params.array_params.pitch[0];
-	Session.pitches.y = params.array_params.pitch[1];
+	Sessions.pitches.x = params.array_params.pitch[0];
+	Sessions.pitches.y = params.array_params.pitch[1];
 
-	Session.xdc_mins.x = params.array_params.xdc_mins[0];
-	Session.xdc_mins.y = params.array_params.xdc_mins[1];
+	Sessions.xdc_mins.x = params.array_params.xdc_mins[0];
+	Sessions.xdc_mins.y = params.array_params.xdc_mins[1];
 
-	Session.xdc_maxes.x = params.array_params.xdc_maxes[0];
-	Session.xdc_maxes.y = params.array_params.xdc_maxes[1];
+	Sessions.xdc_maxes.x = params.array_params.xdc_maxes[0];
+	Sessions.xdc_maxes.y = params.array_params.xdc_maxes[1];
 
-	Session.sequence = (TransmitModes)params.sequence;
+	Sessions.sequence = (TransmitModes)params.sequence;
 
-	Session.pulse_delay = params.pulse_delay;
+	Sessions.pulse_delay = params.pulse_delay;
 
-	Session.mixes_count = params.mixes_count;
-	Session.mixes_offset = params.mixes_offset;
-	memcpy(Session.mixes_rows, params.mixes_rows, sizeof(params.mixes_rows));
+	Sessions.mixes_count = params.mixes_count;
+	Sessions.mixes_offset = params.mixes_offset;
+	memcpy(Sessions.mixes_rows, params.mixes_rows, sizeof(params.mixes_rows));
 
 	i16* d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(i16)));
@@ -51,33 +51,33 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	// Recreate the fft plans for readi subgroup sized batches
 	// TODO: Do this in a better way
-	cufftDestroy(Session.forward_plan);
-	cufftDestroy(Session.inverse_plan);
-	cufftDestroy(Session.strided_plan);
+	cufftDestroy(Sessions.forward_plan);
+	cufftDestroy(Sessions.inverse_plan);
+	cufftDestroy(Sessions.strided_plan);
 
 	if (params.filter_length != 0)
 	{
 		cuda_set_match_filter(params.match_filter, params.filter_length);
 	}
 
-	hilbert::plan_hilbert((int)Session.decoded_dims.x, (int)Session.decoded_dims.y * (int)Session.decoded_dims.z);
+	hilbert::plan_hilbert((int)Sessions.decoded_dims.x, (int)Sessions.decoded_dims.y * (int)Sessions.decoded_dims.z);
 
-	i16_to_f::convert_data(d_input, Session.d_converted);
+	i16_to_f::convert_data(d_input, Sessions.d_converted);
 
-	Session.readi_group = params.readi_group_id;
-	Session.readi_group_size = params.readi_group_size;
+	Sessions.readi_group = params.readi_group_id;
+	Sessions.readi_group_size = params.readi_group_size;
 
-	hadamard::readi_decode(Session.d_converted, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+	hadamard::readi_decode(Sessions.d_converted, Sessions.d_decoded, params.readi_group_id, params.readi_group_size);
 
 	bool do_hilbert = true;
 	if (do_hilbert)
 	{
-		hilbert::hilbert_transform_r2c(Session.d_decoded, Session.d_complex);
+		hilbert::hilbert_transform_r2c(Sessions.d_decoded, Sessions.d_complex);
 	}
 	else
 	{
-		CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
-		CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+		CUDA_RETURN_IF_ERROR(cudaMemset(Sessions.d_complex, 0x00, total_count * sizeof(cuComplex)));
+		CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Sessions.d_complex, 2 * sizeof(float), Sessions.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 	}
 
 	cuComplex* d_volume;
@@ -90,7 +90,7 @@ bool readi_beamform_raw(const int16_t* input, PipelineParams params, cuComplex**
 
 	std::cout << "Starting beamform\n";
 
-	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number, delay_samples);
+	beamformer::beamform(d_volume, Sessions.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number, delay_samples);
 
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -123,41 +123,41 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 
 	vol_config.voxel_counts = *(uint3*) & params.vol_counts;
 	vol_config.total_voxels = (size_t)vol_config.voxel_counts.x * vol_config.voxel_counts.y * vol_config.voxel_counts.z;
-	Session.volume_configuration = vol_config;
+	Sessions.volume_configuration = vol_config;
 
-	Session.pitches.x = params.array_params.pitch[0];
-	Session.pitches.y = params.array_params.pitch[1];
+	Sessions.pitches.x = params.array_params.pitch[0];
+	Sessions.pitches.y = params.array_params.pitch[1];
 
-	Session.xdc_mins.x = params.array_params.xdc_mins[0];
-	Session.xdc_mins.y = params.array_params.xdc_mins[1];	
+	Sessions.xdc_mins.x = params.array_params.xdc_mins[0];
+	Sessions.xdc_mins.y = params.array_params.xdc_mins[1];	
 	
-	Session.xdc_maxes.x = params.array_params.xdc_maxes[0];
-	Session.xdc_maxes.y = params.array_params.xdc_maxes[1];
+	Sessions.xdc_maxes.x = params.array_params.xdc_maxes[0];
+	Sessions.xdc_maxes.y = params.array_params.xdc_maxes[1];
 
-	Session.readi_group = params.readi_group_id;
-	Session.readi_group_size = params.readi_group_size;
+	Sessions.readi_group = params.readi_group_id;
+	Sessions.readi_group_size = params.readi_group_size;
 
-	Session.sequence = (TransmitModes)params.sequence;
+	Sessions.sequence = (TransmitModes)params.sequence;
 
 	float *d_input;
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&d_input, total_raw_count * sizeof(float)));
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_input, input, total_raw_count * sizeof(float), cudaMemcpyHostToDevice));
 
-	hadamard::readi_decode(d_input, Session.d_decoded, params.readi_group_id, params.readi_group_size);
+	hadamard::readi_decode(d_input, Sessions.d_decoded, params.readi_group_id, params.readi_group_size);
 
-	//hadamard::readi_staggered_decode(d_input, Session.d_decoded, Session.d_hadamard);
+	//hadamard::readi_staggered_decode(d_input, Sessions.d_decoded, Sessions.d_hadamard);
 
-	//CUDA_RETURN_IF_ERROR(cudaMemcpy(Session.d_decoded, d_input, total_raw_count * sizeof(float), cudaMemcpyDeviceToDevice));
+	//CUDA_RETURN_IF_ERROR(cudaMemcpy(Sessions.d_decoded, d_input, total_raw_count * sizeof(float), cudaMemcpyDeviceToDevice));
 
 	bool do_hilbert = true;
 	if (do_hilbert)
 	{
-		hilbert::hilbert_transform_r2c(Session.d_decoded, Session.d_complex);
+		hilbert::hilbert_transform_r2c(Sessions.d_decoded, Sessions.d_complex);
 	}
 	else
 	{
-		CUDA_RETURN_IF_ERROR(cudaMemset(Session.d_complex, 0x00, total_count * sizeof(cuComplex)));
-		CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Session.d_complex, 2 * sizeof(float), Session.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
+		CUDA_RETURN_IF_ERROR(cudaMemset(Sessions.d_complex, 0x00, total_count * sizeof(cuComplex)));
+		CUDA_RETURN_IF_ERROR(cudaMemcpy2D(Sessions.d_complex, 2 * sizeof(float), Sessions.d_decoded, sizeof(float), sizeof(float), total_count, cudaMemcpyDefault));
 	}
 	
 
@@ -166,15 +166,15 @@ bool readi_beamform_fii(const float* input, PipelineParams params, cuComplex** v
 	*volume = (cuComplex*)malloc(vol_config.total_voxels * sizeof(cuComplex));
 
 
-	uint readi_group_count = dec_data_dims.z / Session.readi_group_size;
-	//Session.pitches.y = Session.pitches.y * (float)readi_group_count;
+	uint readi_group_count = dec_data_dims.z / Sessions.readi_group_size;
+	//Sessions.pitches.y = Sessions.pitches.y * (float)readi_group_count;
 
-	//Session.decoded_dims.z = Session.readi_group_size;
+	//Sessions.decoded_dims.z = Sessions.readi_group_size;
 
 	float samples_per_meter = params.array_params.sample_freq / params.array_params.c;
 	std::cout << "Starting beamform" << std::endl;
 	int delay_samples = (int)round(params.pulse_delay * params.array_params.sample_freq);
-	beamformer::beamform(d_volume, Session.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number, delay_samples);
+	beamformer::beamform(d_volume, Sessions.d_complex, *(float3*)params.focus, samples_per_meter, params.f_number, delay_samples);
 
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(*volume, d_volume, vol_config.total_voxels * sizeof(cuComplex), cudaMemcpyDefault));

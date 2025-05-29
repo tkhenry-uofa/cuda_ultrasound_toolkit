@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <span>
 #include <memory>
-#include <vector>
+#include <array>
 
 #include <cuda_runtime.h>
 #include <cufft.h>
@@ -20,8 +20,6 @@
 class CudaManager {
 public:
 
-    
-    
 	CudaManager();
     CudaManager(const CudaManager&) = delete;
     CudaManager& operator=(const CudaManager&) = delete;
@@ -29,41 +27,24 @@ public:
     CudaManager& operator=(CudaManager&&) = delete;
 	~CudaManager() { deinit(); }
 
-
-    bool init(uint2 rf_daw_dim, uint3 dec_data_dim);
+    bool init(uint2 rf_raw_dim, uint3 dec_data_dim);
     bool deinit();
 
-    bool register_ogl_buffers(std::span<const uint> rf_data_ssbos, uint raw_data_ssbo);
-    bool unregister_ogl_buffers();
-    
     bool set_channel_mapping(std::span<const int16_t> channel_mapping);
     bool set_match_filter(std::span<const float> match_filter);
 
-    bool ogl_convert_decode(size_t input_buffer_offset, uint output_buffer_idx);
-    bool ogl_hilbert(uint intput_buffer_idx, uint output_buffer_idx);
+    bool i16_convert_decode(i16* d_input, cuComplex* d_output);
+    bool hilbert_transform_strided(float* d_input, cuComplex* d_output);
 
-    bool beamform(std::span<u8> input_data, const CudaBeamformerParameters* params, std::span<u8> volume);
     
+    bool beamform(std::span<u8> input_data, std::span<u8> volume);
+
 private:
-
-    struct CudaBuffers 
-    {
-        size_t decoded_data_size = 0;
-        float* d_converted = nullptr;
-        float* d_decoded = nullptr;
-        cuComplex* d_hilbert = nullptr;
-        cuComplex* d_volume = nullptr;
-    };
-
-    bool _map_ogl_buffer(void** d_ptr, cudaGraphicsResource_t ogl_resource);
-    bool _unmap_ogl_buffer(cudaGraphicsResource_t ogl_resource)
-    {
-        CUDA_RETURN_IF_ERROR(cudaGraphicsUnmapResources(1, &ogl_resource));
-        return true;
-    }
-
+    bool configure_beamformer(const CudaBeamformerParameters* params);
     bool _setup_decode_buffers();
-    bool _cleanup_device_buffers();
+
+    bool _cleanup_decode_buffers();
+    bool _cleanup_beamformer_buffers();
 
     bool _dims_changed(uint2 rf_raw_dim, uint3 dec_data_dim) const
     {
@@ -86,11 +67,11 @@ private:
     uint2 _rf_raw_dim;
     uint3 _dec_data_dim;
 
-    std::pair<uint, cudaGraphicsResource_t> _ogl_raw_buffer; // Original input buffer, could be any type
+    struct {
+        float* d_converted;
+        float* d_decoded;
+        size_t size;
+    } _decode_buffers;
 
-    std::vector<std::pair<uint, cudaGraphicsResource_t>> _ogl_rf_buffers;  // Pipeline buffers, all are float2 (complex)
-	
-    CudaBuffers _device_buffers;
-
-    CudaBeamformerParameters _beamformer_params;
+    cuComplex* _beamformer_rf_buffer;
 };

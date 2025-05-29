@@ -43,7 +43,7 @@ hilbert::setup_filter(int signal_length, int filter_length, const float* filter)
 	cufftHandle plan;
 	CUFFT_RETURN_IF_ERR(cufftPlan1d(&plan, signal_length, CUFFT_C2C, 1));
 	CUFFT_RETURN_IF_ERR(cufftExecC2C(plan, d_filter, d_filter, CUFFT_FORWARD));
-	Session.d_match_filter = d_filter;
+	Sessions.d_match_filter = d_filter;
 	cufftDestroy(plan);
 
 	return true;
@@ -52,16 +52,16 @@ hilbert::setup_filter(int signal_length, int filter_length, const float* filter)
 __host__ bool
 hilbert::f_domain_filter(cuComplex* input)
 {
-	uint sample_count = Session.decoded_dims.x;
+	uint sample_count = Sessions.decoded_dims.x;
 	uint cutoff_sample = (uint)floor((float)sample_count / 2.0f) + 1; // We know the second half of each spectrum is all 0's
 
-	uint channel_count = Session.decoded_dims.y * Session.decoded_dims.z;
+	uint channel_count = Sessions.decoded_dims.y * Sessions.decoded_dims.z;
 	uint grid_length = (uint)ceil((double)cutoff_sample / MAX_THREADS_PER_BLOCK);
 
 	dim3 grid_dims = { grid_length, channel_count, 1 };
 	dim3 block_dims = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
-	kernels::scale_and_filter << <grid_dims, block_dims >> > (input, Session.d_match_filter, sample_count);
+	kernels::scale_and_filter << <grid_dims, block_dims >> > (input, Sessions.d_match_filter, sample_count);
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
@@ -80,26 +80,26 @@ hilbert::plan_hilbert(int sample_count, int channel_count)
 
 	//CUFFT_THROW_IF_ERR(cufftEstimateMany(1, &sample_count, &sample_count, 1, sample_count, &sample_count, 1, sample_count, CUFFT_R2C, channel_count, &work_size));
 
-	CUFFT_RETURN_IF_ERR(cufftPlanMany(&(Session.forward_plan), 1, &sample_count, &data_length, 1, sample_count, &data_length, 1, sample_count, CUFFT_R2C, channel_count));
-	CUFFT_RETURN_IF_ERR(cufftPlanMany(&(Session.inverse_plan), 1, &sample_count, NULL, 1, 0, NULL, 1, 0, CUFFT_C2C, channel_count));
+	CUFFT_RETURN_IF_ERR(cufftPlanMany(&(Sessions.forward_plan), 1, &sample_count, &data_length, 1, sample_count, &data_length, 1, sample_count, CUFFT_R2C, channel_count));
+	CUFFT_RETURN_IF_ERR(cufftPlanMany(&(Sessions.inverse_plan), 1, &sample_count, NULL, 1, 0, NULL, 1, 0, CUFFT_C2C, channel_count));
 
-	CUFFT_RETURN_IF_ERR(cufftPlanMany(&(Session.strided_plan), 1, &sample_count, &data_length, 2, sample_count * 2, &data_length, 1, sample_count, CUFFT_R2C, channel_count));
+	CUFFT_RETURN_IF_ERR(cufftPlanMany(&(Sessions.strided_plan), 1, &sample_count, &data_length, 2, sample_count * 2, &data_length, 1, sample_count, CUFFT_R2C, channel_count));
 	return true;
 }
 
 __host__ bool 
 hilbert::hilbert_transform_r2c(float* d_input, cuComplex* d_output)
 {
-	size_t output_size = Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
+	size_t output_size = Sessions.decoded_dims.x * Sessions.decoded_dims.y * Sessions.decoded_dims.z * sizeof(cuComplex);
 
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
-	CUFFT_RETURN_IF_ERR(cufftExecR2C(Session.forward_plan, d_input, d_output));
+	CUFFT_RETURN_IF_ERR(cufftExecR2C(Sessions.forward_plan, d_input, d_output));
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 	hilbert::f_domain_filter(d_output);
-	CUFFT_RETURN_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
+	CUFFT_RETURN_IF_ERR(cufftExecC2C(Sessions.inverse_plan, d_output, d_output, CUFFT_INVERSE));
 
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -112,17 +112,17 @@ hilbert::hilbert_transform_r2c(float* d_input, cuComplex* d_output)
 __host__ bool
 hilbert::hilbert_transform_c2c(cuComplex* d_input, cuComplex* d_output)
 {
-	size_t output_size = (size_t)Session.decoded_dims.x * Session.decoded_dims.y * Session.decoded_dims.z * sizeof(cuComplex);
+	size_t output_size = (size_t)Sessions.decoded_dims.x * Sessions.decoded_dims.y * Sessions.decoded_dims.z * sizeof(cuComplex);
 
 	CUDA_RETURN_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
-	CUFFT_RETURN_IF_ERR(cufftExecR2C(Session.strided_plan, (float*)d_input, d_output));
+	CUFFT_RETURN_IF_ERR(cufftExecR2C(Sessions.strided_plan, (float*)d_input, d_output));
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 
 	hilbert::f_domain_filter(d_output);
 	
-	CUFFT_RETURN_IF_ERR(cufftExecC2C(Session.inverse_plan, d_output, d_output, CUFFT_INVERSE));
+	CUFFT_RETURN_IF_ERR(cufftExecC2C(Sessions.inverse_plan, d_output, d_output, CUFFT_INVERSE));
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
 

@@ -49,15 +49,15 @@ i16_to_f::convert_data(const i16* d_input, float* d_output)
 {
 	dim3 block_dim(MAX_THREADS_PER_BLOCK, 1, 1);
 
-	uint2 input_dims = Session.input_dims;
+	uint2 input_dims = Sessions.input_dims;
 	uint grid_length = (uint)ceil((double)input_dims.x / MAX_THREADS_PER_BLOCK);
 
-	dim3 grid_dim(grid_length, Session.decoded_dims.y, 1);
+	dim3 grid_dim(grid_length, Sessions.decoded_dims.y, 1);
 
 //	size_t output_size = output_dims.tx_count * output_dims.channel_count * output_dims.sample_count * sizeof(float);
 	//CUDA_THROW_IF_ERROR(cudaMemset(d_output, 0x00, output_size));
 
-	_kernels::short_to_float<<<grid_dim, block_dim >>>(d_input, d_output, input_dims, Session.decoded_dims);
+	_kernels::short_to_float<<<grid_dim, block_dim >>>(d_input, d_output, input_dims, Sessions.decoded_dims);
 	CUDA_RETURN_IF_ERROR(cudaGetLastError());
 
 	return true;

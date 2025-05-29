@@ -516,7 +516,7 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		transmit_type = TX_PLANE;
 	}
 	// We transmit on the Y axis and receive on the X
-	else if (Session.sequence == DAS_ID_FORCES || Session.sequence == DAS_ID_UFORCES)
+	else if (Sessions.sequence == DAS_ID_FORCES || Sessions.sequence == DAS_ID_UFORCES)
 	{
 		transmit_type = TX_X_FOCUS;
 	}
@@ -525,30 +525,30 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		transmit_type = TX_Y_FOCUS;
 	}
 
-	VolumeConfiguration vol_config = Session.volume_configuration;
+	VolumeConfiguration vol_config = Sessions.volume_configuration;
 
 	KernelConstants consts =
 	{
-		Session.decoded_dims.x,
-		Session.decoded_dims.y,
-		Session.decoded_dims.z,
+		Sessions.decoded_dims.x,
+		Sessions.decoded_dims.y,
+		Sessions.decoded_dims.z,
 		vol_config.voxel_counts,
 		vol_config.minimums,
 		{vol_config.lateral_resolution, vol_config.lateral_resolution, vol_config.axial_resolution},
 		focus_pos,
 		transmit_type,
-		Session.pitches,
+		Sessions.pitches,
 		delay_samples,
 		vol_config.maximums.z,
-		Session.xdc_mins,
-		Session.xdc_maxes,
+		Sessions.xdc_mins,
+		Sessions.xdc_maxes,
 		f_number,
 		samples_per_meter,
-		Session.sequence,
-		Session.mixes_count,
-		Session.mixes_offset
+		Sessions.sequence,
+		Sessions.mixes_count,
+		Sessions.mixes_offset
 	};
-	memcpy(consts.mixes_rows, Session.mixes_rows, sizeof(Session.mixes_rows)); // Copy the mix rows to the constant memory
+	memcpy(consts.mixes_rows, Sessions.mixes_rows, sizeof(Sessions.mixes_rows)); // Copy the mix rows to the constant memory
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Constants, &consts, sizeof(KernelConstants)));
 
 	uint3 vox_counts = vol_config.voxel_counts;
@@ -556,7 +556,7 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	bool per_channel = false;
 	auto start = std::chrono::high_resolution_clock::now();
 
-	if (Session.sequence == TransmitModes::MIXES)
+	if (Sessions.sequence == TransmitModes::MIXES)
 	{
 		uint xy_count = vox_counts.x * vox_counts.y;
 		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
@@ -567,9 +567,9 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 	else if (per_channel)
 	{
 		dim3 grid_dim = { vox_counts.x, vox_counts.y, vox_counts.z };
-		dim3 block_dim = { Session.decoded_dims.y, 1, 1 };
+		dim3 block_dim = { Sessions.decoded_dims.y, 1, 1 };
 
-		_kernels::per_channel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, Session.readi_group, Session.d_hadamard);
+		_kernels::per_channel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, Sessions.readi_group, Sessions.d_hadamard);
 	}
 	else
 	{
@@ -577,7 +577,7 @@ beamformer::beamform(cuComplex* d_volume, const cuComplex* d_rf_data, float3 foc
 		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
 		dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
-		_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, Session.readi_group, Session.d_hadamard);
+		_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_data, d_volume, Sessions.readi_group, Sessions.d_hadamard);
 	}
 
 
