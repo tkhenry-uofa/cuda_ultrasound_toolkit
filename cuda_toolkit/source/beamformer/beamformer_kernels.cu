@@ -49,8 +49,8 @@ namespace beamform::kernels
                 rx_vec.y = 0;
             }
 
-            int readi_group_size = Beamformer_Constants.channel_count / Beamformer_Constants.tx_count;
-            uint hadamard_offset = Beamformer_Constants.channel_count * readi_group_id;
+            //int readi_group_size = Beamformer_Constants.channel_count / Beamformer_Constants.tx_count;
+            //uint hadamard_offset = Beamformer_Constants.channel_count * readi_group_id;
             int delay_samples = Beamformer_Constants.delay_samples;
 
 
@@ -119,7 +119,7 @@ namespace beamform::kernels
 
             }
 
-            float coherent_sum = NORM_SQUARE_F2(total);
+//            float coherent_sum = NORM_SQUARE_F2(total);
 
             //float coherency_factor = coherent_sum / (incoherent_sum * total_used_channels);
             //volume[volume_offset] = SCALE_F2(total, coherency_factor);
@@ -132,6 +132,7 @@ namespace beamform::kernels
 	{
 		CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Beamformer_Constants, &constants, sizeof(constants)));
 		std::cout << "Beamformer constants copied to device." << std::endl;
+		return true;
 	}
 
 }

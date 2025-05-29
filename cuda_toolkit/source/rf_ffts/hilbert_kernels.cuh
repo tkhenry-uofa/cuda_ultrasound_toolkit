@@ -13,7 +13,7 @@ namespace rf_fft::kernels
 
     // This is templated so that we can remove the branch applying the filter kernel
     template <bool UseFilter> __global__ void
-    scale_and_filter(cuComplex* spectrums, const cuComplex const* filter_kernel, uint sample_count, uint cutoff)
+    scale_and_filter(cuComplex* spectrums, const cuComplex* filter_kernel, uint sample_count, uint cutoff)
     {
         uint sample_idx = threadIdx.x + blockIdx.x * blockDim.x;
         if (sample_idx > cutoff) return; // We only need to process the first half of the spectrum.

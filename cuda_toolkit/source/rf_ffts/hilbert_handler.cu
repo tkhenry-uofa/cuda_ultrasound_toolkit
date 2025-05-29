@@ -41,12 +41,9 @@ namespace rf_fft
         _fft_dims = fft_dims;
 
         int signal_length = static_cast<int>(fft_dims.x);
-        int channel_count = static_cast<int>(fft_dims.y);
-
         int double_signal_length = signal_length * 2;
 
         int rank = 1;
-        int n[1] = { static_cast<int>(fft_dims.x) };
         CUFFT_RETURN_IF_ERR(cufftPlanMany(&_forward_packed_plan, rank, &signal_length, &signal_length, 1, signal_length, &signal_length, 1, signal_length, CUFFT_R2C, fft_dims.y));
 
         CUFFT_RETURN_IF_ERR(cufftPlanMany(&_inverse_plan, rank, &signal_length, nullptr, 1, 0, nullptr, 1, 0, CUFFT_C2C, fft_dims.y));
@@ -87,7 +84,7 @@ namespace rf_fft
     {
         uint sample_count = _fft_dims.x;
         uint cutoff = sample_count / 2 + 1;
-        uint grid_length = ceil((float)cutoff / MAX_THREADS_PER_BLOCK);
+		uint grid_length = (cutoff + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK; // Divide and round up
         uint channel_count = _fft_dims.y;
 
         dim3 grid_dim(grid_length, channel_count, 1);

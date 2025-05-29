@@ -130,7 +130,7 @@ register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_
     CUDA_RETURN_IF_ERROR(cudaGraphicsGLRegisterBuffer(&(ogl_raw_buffer.second), raw_data_ssbo, cudaGraphicsRegisterFlagsNone));
 
     auto it = graphics_session.ogl_rf_buffers.begin();
-    for (int i = 0; i < rf_buffer_count; ++i, ++it)
+    for (uint i = 0; i < rf_buffer_count; ++i, ++it)
     {
         uint ssbo = rf_data_ssbos[i];
         if (ssbo == 0)

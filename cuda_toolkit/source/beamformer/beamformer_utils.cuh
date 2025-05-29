@@ -78,13 +78,12 @@ namespace beamform::kernels::utils
         float result_x = 0.0f;
         float result_y = 0.0f;
         for (int i = 0; i < 4; ++i) {
-            float hx = 0.0f;
-            float hy = 0.0f;
+            float h_sum = 0.0f;
             for (int j = 0; j < 4; ++j) {
-                hx += S[j] * h[j][i];
+                h_sum += S[j] * h[j][i];
             }
-            result_x += hx * Cx[i];
-            result_y += hx * Cy[i];
+            result_x += h_sum * Cx[i];
+            result_y += h_sum * Cy[i];
         }
 
         return { result_x, result_y };

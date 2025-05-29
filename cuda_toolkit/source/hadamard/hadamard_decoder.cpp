@@ -111,14 +111,14 @@ bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOr
 	if (ISPOWEROF2(requested_length))
 	{
 		base_length = 1;
-		iterations = (int)log2(requested_length);
+		iterations = (uint)log2(requested_length);
 		cpu_hadamard[0] = 1;
 	}
 	else if( requested_length % 12 == 0 && ISPOWEROF2(requested_length / 12))
 	{
 		base_length = 12;
-		iterations = (int)log2(requested_length / 12);
-		for (int i = 0; i < base_length; i++)
+		iterations = (uint)log2(requested_length / 12);
+		for (uint i = 0; i < base_length; i++)
 		{
 			int source_offset = i * base_length;
 			int dest_offset = i * requested_length;
@@ -128,8 +128,8 @@ bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOr
 	else if (requested_length % 20 == 0 && ISPOWEROF2(requested_length / 20))
 	{
 		base_length = 20;
-		iterations = (int)log2(requested_length / 20);
-		for (int i = 0; i < base_length; i++)
+		iterations = (uint)log2(requested_length / 20);
+		for (uint i = 0; i < base_length; i++)
 		{
 			int source_offset = i * base_length;
 			int dest_offset = i * requested_length;
@@ -148,11 +148,11 @@ bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOr
 	{
 		int right_half_offset = current_length; // Offset to top right half
 		int bottom_half_offset = current_length * requested_length; // Offset to bottom left half
-		for (int row_idx = 0; row_idx < current_length; row_idx++)
+		for (uint row_idx = 0; row_idx < current_length; row_idx++)
 		{
 			int row_offset = row_idx * requested_length;
 			// Quadrants 1, 2, and 3 are copies of the base case, quadrant 4 is the negative of the base case
-			for (int col_idx = 0; col_idx < current_length; col_idx++)
+			for (uint col_idx = 0; col_idx < current_length; col_idx++)
 			{
 				cpu_hadamard[col_idx + row_offset + right_half_offset] = cpu_hadamard[col_idx + row_offset];
 				cpu_hadamard[col_idx + row_offset + bottom_half_offset] = cpu_hadamard[col_idx + row_offset];
