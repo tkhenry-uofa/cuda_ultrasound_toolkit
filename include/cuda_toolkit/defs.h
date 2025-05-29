@@ -213,6 +213,12 @@ inline cuComplex sample_value_cplx(const cuComplex* d_value)
     return sample;
 }
 
+template <typename T> void 
+sample_data(const T* d_value, T* h_value, uint count = 1)
+{
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(h_value, d_value, count * sizeof(T), cudaMemcpyDeviceToHost));
+}
+
 inline std::string format_cplx(const cuComplex& value)
 {
     char buffer[128];

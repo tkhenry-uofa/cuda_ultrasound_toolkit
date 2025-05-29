@@ -244,7 +244,7 @@ CudaManager::beamform(void* d_input, cuComplex* d_volume,
         return false;
     }
 
-    bool hilbert = false;
+    bool hilbert = true;
 
     if (hilbert)
     {
