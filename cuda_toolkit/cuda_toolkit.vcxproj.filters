@@ -35,9 +35,6 @@
     <ClInclude Include="source\defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\hilbert\hilbert_transform.cuh" />
-    <ClInclude Include="source\hadamard\hadamard.cuh" />
-    <ClInclude Include="source\data_conversion\int16_to_float.cuh" />
     <ClInclude Include="source\cuda_beamformer_parameters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -75,12 +72,9 @@
     <ClInclude Include="source\beamformer\beamformer_utils.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="source\hilbert\hilbert_transform.cu" />
-    <CudaCompile Include="source\hadamard\hadamard.cu" />
-    <CudaCompile Include="source\data_conversion\int16_to_float.cu" />
     <CudaCompile Include="source\data_conversion\data_converter.cu" />
     <CudaCompile Include="source\rf_ffts\hilbert_handler.cu" />
     <CudaCompile Include="source\beamformer\beamformer_kernels.cu" />
-    <CudaCompile Include="source\beamformer\beamformer_new.cu" />
+    <CudaCompile Include="source\beamformer\beamformer.cu" />
   </ItemGroup>
 </Project>

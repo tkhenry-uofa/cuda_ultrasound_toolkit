@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "cuda_transfer_new.h"
+#include "cuda_transfer.h"
 
 
 int main()

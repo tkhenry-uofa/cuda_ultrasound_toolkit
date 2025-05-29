@@ -170,6 +170,8 @@ CudaManager::i16_convert_decode_strided(i16* d_input, cuComplex* d_output)
     size_t data_count = _decoded_data_count();
     cudaMemset(d_output, 0x00, data_count);
     CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, d_output, data_count);
+
+    return result;
 }
 
 bool

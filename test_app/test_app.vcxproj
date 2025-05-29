@@ -100,7 +100,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="parser\mat_parser.cpp" />
     <ClCompile Include="test_app.cpp" />
     <ClCompile Include="transfer_server\transfer_server.cpp" />
   </ItemGroup>
@@ -109,22 +108,12 @@
     <ClInclude Include="matlab_lib\cuda_transfer.h" />
     <ClInclude Include="parameter_defs.h" />
     <ClInclude Include="test_app.h" />
-    <ClInclude Include="transfer_server\matlab_transfer.h" />
-    <ClInclude Include="parser\mat_parser.h" />
     <ClInclude Include="transfer_server\transfer_server.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="MatlabPath.props">
-      <FileType>Document</FileType>
-    </Xml>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\cuda_toolkit\cuda_toolkit.vcxproj">
       <Project>{bdd780b4-c9fd-4d7f-b63d-06a49965263c}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="transfer_server\matlab_transfer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="matlab_lib\build.sh" />

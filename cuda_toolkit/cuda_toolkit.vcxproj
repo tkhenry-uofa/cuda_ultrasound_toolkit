@@ -177,11 +177,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="source\beamformer\beamformer_kernels.cu" />
-    <CudaCompile Include="source\beamformer\beamformer_new.cu" />
+    <CudaCompile Include="source\beamformer\beamformer.cu" />
     <CudaCompile Include="source\data_conversion\data_converter.cu" />
-    <CudaCompile Include="source\data_conversion\int16_to_float.cu" />
-    <CudaCompile Include="source\hadamard\hadamard.cu" />
-    <CudaCompile Include="source\hilbert\hilbert_transform.cu" />
     <CudaCompile Include="source\rf_ffts\hilbert_handler.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -204,12 +201,7 @@
     <ClInclude Include="source\cuda_toolkit_ogl.h" />
     <ClInclude Include="source\data_conversion\data_conversion_kernels.cuh" />
     <ClInclude Include="source\data_conversion\data_converter.h" />
-    <ClInclude Include="source\data_conversion\int16_to_float.cuh" />
-    <ClInclude Include="source\hadamard\hadamard.cuh" />
     <ClInclude Include="source\hadamard\hadamard_decoder.h" />
-    <ClInclude Include="source\hilbert\hilbert_transform.cuh">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="source\defs.h" />
     <ClInclude Include="source\rf_ffts\hilbert_handler.h" />
     <ClInclude Include="source\rf_ffts\hilbert_kernels.cuh" />
