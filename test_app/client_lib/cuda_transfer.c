@@ -84,7 +84,7 @@ open_command_pipe()
     if (h == INVALID_HANDLE_VALUE)
     {
         DWORD error = GetLastError();
-        warning_msg("Failed to open command pipe with error: %i, '%s'", 
+        warning_msg("Failed to open command pipe with error: %lu, '%s'", 
                     error, format_error_message(error));
     }
     return h;
@@ -98,7 +98,7 @@ open_smem(char* name, void** smem, size_t size)
     if (h == NULL || h == INVALID_HANDLE_VALUE)
     {
         DWORD error = GetLastError();
-        warning_msg("Failed to create data shared memory '%s' with error: %i, '%s'", 
+        warning_msg("Failed to create data shared memory '%s' with error: %lu, '%s'", 
                     name, error, format_error_message(error));
         return false;
     }
@@ -110,7 +110,7 @@ open_smem(char* name, void** smem, size_t size)
         DWORD error = GetLastError();
 
         const char* format_error = format_error_message(error);
-        warning_msg("Failed to map data shared memory '%s' with error: %i, '%s'", 
+        warning_msg("Failed to map data shared memory '%s' with error: %lu, '%s'", 
                     name, error, format_error);
         CloseHandle(h);
         return false;
@@ -164,7 +164,7 @@ bool send_command(CudaCommand command, size_t data_size)
     if (!WriteFile(g_command_pipe, &message, sizeof(message), &bytes_written, NULL))
     {
         DWORD error = GetLastError();
-        warning_msg("Failed to write to command pipe with error: %i", error);
+        warning_msg("Failed to write to command pipe with error: %lu, '%s'", error, format_error_message(error));
         return false;
     }
 
@@ -180,7 +180,7 @@ bool wait_for_response(CommandPipeMessage* message)
         if (!ReadFile(g_command_pipe, message, sizeof(*message), &bytes_read, NULL))
         {
             DWORD error = GetLastError();
-            warning_msg("Failed to read from command pipe with error: %i", error);
+            warning_msg("Failed to read from command pipe with error: %lu", error);
             return false;
         }
 
@@ -193,7 +193,7 @@ bool wait_for_response(CommandPipeMessage* message)
 
         if (bytes_read != sizeof(*message))
         {
-            warning_msg("Invalid message size read from command pipe: %zu", bytes_read);
+            warning_msg("Invalid message size read from command pipe: %lu", bytes_read);
             return false;
         }
         else
@@ -202,15 +202,13 @@ bool wait_for_response(CommandPipeMessage* message)
         }
     }
 
-    warning_msg("Timed out waiting for response from command pipe after %u ms", RESPONSE_POLL_TIMEOUT);
+    warning_msg("Timed out waiting for response from command pipe after %d ms", RESPONSE_POLL_TIMEOUT);
     return false;
 }
 
 bool wait_for_ack()
 {
     CommandPipeMessage message;
-    DWORD bytes_read = 0;
-
     if (!wait_for_response(&message))
     {
         warning_msg("Failed to receive response from command pipe");
@@ -230,14 +228,11 @@ CommandPipeMessage
 wait_for_result()
 {
     CommandPipeMessage message;
-    DWORD bytes_read = 0;
-
     if (!wait_for_response(&message))
     {
         warning_msg("Failed to receive response from command pipe");
         return message;
     }
-
     return message;
 }
 
@@ -247,7 +242,7 @@ beamform(const void* data, size_t data_size,
 {
     if (data_size > DATA_SMEM_SIZE)
     {
-        error_msg("Data size too large: %zu, Max: %zu", data_size, DATA_SMEM_SIZE);
+        error_msg("Data size too large: %zu, Max: %lu", data_size, DATA_SMEM_SIZE);
         return;
     }
 

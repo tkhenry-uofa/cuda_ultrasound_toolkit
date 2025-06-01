@@ -71,7 +71,7 @@ bool decoding::HadamardDecoder::decode(float* d_input, float* d_output, uint3 de
 	return true;
 }
 
-bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOrdering readi_ordering)
+bool decoding::HadamardDecoder::set_hadamard(uint requested_length, ReadiOrdering readi_ordering)
 {
 	if( !_cublas_handle )
 	{
@@ -82,7 +82,7 @@ bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOr
 		}
 	}
 
-    if (requested_length == 0 || requested_length > HADAMARD_MAX_SIZE) // Arbitrary limit for size
+	if (requested_length == 0 || requested_length > HADAMARD_MAX_SIZE) // Arbitrary limit for size
     {
         std::cerr << "Maximum hadamard size (" << HADAMARD_MAX_SIZE << ") exceeded. " << requested_length << " requested." << std::endl;
         return false; 
@@ -91,12 +91,15 @@ bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOr
     {
         _cleanup_hadamard(); // Clean up existing Hadamard matrix if it exists
     }
-    
-    _readi_ordering = readi_ordering;
+
+	_readi_ordering = readi_ordering;
     _hadamard_size = requested_length;
 
-    uint base_length = 0;
-	uint iterations = 0;
+	return generate_hadamard(&_d_hadamard, requested_length, readi_ordering);
+}
+
+bool decoding::HadamardDecoder::generate_hadamard(float** d_hadamard, uint requested_length, ReadiOrdering readi_ordering)
+{
 
     // Create a requested_length x requested_length array on the CPU
 	size_t element_count = (size_t)requested_length * requested_length;
@@ -105,7 +108,10 @@ bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOr
 	{
 		std::cerr << "Failed to init hadamard matrix of size " << requested_length << std::endl;
 	}
-		
+
+	uint base_length; // Base case length for Hadamard matrix
+	uint iterations;
+
 	// Check if the requested length is valid and set up the base case.
     // The base case will be placed in the top left corner of the matrix.
 	if (ISPOWEROF2(requested_length))
@@ -162,8 +168,8 @@ bool decoding::HadamardDecoder::generate_hadamard(uint requested_length, ReadiOr
 	}
 
 
-	CUDA_RETURN_IF_ERROR(cudaMalloc( &_d_hadamard, element_count * sizeof(float)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(_d_hadamard, cpu_hadamard, element_count * sizeof(float), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERROR(cudaMalloc( d_hadamard, element_count * sizeof(float)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(*d_hadamard, cpu_hadamard, element_count * sizeof(float), cudaMemcpyHostToDevice));
 	free(cpu_hadamard);
 
 	return true;

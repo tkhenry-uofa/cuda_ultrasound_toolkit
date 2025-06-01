@@ -30,7 +30,7 @@ namespace beamform::kernels
         // If the voxel is out of the f_number defined range for all elements skip it
         if (!utils::check_ranges(vox_loc, Beamformer_Constants.f_number, Beamformer_Constants.xdc_maxes)) return;
 
-        float3 src_pos = Beamformer_Constants.src_pos;
+        float3 src_pos = Beamformer_Constants.focal_point;
 
         float3 tx_vec = utils::calc_tx_distance(vox_loc, src_pos, Beamformer_Constants.focal_direction);
 
@@ -162,7 +162,7 @@ namespace beamform::kernels
         };
 
         uint transmit_count = Beamformer_Constants.tx_count;
-        float3 src_pos = Beamformer_Constants.src_pos;
+        float3 src_pos = Beamformer_Constants.focal_point;
 
         // If the voxel is out of the f_number defined range for all elements skip it
         if (!utils::check_ranges(vox_loc, Beamformer_Constants.f_number, Beamformer_Constants.xdc_maxes)) return;
@@ -196,7 +196,7 @@ namespace beamform::kernels
 
             for (int g = 0; g < readi_group_size; g++)
             {
-				total_distance = utils::total_path_length(tx_vec, rx_vec, Beamformer_Constants.src_pos.z, focal_distance_sign);
+				total_distance = utils::total_path_length(tx_vec, rx_vec, Beamformer_Constants.focal_point.z, focal_distance_sign);
                 scan_index = (uint)(total_distance * samples_per_meter + delay_samples);
                 value = __ldg(&rfData[channel_offset + scan_index - 1]);
 

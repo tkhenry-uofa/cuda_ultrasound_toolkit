@@ -39,9 +39,12 @@ namespace beamform
         constants.mixes_count = bp.mixes_count;
         constants.mixes_offset = bp.mixes_offset;
 
-        float3 src_pos = {0.0f, 0.0f, bp.focal_depths[0]};
-        constants.src_pos = src_pos;
-        if(src_pos.z == INFINITY)
+        constants.readi_group_count = bp.readi_group_count;
+        constants.readi_group_id = bp.readi_group_id;
+
+        float3 focal_point = {0.0f, 0.0f, bp.focal_depths[0]};
+        constants.focal_point = focal_point;
+        if(focal_point.z == INFINITY)
         {
             constants.focal_direction = kernels::FocalDirection::PLANE;
         }
@@ -71,13 +74,20 @@ namespace beamform
 
         std::cout << "Starting beamform." << std::endl;
 
+        if(constants.readi_group_count > 1)
+        {
+            // We just want the relevant row for this group
+            d_hadamard += constants.readi_group_id * constants.readi_group_count;
+        }
+
+
         uint3 vox_counts = constants.voxel_dims;
         uint xy_count = vox_counts.x * vox_counts.y;
-		dim3 grid_dim = { (uint)ceilf((float)xy_count / MAX_THREADS_PER_BLOCK), (uint)vox_counts.z, 1 };
+		dim3 grid_dim = { (xy_count + MAX_THREADS_PER_BLOCK -1) / MAX_THREADS_PER_BLOCK, vox_counts.z, 1 };
 		dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
         auto start = std::chrono::high_resolution_clock::now();
-		kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_input, d_volume, bp.readi_group_id, d_hadamard);
+		kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_input, d_volume, d_hadamard);
 
         CUDA_RETURN_IF_ERROR(cudaGetLastError());
 	    CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());

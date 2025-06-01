@@ -9,7 +9,7 @@
 namespace beamform::kernels
 {
     __global__ void
-    per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, const float* hadamard);
+    per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, const float* hadamard);
 
     __global__ void
     per_channel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, const float* hadamard);
@@ -19,7 +19,4 @@ namespace beamform::kernels
 
     __host__ bool
 	copy_kernel_constants(const BeamformerConstants& constants);
-
 }
-
-

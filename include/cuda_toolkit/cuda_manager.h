@@ -78,4 +78,5 @@ private:
     } _decode_buffers;
 
     cuComplex* _beamformer_rf_buffer;
+    float* _readi_hadamard;
 };

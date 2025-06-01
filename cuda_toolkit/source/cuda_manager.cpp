@@ -55,7 +55,7 @@ CudaManager::init(uint2 rf_raw_dim, uint3 dec_data_dim, bool beamformer)
         return false;
     }
 
-    if (!_hadamard_decoder->generate_hadamard(dec_data_dim.z, ReadiOrdering::HADAMARD))
+    if (!_hadamard_decoder->set_hadamard(dec_data_dim.z, ReadiOrdering::HADAMARD))
     {
         std::cerr << "Failed to generate Hadamard matrix." << std::endl;
         return false;
@@ -223,6 +223,22 @@ CudaManager::beamform(void* d_input, cuComplex* d_volume,
         }
     }
 
+    if(!_readi_hadamard)
+    {
+        if (bp.readi_group_count > 1)
+        {
+            if (!_hadamard_decoder->generate_hadamard(&_readi_hadamard, bp.readi_group_count, bp.readi_ordering))
+            {
+                std::cerr << "Failed to generate Hadamard matrix for READI beamforming." << std::endl;
+                return false;
+            }
+		}
+		else
+		{
+			CUDA_RETURN_IF_ERROR(cudaMalloc(&_readi_hadamard, sizeof(float)));
+			CUDA_RETURN_IF_ERROR(cudaMemset(_readi_hadamard, 1.0f, sizeof(float)));
+		}
+    }
 
     if (input_type == InputDataType::I16)
     {
@@ -261,17 +277,12 @@ CudaManager::beamform(void* d_input, cuComplex* d_volume,
 		CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, _beamformer_rf_buffer, _decoded_data_count());
     }
     
-    if (!_beamformer->per_voxel_beamform(_beamformer_rf_buffer, d_volume, bp, 
-                                          _hadamard_decoder->get_hadamard()))
+    if (!_beamformer->per_voxel_beamform(_beamformer_rf_buffer, d_volume, bp, _readi_hadamard))
     {
         std::cerr << "Beamforming failed." << std::endl;
         return false;
     }
 
-    cuComplex data_sample = sample_value_cplx(_beamformer_rf_buffer);
-    cuComplex output_sample = sample_value_cplx(d_volume);
-    std::cout << "Sampled data: " << data_sample.x << " + " << data_sample.y << "i" << std::endl;
-    std::cout << "Sampled output: " << output_sample.x << " + " << output_sample.y << "i" << std::endl;
     return true;
 }
 

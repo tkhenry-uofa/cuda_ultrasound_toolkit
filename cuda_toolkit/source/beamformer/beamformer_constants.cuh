@@ -24,7 +24,7 @@ namespace beamform::kernels
         float2 xdc_mins;
         float2 xdc_maxes;
         float samples_per_meter;
-        float3 src_pos;
+        float3 focal_point;
         float2 pitches;
         int delay_samples;
         FocalDirection focal_direction;
@@ -39,6 +39,9 @@ namespace beamform::kernels
         // Sequence Constants
         u8 mixes_count;
         u8 mixes_offset;
+
+        u8 readi_group_count;
+        u8 readi_group_id;
     };
 }
 

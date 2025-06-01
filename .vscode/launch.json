@@ -14,6 +14,18 @@
       "preLaunchTask": "Build Debug"
     },
     {
+      "name": "Launch Test App Release",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/output/Release/test_app.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build Release"
+    },
+    {
       "name": "Launch Client Test",
       "type": "cppvsdbg",
       "request": "launch",

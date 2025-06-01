@@ -4,8 +4,6 @@
 
 #define MAX_BUFFER_COUNT 16
 
-CudaSessionStruct Sessions;
-
 bool unregister_ogl_buffers_();
 
 struct GraphicsSession 
