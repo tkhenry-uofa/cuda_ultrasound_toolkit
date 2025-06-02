@@ -3,7 +3,7 @@
 #include <cufft.h>
 #include <span>
 
-#include "../defs.h"
+#include "../../defs.h"
 
 namespace rf_fft 
 {

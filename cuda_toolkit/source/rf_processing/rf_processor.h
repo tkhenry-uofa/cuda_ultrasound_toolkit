@@ -12,23 +12,22 @@
 #include "data_conversion/data_converter.h"
 #include "hadamard/hadamard_decoder.h"
 #include "rf_ffts/hilbert_handler.h"
-#include "beamformer/beamformer.h"
 
-#include "cuda_beamformer_parameters.h"
-#include "defs.h"
+#include "../cuda_beamformer_parameters.h"
+#include "../defs.h"
 
 
-class CudaManager {
+class RfProcessor {
 public:
 
-	CudaManager();
-    CudaManager(const CudaManager&) = delete;
-    CudaManager& operator=(const CudaManager&) = delete;
-    CudaManager(CudaManager&&) = delete;
-    CudaManager& operator=(CudaManager&&) = delete;
-	~CudaManager() { deinit(); }
+	RfProcessor();
+    RfProcessor(const RfProcessor&) = delete;
+    RfProcessor& operator=(const RfProcessor&) = delete;
+    RfProcessor(RfProcessor&&) = delete;
+    RfProcessor& operator=(RfProcessor&&) = delete;
+	~RfProcessor() { deinit(); }
 
-    bool init(uint2 rf_raw_dim, uint3 dec_data_dim, bool beamformer);
+    bool init(uint2 rf_raw_dim, uint3 dec_data_dim);
     bool deinit();
 
     bool set_channel_mapping(std::span<const int16_t> channel_mapping);
@@ -38,15 +37,10 @@ public:
     
     bool hilbert_transform_strided(float* d_input, cuComplex* d_output);
 
-    
-    bool beamform(void* d_input, cuComplex* d_volume, 
-                  const CudaBeamformerParameters& bp);
-
 private:
     bool _i16_convert_decode(i16* d_input, float* d_output);
 
     bool _setup_decode_buffers();
-
     bool _cleanup_decode_buffers();
 
     bool _dims_changed(uint2 rf_raw_dim, uint3 dec_data_dim) const
@@ -66,17 +60,12 @@ private:
     std::unique_ptr<data_conversion::DataConverter> _data_converter;
     std::unique_ptr<rf_fft::HilbertHandler> _hilbert_handler;
     std::unique_ptr<decoding::HadamardDecoder> _hadamard_decoder;
-    std::unique_ptr<beamform::Beamformer> _beamformer;
-
     uint2 _rf_raw_dim;
     uint3 _dec_data_dim;
 
-    struct {
+    struct 
+    {
         float* d_converted;
         float* d_decoded;
-        size_t size;
     } _decode_buffers;
-
-    cuComplex* _beamformer_rf_buffer;
-    float* _readi_hadamard;
 };

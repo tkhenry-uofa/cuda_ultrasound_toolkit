@@ -6,7 +6,7 @@
 #include "../cuda_beamformer_parameters.h"
 #include "beamformer_constants.cuh"
 
-namespace beamform::kernels
+namespace bf_kernels
 {
     __global__ void
     per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, const float* hadamard);

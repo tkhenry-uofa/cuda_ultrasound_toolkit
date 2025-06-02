@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <cufft.h>
-#include "../defs.h"
+#include "../../defs.h"
 
 namespace rf_fft::kernels
 {

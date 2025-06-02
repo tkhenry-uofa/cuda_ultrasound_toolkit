@@ -84,12 +84,12 @@ inline std::string format_cplx(const cuComplex& value)
 
 
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	#include <assert.h>
 	#define ASSERT(x) assert(x)
-#else
-	#define ASSERT(x)
-#endif // _DEBUG
+//#else
+	//#define ASSERT(x)
+//#endif // _DEBUG
 
 
 #define CUDA_NULL_FREE(PTR)                 \

@@ -6,7 +6,7 @@
 
 static constexpr float CUDART_PI_F = 3.141592654F;
 static constexpr uint MAX_TX_COUNT = 128;
-namespace beamform::kernels
+namespace bf_kernels
 {
     enum class FocalDirection
     {
@@ -42,7 +42,8 @@ namespace beamform::kernels
 
         u8 readi_group_count;
         u8 readi_group_id;
+        ReadiOrdering readi_order;
     };
 }
 
-__constant__ beamform::kernels::BeamformerConstants Beamformer_Constants;
+__constant__ bf_kernels::BeamformerConstants Beamformer_Constants;

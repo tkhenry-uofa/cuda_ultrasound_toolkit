@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <cuda_runtime.h>
 
-#include "../defs.h"
+#include "../../defs.h"
 
 
 namespace data_conversion::kernels 

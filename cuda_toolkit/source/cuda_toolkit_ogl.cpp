@@ -1,6 +1,5 @@
-
+#include "rf_processing/rf_processor.h"
 #include "cuda_toolkit_ogl.h"
-#include "cuda_manager.h"
 
 #define MAX_BUFFER_COUNT 16
 
@@ -8,7 +7,7 @@ bool unregister_ogl_buffers_();
 
 struct GraphicsSession 
 {
-    CudaManager cuda_manager;
+    RfProcessor rf_processor;
     std::pair<uint, cudaGraphicsResource_t> ogl_raw_buffer;
     std::array<std::pair<uint, cudaGraphicsResource_t>, MAX_BUFFER_COUNT> ogl_rf_buffers;
     bool buffers_init = false;
@@ -91,9 +90,9 @@ unregister_ogl_buffers_()
 bool
 init_cuda_configuration(const uint* input_dims, const uint* decoded_dims)
 {
-    CudaManager& cuda_manager = get_session_().cuda_manager;
+    RfProcessor& rf_processor = get_session_().rf_processor;
 
-    if (!cuda_manager.init({input_dims[0], input_dims[1]}, {decoded_dims[0], decoded_dims[1], decoded_dims[2]}, false))
+    if (!rf_processor.init({input_dims[0], input_dims[1]}, {decoded_dims[0], decoded_dims[1], decoded_dims[2]}))
     {
         std::cerr << "Failed to initialize CUDA session." << std::endl;
         return false;
@@ -105,8 +104,8 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims)
 void
 deinit_cuda_configuration()
 {
-    CudaManager& cuda_manager = get_session_().cuda_manager;
-    cuda_manager.deinit();
+    RfProcessor& rf_processor = get_session_().rf_processor;
+    rf_processor.deinit();
 }
 
 bool
@@ -147,10 +146,10 @@ register_cuda_buffers(const uint* rf_data_ssbos, uint rf_buffer_count, uint raw_
 bool
 cuda_set_channel_mapping(const i16 channel_mapping[MAX_CHANNEL_COUNT])
 {
-    CudaManager& cuda_manager = get_session_().cuda_manager;
+    RfProcessor& rf_processor = get_session_().rf_processor;
     
     std::span<const int16_t> mapping_span(channel_mapping, MAX_CHANNEL_COUNT);
-    if (!cuda_manager.set_channel_mapping(mapping_span))
+    if (!rf_processor.set_channel_mapping(mapping_span))
     {
         std::cerr << "Failed to set channel mapping." << std::endl;
         return false;
@@ -162,10 +161,10 @@ cuda_set_channel_mapping(const i16 channel_mapping[MAX_CHANNEL_COUNT])
 bool
 cuda_set_match_filter(const float* match_filter, uint length)
 {
-    CudaManager& cuda_manager = get_session_().cuda_manager;
+    RfProcessor& rf_processor = get_session_().rf_processor;
 
     std::span<const float> filter_span(match_filter, length);
-    if (!cuda_manager.set_match_filter(filter_span))
+    if (!rf_processor.set_match_filter(filter_span))
     {
         std::cerr << "Failed to set match filter." << std::endl;
         return false;
@@ -185,7 +184,7 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
         return false;
     }
 
-    CudaManager& cuda_manager = graphics_session.cuda_manager;
+    RfProcessor& rf_processor = graphics_session.rf_processor;
     auto& ogl_raw_buffer = graphics_session.ogl_raw_buffer;
     auto& ogl_rf_buffers = graphics_session.ogl_rf_buffers;
 
@@ -209,7 +208,7 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
 
     size_t input_offset_count = input_offset / sizeof(int16_t);
 
-    bool result = cuda_manager.i16_convert_decode_strided(d_input + input_offset_count, d_output);
+    bool result = rf_processor.i16_convert_decode_strided(d_input + input_offset_count, d_output);
     if (!result)
     {
         std::cerr << "Failed to decode data." << std::endl;
@@ -230,7 +229,7 @@ cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
         return false;
     }
 
-    CudaManager& cuda_manager = graphics_session.cuda_manager;
+    RfProcessor& rf_processor = graphics_session.rf_processor;
     auto& ogl_rf_buffers = graphics_session.ogl_rf_buffers;
 
     auto input_resource = ogl_rf_buffers[input_buffer_idx].second;
@@ -251,7 +250,7 @@ cuda_hilbert(uint input_buffer_idx, uint output_buffer_idx)
         return false;
     }
     
-    bool result = cuda_manager.hilbert_transform_strided(d_input, d_output);
+    bool result = rf_processor.hilbert_transform_strided(d_input, d_output);
     unmap_ogl_buffer_(input_resource);
     unmap_ogl_buffer_(output_resource);
     return result;

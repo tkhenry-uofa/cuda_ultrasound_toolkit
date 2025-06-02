@@ -3,8 +3,8 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../cuda_beamformer_parameters.h"
-#include "../defs.h"
+#include "../../cuda_beamformer_parameters.h"
+#include "../../defs.h"
 
 
 namespace decoding
@@ -27,7 +27,7 @@ namespace decoding
         HadamardDecoder& operator=(HadamardDecoder&&) = delete;
 
         bool decode(float* d_input, float* d_output, uint3 decoded_dims);
-        static bool generate_hadamard(float** d_hadamard, uint size, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD);
+        static bool generate_hadamard(float* d_hadamard, uint size, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD);
 
         bool set_hadamard(uint size, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD);
 

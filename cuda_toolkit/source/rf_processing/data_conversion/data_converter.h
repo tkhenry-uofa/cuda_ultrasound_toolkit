@@ -4,7 +4,7 @@
 #include <device_launch_parameters.h>
 #include <span>
 
-#include "../defs.h"
+#include "../../defs.h"
 
 namespace data_conversion
 {

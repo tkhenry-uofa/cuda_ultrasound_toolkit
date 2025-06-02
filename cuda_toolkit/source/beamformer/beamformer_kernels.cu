@@ -4,7 +4,7 @@
 #include "beamformer_kernels.cuh"
 
 
-namespace beamform::kernels
+namespace bf_kernels
 {
 __global__ void
 per_voxel_beamform(const cuComplex* rfData, cuComplex* volume, const float* hadamard_row)

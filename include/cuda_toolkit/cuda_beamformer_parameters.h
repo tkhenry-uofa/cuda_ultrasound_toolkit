@@ -54,7 +54,7 @@ typedef enum ReadiOrdering
     WALSH = 1,
 } ReadiOrdering;
 
-typedef struct
+typedef struct CudaBeamformerParameters
 {
 	/*
 	*	BP Head (Transducer and sequence information)

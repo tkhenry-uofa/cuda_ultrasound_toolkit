@@ -3,7 +3,7 @@
 
 #define PATH_LENGTH_SIGN(FOCUS, VOXAL) round((VOXAL.z - FOCUS.z) / abs(VOXAL.z - FOCUS.z))
 
-namespace beamform::kernels::utils
+namespace bf_kernels::utils
 {
     __device__ inline float3
     calc_tx_distance(float3 vox_loc, float3 source_pos, FocalDirection direction)

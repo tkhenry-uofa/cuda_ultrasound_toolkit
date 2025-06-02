@@ -17,17 +17,17 @@
 #include "defs.h"
 
 
-class CudaManager {
+class RfProcessor {
 public:
 
     
     
-	CudaManager();
-    CudaManager(const CudaManager&) = delete;
-    CudaManager& operator=(const CudaManager&) = delete;
-    CudaManager(CudaManager&&) = delete;
-    CudaManager& operator=(CudaManager&&) = delete;
-	~CudaManager() { deinit(); }
+	RfProcessor();
+    RfProcessor(const RfProcessor&) = delete;
+    RfProcessor& operator=(const RfProcessor&) = delete;
+    RfProcessor(RfProcessor&&) = delete;
+    RfProcessor& operator=(RfProcessor&&) = delete;
+	~RfProcessor() { deinit(); }
 
 
     bool init(uint2 rf_daw_dim, uint3 dec_data_dim);

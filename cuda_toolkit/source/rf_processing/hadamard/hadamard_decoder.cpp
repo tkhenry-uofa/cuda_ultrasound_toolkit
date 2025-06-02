@@ -95,10 +95,12 @@ bool decoding::HadamardDecoder::set_hadamard(uint requested_length, ReadiOrderin
 	_readi_ordering = readi_ordering;
     _hadamard_size = requested_length;
 
-	return generate_hadamard(&_d_hadamard, requested_length, readi_ordering);
+	size_t hadamard_mem_size = (size_t)requested_length * requested_length * sizeof(float);
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&_d_hadamard, hadamard_mem_size));
+	return generate_hadamard(_d_hadamard, requested_length, readi_ordering);
 }
 
-bool decoding::HadamardDecoder::generate_hadamard(float** d_hadamard, uint requested_length, ReadiOrdering readi_ordering)
+bool decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint requested_length, ReadiOrdering readi_ordering)
 {
 
     // Create a requested_length x requested_length array on the CPU
@@ -168,8 +170,7 @@ bool decoding::HadamardDecoder::generate_hadamard(float** d_hadamard, uint reque
 	}
 
 
-	CUDA_RETURN_IF_ERROR(cudaMalloc( d_hadamard, element_count * sizeof(float)));
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(*d_hadamard, cpu_hadamard, element_count * sizeof(float), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERROR(cudaMalloc( &d_hadamard, element_count * sizeof(float)));
 	free(cpu_hadamard);
 
 	return true;

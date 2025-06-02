@@ -18,16 +18,19 @@
     <ClCompile Include="source\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\hadamard\hadamard_decoder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\cuda_manager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\cuda_toolkit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\cuda_toolkit_ogl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rf_processing\rf_processor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rf_processing\hadamard\hadamard_decoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\image_processing\image_processor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -38,24 +41,10 @@
     <ClInclude Include="source\cuda_beamformer_parameters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\data_conversion\data_conversion_kernels.cuh" />
-    <ClInclude Include="source\data_conversion\data_converter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\hadamard\hadamard_decoder.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\rf_ffts\hilbert_handler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\rf_ffts\hilbert_kernels.cuh" />
     <ClInclude Include="source\cuda_session.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\cuda_toolkit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\cuda_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\cuda_toolkit.hpp">
@@ -70,11 +59,28 @@
     <ClInclude Include="source\beamformer\beamformer_constants.cuh" />
     <ClInclude Include="source\beamformer\beamformer_kernels.cuh" />
     <ClInclude Include="source\beamformer\beamformer_utils.cuh" />
+    <ClInclude Include="source\rf_processing\rf_processor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\rf_processing\data_conversion\data_converter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\rf_processing\hadamard\hadamard_decoder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\rf_processing\rf_ffts\hilbert_handler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\image_processing\image_processor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\rf_processing\rf_ffts\hilbert_kernels.cuh" />
+    <ClInclude Include="source\rf_processing\data_conversion\data_conversion_kernels.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="source\data_conversion\data_converter.cu" />
-    <CudaCompile Include="source\rf_ffts\hilbert_handler.cu" />
     <CudaCompile Include="source\beamformer\beamformer_kernels.cu" />
     <CudaCompile Include="source\beamformer\beamformer.cu" />
+    <CudaCompile Include="source\rf_processing\rf_ffts\hilbert_handler.cu" />
+    <CudaCompile Include="source\rf_processing\data_conversion\data_converter.cu" />
   </ItemGroup>
 </Project>
