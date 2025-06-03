@@ -135,10 +135,11 @@ Beamformer::_per_voxel_beamform(cuComplex* d_rf_buffer, cuComplex* d_volume)
 {
     std::cout << "Starting beamform." << std::endl;
 
+    float* d_hadamard_row = _d_beamformer_hadamard;
     if(_constants.readi_group_count > 1)
     {
         // We just want the relevant row for this group
-        _d_beamformer_hadamard += _constants.readi_group_id * _constants.readi_group_count;
+        d_hadamard_row += _constants.readi_group_id * _constants.readi_group_count;
     }
 
     uint3 vox_counts = _constants.voxel_dims;
@@ -147,7 +148,7 @@ Beamformer::_per_voxel_beamform(cuComplex* d_rf_buffer, cuComplex* d_volume)
     dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
     auto start = std::chrono::high_resolution_clock::now();
-    bf_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_buffer, d_volume, _d_beamformer_hadamard);
+    bf_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_buffer, d_volume, d_hadamard_row);
 
     CUDA_RETURN_IF_ERROR(cudaGetLastError());
     CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
@@ -155,6 +156,7 @@ Beamformer::_per_voxel_beamform(cuComplex* d_rf_buffer, cuComplex* d_volume)
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Kernel duration: " << elapsed.count() << " seconds" << std::endl;
+
 
     return true;
 }

@@ -105,7 +105,7 @@ bool decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint reques
 
     // Create a requested_length x requested_length array on the CPU
 	size_t element_count = (size_t)requested_length * requested_length;
-	float* cpu_hadamard = (float*)calloc(element_count, sizeof(float));
+	float* cpu_hadamard = (float*)std::calloc(element_count, sizeof(float));
 	if (!cpu_hadamard)
 	{
 		std::cerr << "Failed to init hadamard matrix of size " << requested_length << std::endl;
@@ -130,7 +130,7 @@ bool decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint reques
 		{
 			int source_offset = i * base_length;
 			int dest_offset = i * requested_length;
-			memcpy(cpu_hadamard + dest_offset, hadamard_12_transpose + source_offset, base_length * sizeof(float));
+			std::memcpy(cpu_hadamard + dest_offset, hadamard_12_transpose + source_offset, base_length * sizeof(float));
 		}
 	}
 	else if (requested_length % 20 == 0 && ISPOWEROF2(requested_length / 20))
@@ -141,7 +141,7 @@ bool decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint reques
 		{
 			int source_offset = i * base_length;
 			int dest_offset = i * requested_length;
-			memcpy(cpu_hadamard + dest_offset, hadamard_20_transpose + source_offset, base_length * sizeof(float));
+			std::memcpy(cpu_hadamard + dest_offset, hadamard_20_transpose + source_offset, base_length * sizeof(float));
 		}
 	}
 	else
@@ -169,8 +169,7 @@ bool decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint reques
 		}
 	}
 
-
-	CUDA_RETURN_IF_ERROR(cudaMalloc( &d_hadamard, element_count * sizeof(float)));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_hadamard, cpu_hadamard, element_count * sizeof(float), cudaMemcpyHostToDevice));
 	free(cpu_hadamard);
 
 	return true;
