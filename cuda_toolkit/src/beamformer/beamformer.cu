@@ -70,7 +70,6 @@ Beamformer::_params_to_constants(const CudaBeamformerParameters& bp)
 bool
 Beamformer::setup_beamformer(const CudaBeamformerParameters& bp)
 {
-	bool old_readi_group_count = _constants.readi_group_count;
     bool readi_count_changed = _params_to_constants(bp);
 
     if(!readi_count_changed && _d_beamformer_hadamard)

@@ -1,8 +1,8 @@
 #include "../beamformer_constants.cuh"
 #include "../beamformer_utils.cuh"
-#include "../beamformer_kernels.cuh"
+#include "beamformer_kernels.cuh"
 
-namespace beamform::kernels
+namespace bf_kernels
 {
     __global__ void
     mixes_beamform(const cuComplex* rfData, cuComplex* volume, u8 mixes_rows[128])
@@ -89,7 +89,7 @@ namespace beamform::kernels
 
                 total = ADD_F2(total, value);
                 total_used_channels++;
-                //incoherent_sum += NORM_SQUARE_F2(value);
+                incoherent_sum += NORM_SQUARE_F2(value);
 
             }
         }
@@ -126,12 +126,12 @@ namespace beamform::kernels
 
                 total = ADD_F2(total, value);
                 total_used_channels++;
-                //incoherent_sum += NORM_SQUARE_F2(value);
+                incoherent_sum += NORM_SQUARE_F2(value);
 
             }
         }
 
-        float coherent_sum = NORM_SQUARE_F2(total);
+        //float coherent_sum = NORM_SQUARE_F2(total);
 
         //float coherency_factor = coherent_sum / (incoherent_sum * total_used_channels);
         //volume[volume_offset] = SCALE_F2(total, coherency_factor);
@@ -142,8 +142,6 @@ namespace beamform::kernels
     __global__ void
     per_channel_beamform(const cuComplex* rfData, cuComplex* volume, uint readi_group_id, const float* hadamard)
     {
-        uint tid = threadIdx.x;
-
         uint channel_id = threadIdx.x;
 
         __shared__ cuComplex das_samples[MAX_CHANNEL_COUNT * 2]; // 128 * 2

@@ -1,9 +1,7 @@
 #include <vector>
+
 #include <cuda_toolkit.hpp>
-
 #include "test_app.h"
-
-
 
 TestApp::TestApp()
 {

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "parameter_defs.h"
+#include "communication_params.h"
 
 #if defined(_WIN32)
     #define LIB_FN __declspec(dllexport)

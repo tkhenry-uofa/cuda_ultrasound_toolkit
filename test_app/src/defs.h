@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "parameter_defs.h"
+#include "communication_params.h"
 
 typedef void* Handle;
 

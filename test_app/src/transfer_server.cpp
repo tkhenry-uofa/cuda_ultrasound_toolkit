@@ -41,7 +41,7 @@ TransferServer::TransferServer( const char* command_pipe_name,
     }
 
     // Test writing to the shared memory
-    memset( _data_smem_raw, 1, _data_smem_size );
+    std::memset( _data_smem_raw, 1, _data_smem_size );
     _data_smem[0x40000000u] = 0xFFu; // Test writing to a large offset
 }
 

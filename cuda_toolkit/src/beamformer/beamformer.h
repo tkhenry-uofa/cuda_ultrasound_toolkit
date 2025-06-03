@@ -3,7 +3,7 @@
 #include <cuda_runtime.h>
 
 #include "beamformer_constants.cuh"
-#include "beamformer_kernels.cuh"
+#include "kernels/beamformer_kernels.cuh"
 #include "../defs.h"
 #include "../cuda_beamformer_parameters.h"
 

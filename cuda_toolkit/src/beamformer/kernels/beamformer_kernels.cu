@@ -1,6 +1,6 @@
 
-#include "beamformer_constants.cuh"
-#include "beamformer_utils.cuh"
+#include "../beamformer_constants.cuh"
+#include "../beamformer_utils.cuh"
 #include "beamformer_kernels.cuh"
 
 

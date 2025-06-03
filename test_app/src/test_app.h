@@ -1,6 +1,6 @@
 # pragma once
-#include "parameter_defs.h"
-#include "transfer_server/transfer_server.h"
+#include "communication_params.h"
+#include "transfer_server.h"
 
 
 class TestApp

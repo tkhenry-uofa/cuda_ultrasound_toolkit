@@ -6,7 +6,7 @@
 #include <cassert>
 #include <cstddef>
 
-#include "../defs.h"
+#include "defs.h"
 class TransferServer
 {
 public:
