@@ -376,4 +376,4 @@ FodyWeavers.xsd
 output/
 test_app/client_lib/output/
 
-[Ii]nclude/
+/[Ii]nclude/
