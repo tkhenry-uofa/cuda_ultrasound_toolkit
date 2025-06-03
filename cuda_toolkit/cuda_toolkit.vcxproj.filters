@@ -57,7 +57,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\beamformer\beamformer_constants.cuh" />
-    <ClInclude Include="src\beamformer\beamformer_kernels.cuh" />
     <ClInclude Include="src\beamformer\beamformer_utils.cuh" />
     <ClInclude Include="src\rf_processing\rf_processor.h">
       <Filter>Header Files</Filter>
@@ -76,11 +75,13 @@
     </ClInclude>
     <ClInclude Include="src\rf_processing\rf_ffts\hilbert_kernels.cuh" />
     <ClInclude Include="src\rf_processing\data_conversion\data_conversion_kernels.cuh" />
+    <ClInclude Include="src\beamformer\kernels\beamformer_kernels.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\beamformer\beamformer_kernels.cu" />
     <CudaCompile Include="src\beamformer\beamformer.cu" />
     <CudaCompile Include="src\rf_processing\rf_ffts\hilbert_handler.cu" />
     <CudaCompile Include="src\rf_processing\data_conversion\data_converter.cu" />
+    <CudaCompile Include="src\beamformer\kernels\beamformer_kernels.cu" />
+    <CudaCompile Include="src\beamformer\kernels\other_beamformers.cu" />
   </ItemGroup>
 </Project>
