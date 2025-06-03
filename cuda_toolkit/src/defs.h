@@ -19,6 +19,8 @@
 #include <cublas_v2.h>
 #include <cuda_gl_interop.h>
 
+#include "public/cuda_beamformer_parameters.h"
+
 constexpr float NaN = (float)0xFFFFFFFF; 
 
 constexpr float I_SQRT_64 = 0.125f;

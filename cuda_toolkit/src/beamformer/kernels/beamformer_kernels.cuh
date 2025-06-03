@@ -3,7 +3,6 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "../../defs.h"
-#include "../../cuda_beamformer_parameters.h"
 #include "../beamformer_constants.cuh"
 
 namespace bf_kernels

@@ -13,7 +13,6 @@
 #include "hadamard/hadamard_decoder.h"
 #include "rf_ffts/hilbert_handler.h"
 
-#include "../cuda_beamformer_parameters.h"
 #include "../defs.h"
 
 

@@ -1,7 +1,7 @@
 
-#include "beamformer/beamformer.h"
-#include "rf_processing/rf_processor.h"
-#include "cuda_toolkit.hpp"
+#include "../beamformer/beamformer.h"
+#include "../rf_processing/rf_processor.h"
+#include "../public/cuda_toolkit.hpp"
 
 static RfProcessor& get_rf_processor()
 {

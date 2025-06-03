@@ -80,6 +80,11 @@
     <OutDir>$(SolutionDir)output\$(Configuration)\</OutDir>
     <IntDir>build\$(Configuration)\</IntDir>
   </PropertyGroup>
+  <PropertyGroup>
+    <!-- Propagate the intermidate directory changes back to the cuda props (these aren't the property menu so this is a workaround) -->
+    <CudaIntDir>$(IntDir)</CudaIntDir>
+    <CudaIntDirFullPath>$(ProjectDir)$(CudaIntDir)</CudaIntDirFullPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -136,11 +141,16 @@
     </Link>
     <CudaLink>
       <AdditionalDependencies>cufft.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </CudaLink>
     <PostBuildEvent>
-      <Command>xcopy /Y /I "$(ProjectDir)src\*.h*" "$(SolutionDir)include\cuda_toolkit\" 
-</Command>
+      <Command>robocopy "$(ProjectDir)src\public" "$(ProjectDir)include" *.h* /MIR /NDL /NFL /NJH /NJS
+
+IF %ERRORLEVEL% LEQ 1 (
+    EXIT /B 0
+) ELSE (
+    EXIT /B %ERRORLEVEL%
+)</Command>
     </PostBuildEvent>
     <CudaCompile>
       <AdditionalOptions>-std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
@@ -169,8 +179,13 @@
       <AdditionalDependencies>cudart.lib;cudadevrt.lib;cufft.lib;cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /I "$(ProjectDir)src\*.h*" "$(SolutionDir)include\cuda_toolkit\" 
-</Command>
+      <Command>robocopy "$(ProjectDir)src\public" "$(ProjectDir)include" *.h* /MIR /NDL /NFL /NJH /NJS
+
+IF %ERRORLEVEL% LEQ 1 (
+    EXIT /B 0
+) ELSE (
+    EXIT /B %ERRORLEVEL%
+)</Command>
     </PostBuildEvent>
     <CudaCompile>
       <AdditionalOptions>-std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
@@ -185,9 +200,9 @@
     <CudaCompile Include="src\rf_processing\rf_ffts\hilbert_handler.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\cuda_toolkit.cpp" />
-    <ClCompile Include="src\cuda_toolkit_ogl.cpp" />
-    <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\api\cuda_toolkit.cpp" />
+    <ClCompile Include="src\api\cuda_toolkit_ogl.cpp" />
+    <ClCompile Include="src\api\dllmain.cpp" />
     <ClCompile Include="src\image_processing\image_processor.cpp" />
     <ClCompile Include="src\rf_processing\hadamard\hadamard_decoder.cpp" />
     <ClCompile Include="src\rf_processing\rf_processor.cpp" />
@@ -197,11 +212,11 @@
     <ClInclude Include="src\beamformer\beamformer_constants.cuh" />
     <ClInclude Include="src\beamformer\beamformer_utils.cuh" />
     <ClInclude Include="src\beamformer\kernels\beamformer_kernels.cuh" />
-    <ClInclude Include="src\cuda_beamformer_parameters.h" />
+    <ClInclude Include="src\public\cuda_beamformer_parameters.h" />
     <ClInclude Include="source\cuda_session.h" />
     <ClInclude Include="source\cuda_toolkit.h" />
-    <ClInclude Include="src\cuda_toolkit.hpp" />
-    <ClInclude Include="src\cuda_toolkit_ogl.h" />
+    <ClInclude Include="src\public\cuda_toolkit.hpp" />
+    <ClInclude Include="src\public\cuda_toolkit_ogl.h" />
     <ClInclude Include="src\defs.h" />
     <ClInclude Include="src\image_processing\image_processor.h" />
     <ClInclude Include="src\rf_processing\data_conversion\data_conversion_kernels.cuh" />

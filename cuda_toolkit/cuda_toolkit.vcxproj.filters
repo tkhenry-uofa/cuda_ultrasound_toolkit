@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\dllmain.cpp">
+    <ClCompile Include="src\api\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cuda_toolkit.cpp">
+    <ClCompile Include="src\api\cuda_toolkit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cuda_toolkit_ogl.cpp">
+    <ClCompile Include="src\api\cuda_toolkit_ogl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\rf_processing\rf_processor.cpp">
@@ -38,7 +38,7 @@
     <ClInclude Include="src\defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\cuda_beamformer_parameters.h">
+    <ClInclude Include="src\public\cuda_beamformer_parameters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\cuda_session.h">
@@ -47,10 +47,10 @@
     <ClInclude Include="source\cuda_toolkit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\cuda_toolkit.hpp">
+    <ClInclude Include="src\public\cuda_toolkit.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\cuda_toolkit_ogl.h">
+    <ClInclude Include="src\public\cuda_toolkit_ogl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\beamformer\beamformer.h">

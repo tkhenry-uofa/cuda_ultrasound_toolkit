@@ -1,4 +1,4 @@
-cuda_lib_header_path="../../include/cuda_toolkit"
+cuda_lib_header_path="../../cuda_toolkit/include"
 output_dir="output"
 mkdir -p ${output_dir}
 

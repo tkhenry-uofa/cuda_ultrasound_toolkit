@@ -1,5 +1,5 @@
-#include "rf_processing/rf_processor.h"
-#include "cuda_toolkit_ogl.h"
+#include "../rf_processing/rf_processor.h"
+#include "../public/cuda_toolkit_ogl.h"
 
 #define MAX_BUFFER_COUNT 16
 
