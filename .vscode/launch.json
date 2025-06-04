@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Test App",
+      "name": "Debug App",
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/output/Debug/test_app.exe",
@@ -14,7 +14,7 @@
       "preLaunchTask": "Build Debug"
     },
     {
-      "name": "Launch Test App Release",
+      "name": "Release app",
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/output/Release/test_app.exe",

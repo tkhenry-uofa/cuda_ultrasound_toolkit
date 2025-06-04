@@ -53,8 +53,21 @@ static inline const char* format_error_message(DWORD code) {
     return message;
 }
 
+static int64_t get_current_time_us()
+{
+    static LARGE_INTEGER frequency = {0};
+    if (frequency.QuadPart == 0) {
+        QueryPerformanceFrequency(&frequency);
+    }
+
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+
+    return (int64_t)((now.QuadPart * 1000000) / frequency.QuadPart);
+}
+
 void
-cleanup_shared_resources()
+_cleanup_shared_resources()
 {
     if (g_data)
     {
@@ -130,7 +143,6 @@ bool setup_shared_resources()
             return false;
         }
     }
-    memset(g_data, 0, DATA_SMEM_SIZE);
 
     if(!g_params)
     {
@@ -139,7 +151,6 @@ bool setup_shared_resources()
             return false;
         }
     }
-    memset(g_params, 0, sizeof(SharedMemoryParams));
     
     if(g_command_pipe == INVALID_HANDLE_VALUE)
     {
@@ -252,43 +263,36 @@ _beamform(const void* data, size_t data_size,
         return;
     }
 
-    //warning_msg("Created shared resources, sending data");
     // Load the beamformer parameters
     memcpy(g_params, bp, sizeof(CudaBeamformerParameters)); 
 
     // Copy the raw data to shared memory
     memcpy(g_data, data, data_size);
 
-    //warning_msg("Data copied to shared memory, sending command");
     if (!send_command(BEAMFORM_VOLUME, data_size))
     {
-        cleanup_shared_resources();
+        _cleanup_shared_resources();
         error_msg("Failed to send command to CUDA server");
         return;
     }
 
-    //warning_msg("Command sent, waiting for ack");
     if (!wait_for_ack())
     {
-        cleanup_shared_resources();
+        _cleanup_shared_resources();
         error_msg("Failed to receive ack from CUDA server");
         return;
     }
 
-    //warning_msg("Ack received, waiting for result");
     CommandPipeMessage result = wait_for_result();
     if (result.opcode == ERR)
     {
         error_msg("Failed to receive valid result from CUDA server");
-        cleanup_shared_resources();
+        _cleanup_shared_resources();
         return;
     }
 
-    //warning_msg("Result received, data size: %zu", result.data_size);
     size_t output_size = result.data_size;
     memcpy(output, g_data, output_size);
-
-    cleanup_shared_resources();
 }
 
 void 
@@ -303,6 +307,27 @@ beamform_f32(const float* data, CudaBeamformerParameters bp, float* output)
 {
     size_t data_size = bp.rf_raw_dim[0] * bp.rf_raw_dim[1] * sizeof(float);
     _beamform((void*)data, data_size, &bp, output);
+}
+
+void
+deinit()
+{
+    _cleanup_shared_resources();
+}
+
+BOOL APIENTRY 
+DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
+{
+    switch (ul_reason_for_call)
+    {
+    case DLL_PROCESS_ATTACH:
+        
+        break;
+    case DLL_PROCESS_DETACH:
+        _cleanup_shared_resources();
+        break;
+    }
+    return TRUE;
 }
 
 

@@ -1,4 +1,5 @@
 #include <vector>
+#include <chrono>
 
 #include <cuda_toolkit.hpp>
 #include "test_app.h"
@@ -52,15 +53,12 @@ TestApp::_message_loop()
 			break;
 		}
 		commands_received++;
-		std::cout << "Command received: " << commands_received << std::endl;
 
 		CommandPipeMessage command = command_opt.value();
-
 		switch(command.opcode)
 		{
 			case CudaCommand::BEAMFORM_VOLUME:
-				std::cout << "Beamforming volume." << std::endl;
-
+				std::cout << "Beamform volume command received." << std::endl;
 				if(!_handle_beamform_command(command))
 					throw std::runtime_error("Error handling beamform command");
 				break;
@@ -84,9 +82,6 @@ TestApp::_message_loop()
 			default:
 				std::cerr << "Unknown command opcode (" << command.opcode << ") received." << std::endl;
 		}
-
-
-		std::cout << "Command completed." << std::endl;
 	}
 }
 
@@ -112,7 +107,6 @@ TestApp::_handle_beamform_command(const CommandPipeMessage& command)
 	}
 
     _transfer_server->respond_ack();
-    std::cout << "Beamforming with data size: " << data_size << std::endl;
     // Beamform the data
 
     uint output_size = bp->output_points[0] * bp->output_points[1] * bp->output_points[2] * sizeof(float) * 2; // Assuming output is float2
@@ -124,8 +118,6 @@ TestApp::_handle_beamform_command(const CommandPipeMessage& command)
     }
 
     u8* output_data = new u8[output_size];
-
-    std::cout << "Output size: " << output_size << std::endl;
 
 	if (!cuda_toolkit::beamform(
 			std::span<const u8>(data_buffer.data(), data_size),

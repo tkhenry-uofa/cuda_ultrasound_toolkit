@@ -17,6 +17,8 @@ LIB_FN void beamform_i16( const short* data, CudaBeamformerParameters bp, float*
 
 LIB_FN void beamform_f32(const float* data, CudaBeamformerParameters bp, float* output);
 
+LIB_FN void deinit();
+
 #ifdef __cplusplus
 }   // extern "C"  
 #endif

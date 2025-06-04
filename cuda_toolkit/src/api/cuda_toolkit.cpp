@@ -100,9 +100,9 @@ inspect_buffers()
 	cudaMemcpy(rf, buffers.d_rf, buffers.decoded_data_size, cudaMemcpyDeviceToHost);
 	cudaMemcpy(output, buffers.d_output, buffers.output_data_size, cudaMemcpyDeviceToHost);
 
-	std::cout << "Input buffer size: " << buffers.raw_data_size << " bytes" << std::endl;
-	std::cout << "Decoded buffer size: " << buffers.decoded_data_size << " bytes" << std::endl;
-	std::cout << "RF buffer size: " << buffers.decoded_data_size << " bytes" << std::endl;
+	std::cout << "[Inspect Buffer] Input buffer size: " << buffers.raw_data_size << " bytes" << std::endl;
+	std::cout << "[Inspect Buffer] Decoded buffer size: " << buffers.decoded_data_size << " bytes" << std::endl;
+	std::cout << "[Inspect Buffer] RF buffer size: " << buffers.decoded_data_size << " bytes" << std::endl;
 
 	free(input);
 	free(decoded);
@@ -115,7 +115,6 @@ cuda_toolkit::beamform(std::span<const uint8_t> input_data,
                          std::span<uint8_t> output_data, 
                          const CudaBeamformerParameters& bp)
 {
-    bool result = false;
     auto& beamformer = get_beamformer();
     auto& rf_processor = get_rf_processor();
 	auto& buffers = get_beamformer_buffers();
@@ -143,7 +142,6 @@ cuda_toolkit::beamform(std::span<const uint8_t> input_data,
         std::cerr << "Failed to initialize RF processor." << std::endl;
         return false;
     }
-
     if(!rf_processor.set_channel_mapping(channel_mapping))
     {
         std::cerr << "Failed to set channel mapping." << std::endl;
@@ -168,15 +166,18 @@ cuda_toolkit::beamform(std::span<const uint8_t> input_data,
         return false;
 	}
     
+    bool result = false;
     if (beamformer.beamform(buffers.d_rf, buffers.d_output, bp))
     {
         CUDA_RETURN_IF_ERROR(cudaMemcpy(output_data.data(), buffers.d_output, output_data_size, cudaMemcpyDeviceToHost));
-		inspect_buffers(); // Optional: Inspect buffers for debugging
-        return true;
+		//inspect_buffers();
+        result = true;
     }
     else
     {
         std::cerr << "Beamforming failed." << std::endl;
-        return false;
+        result = false;
     }
+
+    return result;
 }

@@ -1,7 +1,7 @@
 #include "transfer_server.h"
 
 #define COMMAND_WAIT_TIMEOUT 60 * 60 * 1000 // 1 hour
-#define COMMAND_POLL_PERIOD 100 // 100ms
+#define COMMAND_POLL_PERIOD 10 // 100ms
 
 #define MAX_DATA_SIZE UINT32_MAX
 

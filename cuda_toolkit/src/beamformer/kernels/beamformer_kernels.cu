@@ -111,7 +111,6 @@ __host__ bool
 copy_kernel_constants(const BeamformerConstants& constants)
 {
 	CUDA_RETURN_IF_ERROR(cudaMemcpyToSymbol(Beamformer_Constants, &constants, sizeof(constants)));
-	std::cout << "Beamformer constants copied to device." << std::endl;
 	return true;
 }
 
