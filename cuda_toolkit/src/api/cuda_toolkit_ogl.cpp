@@ -105,8 +105,9 @@ init_cuda_configuration(const uint* input_dims, const uint* decoded_dims)
 void
 deinit_cuda_configuration()
 {
-    RfProcessor& rf_processor = get_session_().rf_processor;
-    rf_processor.deinit();
+    CudaManager& cuda_manager = get_session_().cuda_manager;
+    cuda_manager.deinit();
+    unregister_ogl_buffers_();
 }
 
 bool
