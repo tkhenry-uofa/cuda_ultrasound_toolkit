@@ -107,6 +107,7 @@ deinit_cuda_configuration()
 {
     CudaManager& cuda_manager = get_session_().cuda_manager;
     cuda_manager.deinit();
+    unregister_ogl_buffers_();
 }
 
 bool
