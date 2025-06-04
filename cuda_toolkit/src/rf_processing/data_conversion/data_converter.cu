@@ -3,6 +3,7 @@
 #include "data_converter.h"
 
 
+
 namespace data_conversion
 {
     bool
@@ -36,6 +37,10 @@ namespace data_conversion
         kernels::convert_to_f32<int16_t><<<grid_dim, block_dim >>>(d_input, d_output, input_dims, output_dims, _d_channel_mapping);
         CUDA_RETURN_IF_ERROR(cudaGetLastError());
         CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());
+
+
+        uint input_count = input_dims.x * input_dims.y;
+		uint output_count = output_dims.x * output_dims.y * output_dims.z;
 
         return true;
     }

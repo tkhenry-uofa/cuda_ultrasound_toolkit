@@ -236,8 +236,8 @@ wait_for_result()
     return message;
 }
 
-void 
-beamform(const void* data, size_t data_size,
+static void 
+_beamform(const void* data, size_t data_size,
               const CudaBeamformerParameters* bp, float* output)
 {
     if (data_size > DATA_SMEM_SIZE)
@@ -291,17 +291,18 @@ beamform(const void* data, size_t data_size,
     cleanup_shared_resources();
 }
 
-void beamform_i16( const short* data, CudaBeamformerParameters bp, float* output)
+void 
+beamform_i16( const short* data, CudaBeamformerParameters bp, float* output)
 {
     size_t data_size = bp.rf_raw_dim[0] * bp.rf_raw_dim[1] * sizeof(short);
-    beamform(data, data_size, &bp, output);
+    _beamform((void*)data, data_size, &bp, output);
 }
 
 void
 beamform_f32(const float* data, CudaBeamformerParameters bp, float* output)
 {
     size_t data_size = bp.rf_raw_dim[0] * bp.rf_raw_dim[1] * sizeof(float);
-    beamform(data, data_size, &bp, output);
+    _beamform((void*)data, data_size, &bp, output);
 }
 
 

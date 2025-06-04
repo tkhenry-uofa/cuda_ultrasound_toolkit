@@ -13,11 +13,9 @@ extern "C" {
     #define LIB_FN
 #endif
 
-
 LIB_FN void beamform_i16( const short* data, CudaBeamformerParameters bp, float* output);
 
-LIB_FN void beamform_f32( const float* data, CudaBeamformerParameters bp, float* output);
-
+LIB_FN void beamform_f32(const float* data, CudaBeamformerParameters bp, float* output);
 
 #ifdef __cplusplus
 }   // extern "C"  

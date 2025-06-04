@@ -114,27 +114,7 @@ RfProcessor::set_match_filter(std::span<const float> match_filter)
 }
 
 bool
-RfProcessor::_i16_convert_decode(i16* d_input, float* d_output)
-{
-    bool result = _data_converter->convert_i16(d_input, _decode_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
-    if (!result)
-    {
-        std::cerr << "Failed to convert data." << std::endl;
-        return false;
-    }
-
-    result = _hadamard_decoder->decode(_decode_buffers.d_converted, d_output, _dec_data_dim);
-    if (!result)
-    {
-        std::cerr << "Failed to decode Hadamard data." << std::endl;
-        return false;
-    }
-
-    return true;
-}
-
-bool
-RfProcessor::i16_convert_decode_strided(i16* d_input, cuComplex* d_output)
+RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDataType type)
 {
 	if (!_init)
 	{
@@ -142,14 +122,38 @@ RfProcessor::i16_convert_decode_strided(i16* d_input, cuComplex* d_output)
 		return false;
 	}
 
-	bool result = _i16_convert_decode(d_input, _decode_buffers.d_decoded);
+    bool result;
+    if(type == InputDataType::I16)
+    {
+        result = _data_converter->convert_i16(reinterpret_cast<i16*>(d_input), _decode_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
+    }
+    else if(type == InputDataType::F32)
+    {
+        result = _data_converter->convert_f32(reinterpret_cast<float*>(d_input), _decode_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
+    }
+    else
+    {
+        std::cerr << "Unsupported input data type." << std::endl;
+        return false;
+    }
+    
+    if (!result)
+    {
+        std::cerr << "Failed to convert data." << std::endl;
+        return false;
+    }
+
+    result = _hadamard_decoder->decode(_decode_buffers.d_converted, _decode_buffers.d_decoded, _dec_data_dim);
+    if (!result)
+    {
+        std::cerr << "Failed to decode Hadamard data." << std::endl;
+        return false;
+    }
 
     // Decode output is packed real floats, but OGL expects complex 
     // so do a strided copy to fit interleaved complex 
     size_t data_count = _decoded_data_count();
-    cudaMemset(d_output, 0x00, data_count);
     CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, d_output, data_count);
-
     return result;
 }
 

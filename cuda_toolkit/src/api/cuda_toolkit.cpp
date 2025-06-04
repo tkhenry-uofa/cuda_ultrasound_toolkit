@@ -85,6 +85,31 @@ update_beamformer_buffers(size_t rf, size_t dec, size_t out)
     return true;
 }
 
+static void
+inspect_buffers()
+{
+	auto& buffers = get_beamformer_buffers();
+
+	void* input = std::malloc(buffers.raw_data_size);
+	cuComplex* decoded = (cuComplex*)std::malloc(buffers.decoded_data_size);
+	cuComplex* rf = (cuComplex*)std::malloc(buffers.decoded_data_size);
+	cuComplex* output = (cuComplex*)std::malloc(buffers.output_data_size);
+
+	cudaMemcpy(input, buffers.d_input, buffers.raw_data_size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(decoded, buffers.d_decoded, buffers.decoded_data_size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(rf, buffers.d_rf, buffers.decoded_data_size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(output, buffers.d_output, buffers.output_data_size, cudaMemcpyDeviceToHost);
+
+	std::cout << "Input buffer size: " << buffers.raw_data_size << " bytes" << std::endl;
+	std::cout << "Decoded buffer size: " << buffers.decoded_data_size << " bytes" << std::endl;
+	std::cout << "RF buffer size: " << buffers.decoded_data_size << " bytes" << std::endl;
+
+	free(input);
+	free(decoded);
+	free(rf);
+	free(output);
+}
+
 bool 
 cuda_toolkit::beamform(std::span<const uint8_t> input_data, 
                          std::span<uint8_t> output_data, 
@@ -95,8 +120,8 @@ cuda_toolkit::beamform(std::span<const uint8_t> input_data,
     auto& rf_processor = get_rf_processor();
 	auto& buffers = get_beamformer_buffers();
 
-    uint2 rf_raw_dim = { bp.rf_raw_dim[0], bp.rf_raw_dim[1] };
-    uint3 dec_data_dim = { bp.dec_data_dim[0], bp.dec_data_dim[1], bp.dec_data_dim[2] };
+    uint2 rf_raw_dim =      { bp.rf_raw_dim[0], bp.rf_raw_dim[1] };
+    uint3 dec_data_dim =    { bp.dec_data_dim[0], bp.dec_data_dim[1], bp.dec_data_dim[2] };
     uint4 output_data_dim = { bp.output_points[0], bp.output_points[1], bp.output_points[2], bp.output_points[3] };
 
     size_t raw_data_size = input_data.size();
@@ -131,7 +156,7 @@ cuda_toolkit::beamform(std::span<const uint8_t> input_data,
         return false;
     }
 
-    if (!rf_processor.i16_convert_decode_strided(reinterpret_cast<i16*>(buffers.d_input), buffers.d_decoded))
+    if (!rf_processor.convert_decode_strided(buffers.d_input, buffers.d_decoded, bp.data_type))
     {
         std::cerr << "Failed to decode RF data." << std::endl;
         return false;
@@ -146,6 +171,7 @@ cuda_toolkit::beamform(std::span<const uint8_t> input_data,
     if (beamformer.beamform(buffers.d_rf, buffers.d_output, bp))
     {
         CUDA_RETURN_IF_ERROR(cudaMemcpy(output_data.data(), buffers.d_output, output_data_size, cudaMemcpyDeviceToHost));
+		inspect_buffers(); // Optional: Inspect buffers for debugging
         return true;
     }
     else

@@ -208,7 +208,7 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
 
     size_t input_offset_count = input_offset / sizeof(int16_t);
 
-    bool result = rf_processor.i16_convert_decode_strided(d_input + input_offset_count, d_output);
+    bool result = rf_processor.convert_decode_strided(d_input + input_offset_count, d_output, InputDataType::I16);
     if (!result)
     {
         std::cerr << "Failed to decode data." << std::endl;

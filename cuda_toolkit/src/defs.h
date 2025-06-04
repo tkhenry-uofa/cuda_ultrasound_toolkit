@@ -68,11 +68,6 @@ inline double hamming_coef(int n, int N)
 }
 
 
-template <typename T> void 
-sample_data(const T* d_value, T* h_value, uint count = 1)
-{
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(h_value, d_value, count * sizeof(T), cudaMemcpyDeviceToHost));
-}
 
 inline std::string format_cplx(const cuComplex& value)
 {
@@ -153,6 +148,13 @@ inline std::string format_cplx(const cuComplex& value)
     CUDA_RETURN_IF_ERROR(cudaMemcpy2D(DEST, 2 * sizeof(float), SOURCE, sizeof(float),       \
                                       sizeof(float), COUNT, cudaMemcpyDefault));            \
 }   while (0)                                                                               \
+
+
+template <typename T> void
+sample_data(const T* d_value, T* h_value, uint count = 1)
+{
+    cudaMemcpy(h_value, d_value, count * sizeof(T), cudaMemcpyDeviceToHost);
+}
 
 
 #endif // !DEFS_H

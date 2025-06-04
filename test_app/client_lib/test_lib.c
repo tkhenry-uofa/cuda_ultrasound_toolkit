@@ -41,12 +41,13 @@ int main()
     params.output_points[0] = output_dim[0];
     params.output_points[1] = output_dim[1];
     params.output_points[2] = output_dim[2];
+    params.data_type = I16; // Set data type to int16_t
     // Set other params as needed...
 
     // Call the function
-    beamform_i16(rf_data, params, output);
+    beamform_f32((float*)rf_data, params, output);
 
-    printf("beamform_i16 returned\n");
+    printf("beamform_f32 returned\n");
 
     // Cleanup
     free(rf_data);

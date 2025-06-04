@@ -32,12 +32,11 @@ public:
     bool set_channel_mapping(std::span<const int16_t> channel_mapping);
     bool set_match_filter(std::span<const float> match_filter);
 
-	bool i16_convert_decode_strided(i16* d_input, cuComplex* d_output);
+	bool convert_decode_strided(void* d_input, cuComplex* d_output, InputDataType type);
     
     bool hilbert_transform_strided(float* d_input, cuComplex* d_output);
 
 private:
-    bool _i16_convert_decode(i16* d_input, float* d_output);
 
     bool _setup_decode_buffers();
     bool _cleanup_decode_buffers();
