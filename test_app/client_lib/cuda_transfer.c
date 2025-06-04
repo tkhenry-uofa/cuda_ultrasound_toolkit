@@ -252,14 +252,14 @@ _beamform(const void* data, size_t data_size,
         return;
     }
 
-    warning_msg("Created shared resources, sending data");
+    //warning_msg("Created shared resources, sending data");
     // Load the beamformer parameters
     memcpy(g_params, bp, sizeof(CudaBeamformerParameters)); 
 
     // Copy the raw data to shared memory
     memcpy(g_data, data, data_size);
 
-    warning_msg("Data copied to shared memory, sending command");
+    //warning_msg("Data copied to shared memory, sending command");
     if (!send_command(BEAMFORM_VOLUME, data_size))
     {
         cleanup_shared_resources();
@@ -267,7 +267,7 @@ _beamform(const void* data, size_t data_size,
         return;
     }
 
-    warning_msg("Command sent, waiting for ack");
+    //warning_msg("Command sent, waiting for ack");
     if (!wait_for_ack())
     {
         cleanup_shared_resources();
@@ -275,7 +275,7 @@ _beamform(const void* data, size_t data_size,
         return;
     }
 
-    warning_msg("Ack received, waiting for result");
+    //warning_msg("Ack received, waiting for result");
     CommandPipeMessage result = wait_for_result();
     if (result.opcode == ERR)
     {
@@ -284,7 +284,7 @@ _beamform(const void* data, size_t data_size,
         return;
     }
 
-    warning_msg("Result received, data size: %zu", result.data_size);
+    //warning_msg("Result received, data size: %zu", result.data_size);
     size_t output_size = result.data_size;
     memcpy(output, g_data, output_size);
 
