@@ -19,6 +19,14 @@ namespace bf_kernels
     __global__ void
     mixes_beamform(const cuComplex* rfData, cuComplex* volume, u8 mixes_rows[128]);
 
+    __global__ void
+    forces_beamform(const cuComplex* rfData, cuComplex* volume, const float* hadamard);
+
     __host__ bool
 	copy_kernel_constants(const BeamformerConstants& constants);
+
+    template<SequenceId SEQUENCE, ReadiOrdering READI_ORDER> __global__ void
+    readi_beamform(const cuComplex* rfData, cuComplex* volume, const float* hadamard);
 }
+
+

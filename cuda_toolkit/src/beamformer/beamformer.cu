@@ -159,7 +159,7 @@ Beamformer::_per_voxel_beamform(cuComplex* d_rf_buffer, cuComplex* d_volume)
     }
     else
     {
-        bf_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_buffer, d_volume, d_hadamard_row);
+        bf_kernels::forces_beamform << < grid_dim, block_dim >> > (d_rf_buffer, d_volume, d_hadamard_row);
     }
     
 

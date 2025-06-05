@@ -43,7 +43,8 @@ void
 TestApp::_message_loop()
 {
     int commands_received = 0;
-	while(true)
+	bool exit = false;
+	while(!exit)
 	{
 		std::cout << "Waiting for command..." << std::endl;
 		auto command_opt = _transfer_server->wait_for_command();
@@ -84,6 +85,7 @@ TestApp::_message_loop()
 		}
 
 		std::cout << "Command handled, total processed: " << commands_received << std::endl << std::endl;
+		exit = true;
 	}
 }
 
