@@ -12,10 +12,12 @@ namespace rf_fft::kernels
     }
 
     // This is templated so that we can remove the branch applying the filter kernel
+    // Block dims are <128, 1, 1>, each thread is a sample.
+    // Grid dims are <channel_count, sample_count / 128, 1>
     template <bool UseFilter> __global__ void
     scale_and_filter(cuComplex* spectrums, const cuComplex* filter_kernel, uint sample_count, uint cutoff)
     {
-        uint sample_idx = threadIdx.x + blockIdx.x * blockDim.x;
+        uint sample_idx = threadIdx.x + blockIdx.y * blockDim.x;
         if (sample_idx > cutoff) return; // We only need to process the first half of the spectrum.
 
         // This should be 2/N, 2 for the hilbert transform and 1/N for the ifft normalization.
@@ -25,7 +27,7 @@ namespace rf_fft::kernels
         // Scale the DC and Nyquist components by 0.5 compared to the rest of the spectrum (analytic signal)
         if (sample_idx == 0 || sample_idx == cutoff) scale_factor *= 0.5f;
 
-        uint channel_offset = blockIdx.y * sample_count;
+        uint channel_offset = blockIdx.x * sample_count;
         cuComplex scaled_output = SCALE_F2(spectrums[channel_offset + sample_idx], scale_factor);
 
         // Templating away this branch

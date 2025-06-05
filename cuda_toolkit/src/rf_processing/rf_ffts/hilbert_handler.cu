@@ -84,7 +84,8 @@ namespace rf_fft
 		uint grid_length = (cutoff + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK; // Divide and round up
         uint channel_count = _fft_dims.y;
 
-        dim3 grid_dim(grid_length, channel_count, 1);
+        // Grid dim y and z cant be bigger than 2^16 - 1, so we put channel count in X as it could pass that
+        dim3 grid_dim(channel_count, grid_length, 1);
         dim3 block_dim(MAX_THREADS_PER_BLOCK, 1, 1);
 
         if(_d_filter)
