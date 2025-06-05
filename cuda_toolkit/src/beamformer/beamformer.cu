@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "../rf_processing/hadamard/hadamard_decoder.h"
+#include "kernels/beamformer_kernels.cuh"
 #include "beamformer.h"
 
 bool
@@ -61,8 +62,11 @@ Beamformer::_params_to_constants(const CudaBeamformerParameters& bp)
     {
         constants.focal_direction = bf_kernels::FocalDirection::XZ_PLANE;
     }
+    
 
-    bool readi_count_changed = (_constants.readi_group_count != bp.readi_group_count);
+    bool readi_count_changed = (_constants.readi_group_count != bp.readi_group_count ||
+                                _constants.readi_order != bp.readi_ordering);
+
     std::memcpy(&_constants, &constants, sizeof(bf_kernels::BeamformerConstants));
     return readi_count_changed;
 }
@@ -148,7 +152,16 @@ Beamformer::_per_voxel_beamform(cuComplex* d_rf_buffer, cuComplex* d_volume)
     dim3 block_dim = { MAX_THREADS_PER_BLOCK, 1, 1 };
 
     auto start = std::chrono::high_resolution_clock::now();
-    bf_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_buffer, d_volume, d_hadamard_row);
+
+    if (_constants.readi_order == ReadiOrdering::WALSH)
+    {
+        bf_kernels::walsh_beamform << < grid_dim, block_dim >> > (d_rf_buffer, d_volume, d_hadamard_row);
+    }
+    else
+    {
+        bf_kernels::per_voxel_beamform << < grid_dim, block_dim >> > (d_rf_buffer, d_volume, d_hadamard_row);
+    }
+    
 
     CUDA_RETURN_IF_ERROR(cudaGetLastError());
     CUDA_RETURN_IF_ERROR(cudaDeviceSynchronize());

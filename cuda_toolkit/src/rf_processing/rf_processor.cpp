@@ -4,7 +4,8 @@
 RfProcessor::RfProcessor() : _init(false),
                             _rf_raw_dim({ 0, 0 }),
                             _dec_data_dim({ 0, 0, 0 }),
-                            _decode_buffers({nullptr, nullptr })
+                            _decode_buffers({nullptr, nullptr }),
+                            _readi_ordering(ReadiOrdering::HADAMARD)
 {
     _data_converter = std::make_unique<data_conversion::DataConverter>();
     _hilbert_handler = std::make_unique<rf_fft::HilbertHandler>();
@@ -20,8 +21,9 @@ bool
 RfProcessor::init(uint2 rf_raw_dim, uint3 dec_data_dim, ReadiOrdering readi_ordering)
 {
 
-    if (_init && !_dims_changed(rf_raw_dim, dec_data_dim))
+    if (_init && !_dims_changed(rf_raw_dim, dec_data_dim, readi_ordering))
     {
+        std::cerr << "Session already initialized with the same dimensions." << std::endl;
         return true;
     }
 
@@ -37,6 +39,7 @@ RfProcessor::init(uint2 rf_raw_dim, uint3 dec_data_dim, ReadiOrdering readi_orde
 
     _rf_raw_dim = rf_raw_dim;
     _dec_data_dim = dec_data_dim;
+    _readi_ordering = readi_ordering;
 
     if(!_setup_decode_buffers())
     {

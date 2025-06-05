@@ -41,14 +41,14 @@ private:
     bool _setup_decode_buffers();
     bool _cleanup_decode_buffers();
 
-    bool _dims_changed(uint2 rf_raw_dim, uint3 dec_data_dim) const
+    bool _dims_changed(uint2 rf_raw_dim, uint3 dec_data_dim, ReadiOrdering readi_order) const
     {
         return _rf_raw_dim.x != rf_raw_dim.x || 
                _rf_raw_dim.y != rf_raw_dim.y ||
                _dec_data_dim.x != dec_data_dim.x ||
                _dec_data_dim.y != dec_data_dim.y ||
-               _dec_data_dim.z != dec_data_dim.z;
-
+               _dec_data_dim.z != dec_data_dim.z ||
+			   _readi_ordering != readi_order;
     };
 
     size_t _decoded_data_count() { return (size_t)(_dec_data_dim.x) * _dec_data_dim.y * _dec_data_dim.z;}
@@ -60,6 +60,7 @@ private:
     std::unique_ptr<decoding::HadamardDecoder> _hadamard_decoder;
     uint2 _rf_raw_dim;
     uint3 _dec_data_dim;
+    ReadiOrdering _readi_ordering;
 
     struct 
     {
