@@ -26,7 +26,7 @@ public:
     RfProcessor& operator=(RfProcessor&&) = delete;
 	~RfProcessor() { deinit(); }
 
-    bool init(uint2 rf_raw_dim, uint3 dec_data_dim);
+    bool init(uint2 rf_raw_dim, uint3 dec_data_dim, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD);
     bool deinit();
 
     bool set_channel_mapping(std::span<const int16_t> channel_mapping);

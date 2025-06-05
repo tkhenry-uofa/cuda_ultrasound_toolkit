@@ -82,6 +82,8 @@ TestApp::_message_loop()
 			default:
 				std::cerr << "Unknown command opcode (" << command.opcode << ") received." << std::endl;
 		}
+
+		std::cout << "Command handled, total processed: " << commands_received << std::endl << std::endl;
 	}
 }
 

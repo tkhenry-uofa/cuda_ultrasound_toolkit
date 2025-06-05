@@ -17,7 +17,7 @@ RfProcessor::RfProcessor() : _init(false),
 }
 
 bool
-RfProcessor::init(uint2 rf_raw_dim, uint3 dec_data_dim)
+RfProcessor::init(uint2 rf_raw_dim, uint3 dec_data_dim, ReadiOrdering readi_ordering)
 {
 
     if (_init && !_dims_changed(rf_raw_dim, dec_data_dim))
@@ -52,7 +52,7 @@ RfProcessor::init(uint2 rf_raw_dim, uint3 dec_data_dim)
         return false;
     }
 
-    if (!_hadamard_decoder->set_hadamard(dec_data_dim.z, ReadiOrdering::HADAMARD))
+    if (!_hadamard_decoder->set_hadamard(dec_data_dim.z, readi_ordering))
     {
         std::cerr << "Failed to generate Hadamard matrix." << std::endl;
         return false;
