@@ -81,6 +81,7 @@ inline std::string format_cplx(const cuComplex& value)
 
 
 
+
 //#ifdef _DEBUG
 	#include <assert.h>
 	#define ASSERT(x) assert(x)
@@ -156,6 +157,19 @@ sample_data(const T* d_value, T* h_value, uint count = 1)
     cudaMemcpy(h_value, d_value, count * sizeof(T), cudaMemcpyDeviceToHost);
 }
 
+
+namespace types
+{
+    template <InputDataTypes> struct type_for;
+
+    template <> struct type_for<InputDataTypes::TYPE_I16> { using type = int16_t; };
+    template <> struct type_for<InputDataTypes::TYPE_F32> { using type = float; };
+    template <> struct type_for<InputDataTypes::TYPE_F32C> { using type = cuComplex; };
+    template <> struct type_for<InputDataTypes::TYPE_U8> { using type = uint8_t; };
+
+    template <InputDataTypes T>
+    using type_for_t = typename type_for<T>::type;
+};
 
 #endif // !DEFS_H
 

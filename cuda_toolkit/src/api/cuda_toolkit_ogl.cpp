@@ -1,4 +1,5 @@
 #include "../rf_processing/rf_processor.h"
+#include "../public/cuda_beamformer_parameters.h"
 #include "../public/cuda_toolkit_ogl.h"
 
 #define MAX_BUFFER_COUNT 16
@@ -208,7 +209,7 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
 
     size_t input_offset_count = input_offset / sizeof(int16_t);
 
-    bool result = rf_processor.convert_decode_strided(d_input + input_offset_count, d_output, InputDataType::I16);
+    bool result = rf_processor.convert_decode_strided(d_input + input_offset_count, d_output, InputDataTypes::TYPE_I16);
     if (!result)
     {
         std::cerr << "Failed to decode data." << std::endl;

@@ -7,6 +7,8 @@ extern "C" {
 
 #define MAX_CHANNEL_COUNT 256
 
+typedef unsigned int uint;
+
 typedef enum TxRxDirection
 {
 	TX_ROW_RX_ROW = 0,
@@ -40,19 +42,32 @@ typedef enum SequenceId
 	MIXES_S = 100,
 } SequenceId;
 
-typedef enum InputDataType
+typedef enum InputDataTypes
 {
 	INVALID_TYPE = 0,
-    I16 = 1,
-    F32 = 2,
-    F32C = 3,
-} InputDataType;
+    TYPE_I16 = 1,
+    TYPE_F32 = 2,
+    TYPE_F32C = 3,
+	TYPE_U8 = 4,
+} InputDataTypes;
+
 
 typedef enum ReadiOrdering
 {
     HADAMARD = 0,
     WALSH = 1,
 } ReadiOrdering;
+
+typedef struct NccCompParameters
+{
+	uint patch_size; 			// Patch size in pixels (assumed square)
+	uint motion_grid_spacing;	// [pixels] Spacing between sample patches
+	uint search_margins[2];		// [rows, cols] how far outside the patch to search for motion (symmetric)
+	float correlation_threshold;// Threshold for the peak to be considered valid relative to the value for no motion.
+	float min_patch_variance; 	// Minimum variance of the search patch, if its too flat we won't get a good result
+	uint reference_frame;		// Frame to use as the reference for the computation
+	InputDataTypes data_type;  // Image data type, f32 or u8
+} NccCompParameters;
 
 typedef struct CudaBeamformerParameters
 {
@@ -62,8 +77,8 @@ typedef struct CudaBeamformerParameters
 	float xdc_transform[16];		// 4x4 Orientation Matrix for the transducer, (column major order)
 	float xdc_element_pitch[2];		// [m] Transducer Element Pitch {row, col}
 
-	unsigned int rf_raw_dim[2];		// Raw Data Dimensions [samples * transmits + padding, total_channels (rows + cols)]
-	unsigned int dec_data_dim[4];	// Expected dimensions after decoding [samples, rx_channels, transmits]; last element ignored
+	uint rf_raw_dim[2];		// Raw Data Dimensions [samples * transmits + padding, total_channels (rows + cols)]
+	uint dec_data_dim[4];	// Expected dimensions after decoding [samples, rx_channels, transmits]; last element ignored
 
 	bool decode;					// Decode or just reshape data
 	TxRxDirection transmit_mode;	// TX and RX directions
@@ -73,7 +88,7 @@ typedef struct CudaBeamformerParameters
 	/*
 	*	BP UI (Beamforming settings)
 	*/
-	unsigned int output_points[4];	// [X, Y, Z, Frames]
+	uint output_points[4];	// [X, Y, Z, Frames]
 	float output_min_coordinate[4];	// [m] Min XYZ positions, 4th value ignored
 	float output_max_coordinate[4];	// [m] Max XYZ positions, 4th value ignored
 
@@ -99,18 +114,18 @@ typedef struct CudaBeamformerParameters
 	/*
 	*	Extra parameters (not part of the standard BP)
 	*/
-	unsigned int readi_group_count;	// Number of READI groups in the scheme
-	unsigned int readi_group_id;	// Which READI group this represents
+	uint readi_group_count;	// Number of READI groups in the scheme
+	uint readi_group_id;	// Which READI group this represents
 	ReadiOrdering readi_ordering;	// Ordering of the READI groups
 
-	unsigned int mixes_count;		// Number of mixes crosses
-	unsigned int mixes_offset;		// Cross offset at the center of the array
-	unsigned int mixes_rows[128];	// Cross row IDs (same for columns)
+	uint mixes_count;		// Number of mixes crosses
+	uint mixes_offset;		// Cross offset at the center of the array
+	uint mixes_rows[128];	// Cross row IDs (same for columns)
 
-	unsigned int filter_length;		// Length of the filter
+	uint filter_length;		// Length of the filter
 	float rf_filter[1024];			// Time domain kernel of the filter (assumed to be sampled at fs)
 
-	InputDataType data_type;		// Type of the raw data being passed in
+	InputDataTypes data_type;		// Type of the raw data being passed in
 } CudaBeamformerParameters;
 
 #ifdef __cplusplus

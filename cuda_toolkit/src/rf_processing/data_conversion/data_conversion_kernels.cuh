@@ -9,11 +9,11 @@
 
 
 namespace data_conversion::kernels 
-{
-    template<typename T>
-    concept SupportedType = std::is_same_v<T, int16_t> || std::is_same_v<T, float>;
+{    
+    template <typename T>
+    concept SupportedConversionType = std::is_same_v<T, int16_t> || std::is_same_v<T, float> || std::is_same_v<T, cuComplex>;
     
-    template<SupportedType T> __global__ void
+    template<SupportedConversionType T> __global__ void
     convert_to_f32(const T* input, float* output, uint2 input_dims, uint3 output_dims, const short* d_channel_mapping)
     {
         uint raw_sample_idx = threadIdx.x + blockIdx.x * blockDim.x;

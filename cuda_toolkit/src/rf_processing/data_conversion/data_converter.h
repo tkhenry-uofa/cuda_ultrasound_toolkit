@@ -23,8 +23,8 @@ namespace data_conversion
 
         bool copy_channel_mapping(std::span<const int16_t> channel_mapping);
 
-        bool convert_i16(const int16_t* d_input, float* d_output, uint2 input_dims, uint3 output_dims);
-        bool convert_f32(const float* d_input, float* d_output, uint2 input_dims, uint3 output_dims);
+        bool convert(const void* d_input, void* d_output, InputDataTypes input_type, uint2 input_dims, uint3 output_dims);
+        
 
     private:
         short* _d_channel_mapping;

@@ -117,7 +117,7 @@ RfProcessor::set_match_filter(std::span<const float> match_filter)
 }
 
 bool
-RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDataType type)
+RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDataTypes type)
 {
 	if (!_init)
 	{
@@ -125,20 +125,8 @@ RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDat
 		return false;
 	}
 
-    bool result;
-    if(type == InputDataType::I16)
-    {
-        result = _data_converter->convert_i16(reinterpret_cast<i16*>(d_input), _decode_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
-    }
-    else if(type == InputDataType::F32)
-    {
-        result = _data_converter->convert_f32(reinterpret_cast<float*>(d_input), _decode_buffers.d_converted, _rf_raw_dim, _dec_data_dim);
-    }
-    else
-    {
-        std::cerr << "Unsupported input data type." << std::endl;
-        return false;
-    }
+    bool result = _data_converter->convert(d_input, _decode_buffers.d_converted, type, 
+        { _rf_raw_dim.x, _rf_raw_dim.y }, { _dec_data_dim.x, _dec_data_dim.y, _dec_data_dim.z });
     
     if (!result)
     {
