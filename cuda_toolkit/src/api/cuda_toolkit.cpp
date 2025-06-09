@@ -46,22 +46,11 @@ static void
 cleanup_beamformer_buffers()
 {
 	auto& buffers = get_beamformer_buffers();
-	if (buffers.d_input) {
-		cudaFree(buffers.d_input);
-		buffers.d_input = nullptr;
-	}
-	if (buffers.d_decoded) {
-		cudaFree(buffers.d_decoded);
-		buffers.d_decoded = nullptr;
-	}
-	if (buffers.d_rf) {
-		cudaFree(buffers.d_rf);
-		buffers.d_rf = nullptr;
-	}
-	if (buffers.d_output) {
-		cudaFree(buffers.d_output);
-		buffers.d_output = nullptr;
-	}
+	CUDA_NULL_FREE(buffers.d_input);
+	CUDA_NULL_FREE(buffers.d_decoded);
+	CUDA_NULL_FREE(buffers.d_rf);
+	CUDA_NULL_FREE(buffers.d_output);
+
 	buffers.raw_data_size = 0;
 	buffers.decoded_data_size = 0;
 	buffers.output_data_size = 0;

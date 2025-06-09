@@ -16,10 +16,7 @@ public:
     Beamformer& operator=(Beamformer&&) = delete;
     ~Beamformer() 
     { 
-        if (_d_beamformer_hadamard) {
-            cudaFree(_d_beamformer_hadamard);
-            _d_beamformer_hadamard = nullptr;
-        }
+        CUDA_NULL_FREE(_d_beamformer_hadamard);
     }
 
     bool setup_beamformer(const CudaBeamformerParameters& bp);

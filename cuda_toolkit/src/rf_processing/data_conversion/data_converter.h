@@ -14,11 +14,7 @@ namespace data_conversion
         DataConverter() : _d_channel_mapping(nullptr) {};
         ~DataConverter()
         {
-            if (_d_channel_mapping)
-            {
-                cudaFree(_d_channel_mapping);
-                _d_channel_mapping = nullptr;
-            }
+            CUDA_NULL_FREE(_d_channel_mapping);
         }
 
         bool copy_channel_mapping(std::span<const int16_t> channel_mapping);

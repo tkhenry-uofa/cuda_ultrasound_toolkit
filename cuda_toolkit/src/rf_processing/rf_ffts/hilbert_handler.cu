@@ -24,10 +24,7 @@ namespace rf_fft
     void
     HilbertHandler::_cleanup_filter()
     {
-        if (_d_filter) {
-            cudaFree(_d_filter);
-            _d_filter = nullptr;
-        }
+		CUDA_NULL_FREE(_d_filter);
     }
 
     bool

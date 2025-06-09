@@ -9,11 +9,7 @@ namespace data_conversion
     bool
     DataConverter::copy_channel_mapping(std::span<const int16_t> channel_mapping)
     {
-        if (_d_channel_mapping)
-        {
-            cudaFree(_d_channel_mapping);
-            _d_channel_mapping = nullptr;
-        }
+        CUDA_NULL_FREE(_d_channel_mapping);
 
         size_t size = channel_mapping.size() * sizeof(short);
         CUDA_RETURN_IF_ERROR(cudaMalloc(&_d_channel_mapping, size));

@@ -15,6 +15,7 @@
 
 #include <iostream>
 
+#include <npp.h>
 #include <cufft.h>
 #include <cublas_v2.h>
 #include <cuda_gl_interop.h>
@@ -82,12 +83,12 @@ inline std::string format_cplx(const cuComplex& value)
 
 
 
-//#ifdef _DEBUG
+#ifdef _DEBUG
 	#include <assert.h>
 	#define ASSERT(x) assert(x)
-//#else
-	//#define ASSERT(x)
-//#endif // _DEBUG
+#else
+	#define ASSERT(x)
+#endif // _DEBUG
 
 
 #define CUDA_NULL_FREE(PTR)                 \
@@ -131,6 +132,22 @@ inline std::string format_cplx(const cuComplex& value)
 			return false;																	\
 		}                                                                                   \
     } while (0)
+
+
+#define NPP_RETURN_IF_ERR(err)																\
+    do {																					\
+        NppStatus err_ = (err);																\
+        if(err < 0)																			\
+        {																					\
+            std::printf("NPP error %d at %s:%d\n", err_, __FILE__, __LINE__);				\
+            ASSERT(false);																	\
+			return false;																	\
+        }																					\
+        else if(err > 0)																	\
+        {																					\
+            std::printf("NPP warning %d at %s:%d\n", err_, __FILE__, __LINE__);				\
+        }																					\
+    } while(0)																				\
 
 
 #define TIME_FUNCTION(CALL, MESSAGE)                                                        \

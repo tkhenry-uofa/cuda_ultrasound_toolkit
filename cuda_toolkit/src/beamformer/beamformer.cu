@@ -82,12 +82,7 @@ Beamformer::setup_beamformer(const CudaBeamformerParameters& bp)
         return true;
     }
 
-	if(_d_beamformer_hadamard) 
-	{
-		// Free existing Hadamard matrix
-		CUDA_RETURN_IF_ERROR(cudaFree(_d_beamformer_hadamard));
-		_d_beamformer_hadamard = nullptr;
-	}
+	CUDA_NULL_FREE(_d_beamformer_hadamard);
 
     size_t hadamard_size = _constants.readi_group_count * _constants.readi_group_count * sizeof(float);
     CUDA_RETURN_IF_ERROR(cudaMalloc(&_d_beamformer_hadamard, hadamard_size));

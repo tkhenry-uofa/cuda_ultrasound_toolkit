@@ -34,15 +34,10 @@ namespace decoding
 
     private:
 
-        bool _cleanup_hadamard() {
-            if (_d_hadamard)
-            {
-                cudaFree(_d_hadamard);
-                _d_hadamard = nullptr;
-                _hadamard_size = 0;
-                return true;
-            }
-            return false;
+        void _cleanup_hadamard() 
+		{
+            CUDA_NULL_FREE(_d_hadamard);
+			_hadamard_size = 0;
         }
 
         bool _create_cublas_handle() {

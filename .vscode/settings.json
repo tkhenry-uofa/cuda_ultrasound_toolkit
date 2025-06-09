@@ -79,8 +79,13 @@
     "xtree": "cpp",
     "span": "c",
     "stdint.h": "c",
-    "expected": "cpp"
+    "expected": "cpp",
+    "numeric": "cpp"
   },
   "C_Cpp.default.compilerPath": "cl.exe",
   "cmake.sourceDirectory": "C:/Users/tkhen/source/repos/cuda_toolkit/ogl_beamforming_cuda/external/raylib",
+  "editor.insertSpaces": false,
+  "editor.tabSize": 4,
+  "editor.detectIndentation": false,
+
 }
