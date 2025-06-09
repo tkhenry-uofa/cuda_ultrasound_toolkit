@@ -66,9 +66,16 @@ unregister_ogl_buffers_()
 {
     auto& graphics_session = get_session_();
     auto& ogl_raw_buffer = graphics_session.ogl_raw_buffer;
+    cudaError_t err;
     if (ogl_raw_buffer.second)
     {
-        CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(ogl_raw_buffer.second));
+        err = cudaGraphicsUnregisterResource(ogl_raw_buffer.second);
+        if (err != cudaSuccess)
+        {
+            std::cerr << "Failed to unregister OpenGL raw buffer: " << cudaGetErrorString(err) << std::endl;
+            std::cerr << "Shared buffers may be in an invalid state." << std::endl;
+            return false;
+        }
         ogl_raw_buffer.second = nullptr;
         ogl_raw_buffer.first = 0;
     }
@@ -77,7 +84,14 @@ unregister_ogl_buffers_()
     {
         if (pair.second)
         {
-            CUDA_RETURN_IF_ERROR(cudaGraphicsUnregisterResource(pair.second));
+            err = cudaGraphicsUnregisterResource(pair.second);
+            if (err != cudaSuccess)
+            {
+                std::cerr << "Failed to unregister OpenGL RF buffer: " << cudaGetErrorString(err) << std::endl;
+                std::cerr << "Shared buffers may be in an invalid state." << std::endl;
+                return false;
+            }
+
             pair.second = nullptr;
             pair.first = 0;
         }
