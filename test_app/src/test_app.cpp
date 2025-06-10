@@ -85,7 +85,7 @@ TestApp::_message_loop()
 		}
 
 		std::cout << "Command handled, total processed: " << commands_received << std::endl << std::endl;
-		exit = true;
+		//exit = true;
 	}
 }
 

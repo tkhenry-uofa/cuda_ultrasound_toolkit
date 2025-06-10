@@ -61,15 +61,20 @@ namespace bf_kernels::utils
         float xr = x - static_cast<float>(x_whole);
         float S[4] = { xr * xr * xr, xr * xr, xr, 1.0f };
 
-        cuComplex P1 = rf_data[channel_offset + x_whole];
-        cuComplex P2 = rf_data[channel_offset + x_whole + 1];
+        int idx = channel_offset + x_whole;
+        
+        cuComplex P0 = __ldg(&rf_data[idx - 1]);
+        cuComplex P1 = __ldg(&rf_data[idx]);
+        cuComplex P2 = __ldg(&rf_data[idx + 1]);
+        cuComplex P3 = __ldg(&rf_data[idx + 2]);
+
         cuComplex T1 = {
-            C_SPLINE * (P2.x - rf_data[channel_offset + x_whole - 1].x),
-            C_SPLINE * (P2.y - rf_data[channel_offset + x_whole - 1].y)
+            C_SPLINE * (P2.x - P0.x),
+            C_SPLINE * (P2.y - P0.y)
         };
         float2 T2 = {
-            C_SPLINE * (rf_data[channel_offset + x_whole + 2].x - P1.x),
-            C_SPLINE * (rf_data[channel_offset + x_whole + 2].y - P1.y)
+            C_SPLINE * (P3.x - P1.x),
+            C_SPLINE * (P3.y - P1.y)
         };
 
         float Cx[4] = { P1.x, P2.x, T1.x, T2.x };
@@ -80,7 +85,7 @@ namespace bf_kernels::utils
         for (int i = 0; i < 4; ++i) {
             float h_sum = 0.0f;
             for (int j = 0; j < 4; ++j) {
-                h_sum += S[j] * h[j][i];
+                h_sum = fmaf(S[j], h[j][i], h_sum);
             }
             result_x += h_sum * Cx[i];
             result_y += h_sum * Cy[i];
@@ -148,7 +153,7 @@ namespace bf_kernels::utils
     __device__ inline float
     total_path_length(float3 tx_vec, float3 rx_vec, float focal_depth, float sign)
     {
-        return focal_depth + NORM_F3(rx_vec) + NORM_F3(tx_vec) * sign;
+       return focal_depth + NORM_F3_TEST(rx_vec) + NORM_F3_TEST(tx_vec) * sign;
     }
 
 }

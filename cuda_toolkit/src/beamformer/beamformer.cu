@@ -53,7 +53,7 @@ Beamformer::_params_to_constants(const CudaBeamformerParameters& bp)
         constants.focal_direction = bf_kernels::FocalDirection::PLANE;
     }
     else if(bp.das_shader_id == SequenceId::HERCULES 
-        || bp.das_shader_id == SequenceId::UHURCULES
+        || bp.das_shader_id == SequenceId::UHERCULES
         || bp.das_shader_id == SequenceId::EPIC_UHERCULES)
     {
         constants.focal_direction = bf_kernels::FocalDirection::YZ_PLANE;
