@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cuda_lib_header_path="../../cuda_toolkit/include"
 output_dir="output"
 mkdir -p ${output_dir}

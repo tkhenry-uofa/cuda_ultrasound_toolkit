@@ -41,7 +41,7 @@ int main()
     params.output_points[0] = output_dim[0];
     params.output_points[1] = output_dim[1];
     params.output_points[2] = output_dim[2];
-    params.data_type = I16; // Set data type to int16_t
+    params.data_type = TYPE_I16; // Set data type to int16_t
     // Set other params as needed...
 
     // Call the function
