@@ -17,10 +17,10 @@ jobs:
       - name: Install CUDA
         uses: Jimver/cuda-toolkit@v0.2.25
         with:
-          cuda: "12.9.0"        # any 12.x/11.x value works :contentReference[oaicite:0]{index=0}
+          cuda: "12.9.0"
 
       # Add MSBuild.exe to PATH (Visual Studio BuildTools)
-      - uses: microsoft/setup-msbuild@v2   :contentReference[oaicite:1]{index=1}
+      - uses: microsoft/setup-msbuild@v2
 
       # Build invocation
       - name: Build via script
@@ -49,6 +49,6 @@ jobs:
           name: cuda-lib-win64
           path: dist
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2   :contentReference[oaicite:3]{index=3}
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/*
