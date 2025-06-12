@@ -3,9 +3,10 @@ name: Build CUDA library
 on:
   # build on every push + PR; create a Release when a tag is pushed
   push:
-    branches: [ master ]
+    branches: [ master, ci_test ]
     tags:     [ "v*.*.*" ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,17 +16,18 @@ jobs:
 
       # Need to install the toolkit on the fly
       - name: Install CUDA
-        uses: Jimver/cuda-toolkit@v0.2.25
+        uses: Jimver/cuda-toolkit@v0.2.24
+        id: cuda-toolkit
         with:
-          cuda: "12.9.0"        # any 12.x/11.x value works :contentReference[oaicite:0]{index=0}
+          cuda: "12.9.0"
 
       # Add MSBuild.exe to PATH (Visual Studio BuildTools)
-      - uses: microsoft/setup-msbuild@v2   :contentReference[oaicite:1]{index=1}
+      - uses: microsoft/setup-msbuild@v2
 
       # Build invocation
       - name: Build via script
         shell: pwsh
-        run: ./build-lib.ps1 -OutDir "${{github.workspace}}\artifacts"
+        run: ./build_lib.ps1 -o "${{github.workspace}}\artifacts"
 
       # Upload the built library
       - name: Compress artifacts
@@ -38,17 +40,24 @@ jobs:
           name: cuda-lib-win64
           path: cuda-lib-win64.zip
 
-  # Create a GitHub Release whenever a tag is pushed
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: cuda-lib-win64
           path: dist
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2   :contentReference[oaicite:3]{index=3}
+  
+      - name: Create or update "latest" release
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: latest
+          name: Latest Build
           files: dist/*
+          prerelease: true       # Optional: mark it clearly as not a stable release
+          make_latest: true      # Optional: this is now the "latest" release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
