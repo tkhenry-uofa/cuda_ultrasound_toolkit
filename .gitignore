@@ -377,3 +377,5 @@ output/
 test_app/client_lib/output/
 
 /[Ii]nclude/
+
+library_output/
