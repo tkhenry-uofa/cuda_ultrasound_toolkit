@@ -3,7 +3,7 @@ name: Build CUDA library
 on:
   # build on every push + PR; create a Release when a tag is pushed
   push:
-    branches: [ master ]
+    branches: [ master, ci_test ]
     tags:     [ "v*.*.*" ]
   pull_request:
 
