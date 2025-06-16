@@ -8,6 +8,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write  # Required to create releases
+
 jobs:
   build:
     runs-on: windows-latest   # VS 2022 is pre-installed
@@ -56,8 +59,6 @@ jobs:
           tag_name: latest
           name: Latest Build
           files: dist/*
-          prerelease: true       # Optional: mark it clearly as not a stable release
-          make_latest: true      # Optional: this is now the "latest" release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          make_latest: true
 
