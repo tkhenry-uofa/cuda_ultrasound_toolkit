@@ -6,6 +6,7 @@ on:
     branches: [ master, ci_test ]
     tags:     [ "v*.*.*" ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,7 +16,7 @@ jobs:
 
       # Need to install the toolkit on the fly
       - name: Install CUDA
-        uses: Jimver/cuda-toolkit@v0.2.25
+        uses: Jimver/cuda-toolkit@v0.2.24
         id: cuda-toolkit
         with:
           cuda: "12.9.0"
@@ -26,7 +27,7 @@ jobs:
       # Build invocation
       - name: Build via script
         shell: pwsh
-        run: ./build-lib.ps1 -OutDir "${{github.workspace}}\artifacts"
+        run: ./build_lib.ps1 -OutDir "${{github.workspace}}\artifacts"
 
       # Upload the built library
       - name: Compress artifacts
