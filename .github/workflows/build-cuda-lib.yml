@@ -9,13 +9,14 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest   # VS 2022 is pre-installed
+    runs-on: windows-2019   # VS 2022 is pre-installed
     steps:
       - uses: actions/checkout@v4
 
       # Need to install the toolkit on the fly
       - name: Install CUDA
         uses: Jimver/cuda-toolkit@v0.2.25
+        id: cuda-toolkit
         with:
           cuda: "12.9.0"
 
