@@ -70,7 +70,7 @@ $normalizedOutDir = ([System.IO.Path]::GetFullPath($OutputDir)) + "\bin\"
 $targets = if ($Clean) { "Clean;Build" } else { "Build" }
 
 $msbuildArgs = @(
-    "`"$Project`"",
+    $Project,
     "/t:$targets",
     "/p:Configuration=$Configuration",
     "/p:Platform=$Platform",
@@ -82,9 +82,6 @@ $msbuildArgs = @(
 
 Write-Host "Building $Configuration"
 & $msbuildPath @msbuildArgs
-
-# $process = Start-Process -FilePath $msbuildPath -ArgumentList $msbuildArgs `
-#                          -Wait -NoNewWindow -PassThru
 
 $build_exit_code = $LASTEXITCODE
 
