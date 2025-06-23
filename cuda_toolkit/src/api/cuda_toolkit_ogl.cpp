@@ -2,6 +2,8 @@
 #include "../public/cuda_beamformer_parameters.h"
 #include "../public/cuda_toolkit_ogl.h"
 
+#include <atomic>
+
 #define MAX_BUFFER_COUNT 16
 
 bool unregister_ogl_buffers_();
@@ -105,6 +107,7 @@ unregister_ogl_buffers_()
 bool
 init_cuda_configuration(const uint* input_dims, const uint* decoded_dims)
 {
+	std::cout << "Initializing CUDA configuration..." << std::endl;
     RfProcessor& rf_processor = get_session_().rf_processor;
 
     if (!rf_processor.init({input_dims[0], input_dims[1]}, {decoded_dims[0], decoded_dims[1], decoded_dims[2]}))
@@ -192,6 +195,10 @@ cuda_set_match_filter(const float* match_filter, uint length)
 bool
 cuda_decode(size_t input_offset, uint output_buffer_idx)
 {
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+	auto function_start = std::chrono::steady_clock::now();
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+
     GraphicsSession& graphics_session = get_session_();
 
     if (!graphics_session.buffers_init)
@@ -210,6 +217,9 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
     int16_t* d_input = nullptr;
     cuComplex* d_output = nullptr;
 
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+	auto map_start = std::chrono::steady_clock::now();
+	std::atomic_signal_fence(std::memory_order_seq_cst);
     if (!map_ogl_buffer_((void**)&d_input, input_resource))
     {
         std::cerr << "Failed to map input OpenGL buffer." << std::endl;
@@ -222,6 +232,11 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
         return false;
     }
 
+
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+	auto process_start = std::chrono::steady_clock::now();
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+
     size_t input_offset_count = input_offset / sizeof(int16_t);
 
     bool result = rf_processor.convert_decode_strided(d_input + input_offset_count, d_output, InputDataTypes::TYPE_I16);
@@ -229,8 +244,30 @@ cuda_decode(size_t input_offset, uint output_buffer_idx)
     {
         std::cerr << "Failed to decode data." << std::endl;
     }
+
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+	auto process_end = std::chrono::steady_clock::now();
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+
     unmap_ogl_buffer_(input_resource);
     unmap_ogl_buffer_(output_resource);
+
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+	auto map_end = std::chrono::steady_clock::now();
+	std::atomic_signal_fence(std::memory_order_seq_cst);
+
+	std::chrono::duration<double, std::milli> map_duration = process_start - map_start;
+	std::chrono::duration<double, std::milli> process_duration = process_end - process_start;
+	std::chrono::duration<double, std::milli> unmap_duration = map_end - process_end;
+	std::chrono::duration<double, std::milli> total_duration = map_end - function_start;
+
+	std::cout << "Mapping durations: " << map_duration.count() << " ms" << std::endl;
+	std::cout << "Processing duration: " << process_duration.count() << " ms" << std::endl;
+	std::cout << "Unmapping duration: " << unmap_duration.count() << " ms" << std::endl;
+	std::cout << "Total duration: " << total_duration.count() << " ms" << std::endl;
+	std::cout << std::endl;
+	
+
     return result;
 }
 

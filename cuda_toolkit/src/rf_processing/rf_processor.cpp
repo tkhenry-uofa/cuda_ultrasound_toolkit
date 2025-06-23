@@ -125,8 +125,12 @@ RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDat
 		return false;
 	}
 
+	auto start_time = std::chrono::high_resolution_clock::now();
+
     bool result = _data_converter->convert(d_input, _decode_buffers.d_converted, type, 
         { _rf_raw_dim.x, _rf_raw_dim.y }, { _dec_data_dim.x, _dec_data_dim.y, _dec_data_dim.z });
+
+	auto conversion_time = std::chrono::high_resolution_clock::now();
     
     if (!result)
     {
@@ -135,16 +139,30 @@ RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDat
     }
 
     result = _hadamard_decoder->decode(_decode_buffers.d_converted, _decode_buffers.d_decoded, _dec_data_dim);
+
+	auto decode_time = std::chrono::high_resolution_clock::now();
     if (!result)
     {
         std::cerr << "Failed to decode Hadamard data." << std::endl;
         return false;
     }
 
+
+
     // Decode output is packed real floats, but OGL expects complex 
     // so do a strided copy to fit interleaved complex 
     size_t data_count = _decoded_data_count();
     CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, d_output, data_count);
+
+	auto copy_time = std::chrono::high_resolution_clock::now();
+
+	std::chrono::duration<double, std::milli> conversion_duration = conversion_time - start_time;
+	std::chrono::duration<double, std::milli> decode_duration = decode_time - conversion_time;
+	std::chrono::duration<double, std::milli> copy_duration = copy_time - decode_time;
+
+	// std::cout << "Conversion time: " << conversion_duration.count() << " ms" << std::endl;
+	// std::cout << "Hadamard decode time: " << decode_duration.count() << " ms" << std::endl;
+	// std::cout << "Copy to complex time: " << copy_duration.count() << " ms" << std::endl;
     return result;
 }
 

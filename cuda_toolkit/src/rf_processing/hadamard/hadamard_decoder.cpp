@@ -74,6 +74,8 @@ decoding::HadamardDecoder::decode(float* d_input, float* d_output, uint3 decoded
 		_d_hadamard, decoded_dims.z,
 		&beta, d_output, tx_size));
 
+	cudaDeviceSynchronize();
+
 	return true;
 }
 
