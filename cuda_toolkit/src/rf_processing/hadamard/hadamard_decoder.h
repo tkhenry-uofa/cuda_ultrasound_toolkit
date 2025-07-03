@@ -26,7 +26,10 @@ namespace decoding
         HadamardDecoder& operator=(HadamardDecoder&&) = delete;
 
         bool decode(float* d_input, float* d_output, uint3 decoded_dims);
-        static bool generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD);
+
+		bool test_convert_and_decode(void* d_input, cuComplex* d_output, InputDataTypes input_type, uint2 input_dims, uint3 output_dims, short* d_channel_mapping);
+
+        static bool generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD, uint4* d_test = nullptr);
 
         bool set_hadamard(uint row_count, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD);
 
@@ -37,6 +40,8 @@ namespace decoding
         void _cleanup_hadamard() 
 		{
             CUDA_NULL_FREE(_d_hadamard);
+			CUDA_NULL_FREE(_compact_hadamard_test);
+			_readi_ordering = ReadiOrdering::HADAMARD;
 			_hadamard_size = 0;
         }
 
@@ -57,6 +62,8 @@ namespace decoding
         ReadiOrdering _readi_ordering;
         float* _d_hadamard;
         uint _hadamard_size = 0;
+
+		uint4* _compact_hadamard_test = nullptr;
 
         cublasHandle_t _cublas_handle = nullptr;
     };

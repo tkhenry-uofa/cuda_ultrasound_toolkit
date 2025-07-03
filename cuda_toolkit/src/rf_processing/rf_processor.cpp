@@ -119,6 +119,7 @@ RfProcessor::set_match_filter(std::span<const float> match_filter)
 bool
 RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDataTypes type)
 {
+	bool result = false;
 	if (!_init)
 	{
 		std::cerr << "Session not initialized." << std::endl;
@@ -127,25 +128,43 @@ RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDat
 
 	auto start_time = std::chrono::high_resolution_clock::now();
 
-    bool result = _data_converter->convert(d_input, _decode_buffers.d_converted, type, 
-        { _rf_raw_dim.x, _rf_raw_dim.y }, { _dec_data_dim.x, _dec_data_dim.y, _dec_data_dim.z });
+	if(_dec_data_dim.z == 128 )
+	{
+		// Special case for 128 channel Hadamard decoding
+		result = _hadamard_decoder->test_convert_and_decode(d_input, d_output, type, 
+			{ _rf_raw_dim.x, _rf_raw_dim.y }, { _dec_data_dim.x, _dec_data_dim.y, _dec_data_dim.z }, 
+			_data_converter->get_channel_mapping());
 
-	auto conversion_time = std::chrono::high_resolution_clock::now();
-    
-    if (!result)
-    {
-        std::cerr << "Failed to convert data." << std::endl;
-        return false;
-    }
+		if (!result)
+		{
+			std::cerr << "Failed to convert and decode Hadamard data." << std::endl;
+			return false;
+		}
+	}
+	else
+	{
 
-    result = _hadamard_decoder->decode(_decode_buffers.d_converted, _decode_buffers.d_decoded, _dec_data_dim);
+		result = _data_converter->convert(d_input, _decode_buffers.d_converted, type, 
+			{ _rf_raw_dim.x, _rf_raw_dim.y }, { _dec_data_dim.x, _dec_data_dim.y, _dec_data_dim.z });
 
-	auto decode_time = std::chrono::high_resolution_clock::now();
-    if (!result)
-    {
-        std::cerr << "Failed to decode Hadamard data." << std::endl;
-        return false;
-    }
+		auto conversion_time = std::chrono::high_resolution_clock::now();
+		
+		if (!result)
+		{
+			std::cerr << "Failed to convert data." << std::endl;
+			return false;
+		}
+
+		result = _hadamard_decoder->decode(_decode_buffers.d_converted, _decode_buffers.d_decoded, _dec_data_dim);
+
+		auto decode_time = std::chrono::high_resolution_clock::now();
+		if (!result)
+		{
+			std::cerr << "Failed to decode Hadamard data." << std::endl;
+			return false;
+		}
+
+	}
 
 
 
@@ -155,10 +174,6 @@ RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDat
     CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, d_output, data_count);
 
 	auto copy_time = std::chrono::high_resolution_clock::now();
-
-	std::chrono::duration<double, std::milli> conversion_duration = conversion_time - start_time;
-	std::chrono::duration<double, std::milli> decode_duration = decode_time - conversion_time;
-	std::chrono::duration<double, std::milli> copy_duration = copy_time - decode_time;
 
 	// std::cout << "Conversion time: " << conversion_duration.count() << " ms" << std::endl;
 	// std::cout << "Hadamard decode time: " << decode_duration.count() << " ms" << std::endl;

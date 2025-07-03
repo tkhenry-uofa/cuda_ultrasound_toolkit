@@ -21,6 +21,10 @@ namespace data_conversion
 
         bool convert(const void* d_input, void* d_output, InputDataTypes input_type, uint2 input_dims, uint3 output_dims);
         
+		short* get_channel_mapping() const
+		{
+			return _d_channel_mapping;
+		}
 
     private:
         short* _d_channel_mapping;

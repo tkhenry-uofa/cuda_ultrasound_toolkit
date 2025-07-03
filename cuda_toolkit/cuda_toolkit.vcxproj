@@ -211,6 +211,7 @@ IF %ERRORLEVEL% LEQ 1 (
     <CudaCompile Include="src\beamformer\kernels\beamformer_kernels.cu" />
     <CudaCompile Include="src\beamformer\kernels\other_beamformers.cu" />
     <CudaCompile Include="src\rf_processing\data_conversion\data_converter.cu" />
+    <CudaCompile Include="src\rf_processing\hadamard\hadamard_kernels.cu" />
     <CudaCompile Include="src\rf_processing\rf_ffts\hilbert_handler.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -235,6 +236,7 @@ IF %ERRORLEVEL% LEQ 1 (
     <ClInclude Include="src\image_processing\image_processor.h" />
     <ClInclude Include="src\rf_processing\data_conversion\data_conversion_kernels.cuh" />
     <ClInclude Include="src\rf_processing\data_conversion\data_converter.h" />
+    <ClInclude Include="src\rf_processing\hadamard\hadamard.cuh" />
     <ClInclude Include="src\rf_processing\hadamard\hadamard_decoder.h" />
     <ClInclude Include="src\rf_processing\rf_ffts\hilbert_handler.h" />
     <ClInclude Include="src\rf_processing\rf_ffts\hilbert_kernels.cuh" />

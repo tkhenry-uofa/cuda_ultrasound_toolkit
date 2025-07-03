@@ -106,11 +106,12 @@ decoding::HadamardDecoder::set_hadamard(uint row_count, ReadiOrdering readi_orde
 
 	size_t hadamard_mem_size = (size_t)row_count * row_count * sizeof(float);
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&_d_hadamard, hadamard_mem_size));
-	return generate_hadamard(_d_hadamard, row_count, readi_ordering);
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&_compact_hadamard_test, 128 * sizeof(uint4)));
+	return generate_hadamard(_d_hadamard, row_count, readi_ordering, _compact_hadamard_test);
 }
 
 bool 
-decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering)
+decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering, uint4* d_test)
 {
 
     // Create a requested_length x requested_length array on the CPU
@@ -184,8 +185,27 @@ decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, 
 		_sort_walsh(cpu_hadamard, row_count);
 	}
 
+	size_t compact_word_count = element_count / (sizeof(uint) * 32);
+
+	uint* cpu_compact_hadamard = (uint*)std::calloc(compact_word_count, sizeof(uint));
+
+	for( uint i=0; i < compact_word_count; i++)
+	{
+		uint word = 0;
+		for( uint j=0; j < 32; j++)
+		{
+			float value = cpu_hadamard[i * 32 + j];
+			word |= (value > 0 ? 1u : 0u) << j; // Set bit if value is positive
+		}
+
+		cpu_compact_hadamard[i] = word;
+	}
+
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_test, cpu_compact_hadamard, compact_word_count * sizeof(uint), cudaMemcpyHostToDevice));
+
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_hadamard, cpu_hadamard, element_count * sizeof(float), cudaMemcpyHostToDevice));
 	free(cpu_hadamard);
+	std::free(cpu_compact_hadamard);
 
 	return true;
 }

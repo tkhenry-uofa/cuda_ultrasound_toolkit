@@ -29,10 +29,13 @@ constexpr float I_SQRT_128 = 0.088388347648318f;
 constexpr float PI_F = 3.141592654f;
 constexpr double PI_D = 3.141592653589793;
 
-constexpr int MAX_THREADS_PER_BLOCK = 128;
+constexpr int MAX_THREADS_PER_BLOCK = 256;
 constexpr int MAX_2D_BLOCK_DIM = 32;
 constexpr int WARP_SIZE = 32;
 constexpr int TOTAL_TOBE_CHANNELS = 256;
+
+constexpr int HADAMARD_MAX_SIZE = 256;
+
 
 typedef unsigned int uint;
 
