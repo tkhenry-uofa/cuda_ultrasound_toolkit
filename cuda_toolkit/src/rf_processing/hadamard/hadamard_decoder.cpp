@@ -185,7 +185,7 @@ decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, 
 		_sort_walsh(cpu_hadamard, row_count);
 	}
 
-	size_t compact_word_count = element_count / (sizeof(uint) * 32);
+	size_t compact_word_count = element_count / (sizeof(uint) * 8);
 
 	uint* cpu_compact_hadamard = (uint*)std::calloc(compact_word_count, sizeof(uint));
 
@@ -195,7 +195,7 @@ decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, 
 		for( uint j=0; j < 32; j++)
 		{
 			float value = cpu_hadamard[i * 32 + j];
-			word |= (value > 0 ? 1u : 0u) << j; // Set bit if value is positive
+			word |= (value > 0 ? 0u : 1u) << (31 - j); // Set bit if value is negative
 		}
 
 		cpu_compact_hadamard[i] = word;

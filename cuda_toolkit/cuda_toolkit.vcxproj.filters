@@ -76,7 +76,7 @@
     <ClInclude Include="src\rf_processing\rf_ffts\hilbert_kernels.cuh" />
     <ClInclude Include="src\rf_processing\data_conversion\data_conversion_kernels.cuh" />
     <ClInclude Include="src\beamformer\kernels\beamformer_kernels.cuh" />
-    <ClInclude Include="src\rf_processing\hadamard\hadamard.cuh" />
+    <ClInclude Include="src\rf_processing\hadamard\hadamard_kernels.cuh" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\beamformer\beamformer.cu" />

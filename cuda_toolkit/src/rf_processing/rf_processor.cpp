@@ -23,7 +23,6 @@ RfProcessor::init(uint2 rf_raw_dim, uint3 dec_data_dim, ReadiOrdering readi_orde
 
     if (_init && !_dims_changed(rf_raw_dim, dec_data_dim, readi_ordering))
     {
-        std::cerr << "Session already initialized with the same dimensions." << std::endl;
         return true;
     }
 
@@ -164,20 +163,22 @@ RfProcessor::convert_decode_strided(void* d_input, cuComplex* d_output, InputDat
 			return false;
 		}
 
+        // Decode output is packed real floats, but OGL expects complex 
+        // so do a strided copy to fit interleaved complex 
+        size_t data_count = _decoded_data_count();
+        CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, d_output, data_count);
+
 	}
 
 
 
-    // Decode output is packed real floats, but OGL expects complex 
-    // so do a strided copy to fit interleaved complex 
-    size_t data_count = _decoded_data_count();
-    CUDA_FLOAT_TO_COMPLEX_COPY(_decode_buffers.d_decoded, d_output, data_count);
+    
 
 	auto copy_time = std::chrono::high_resolution_clock::now();
 
-	// std::cout << "Conversion time: " << conversion_duration.count() << " ms" << std::endl;
-	// std::cout << "Hadamard decode time: " << decode_duration.count() << " ms" << std::endl;
-	// std::cout << "Copy to complex time: " << copy_duration.count() << " ms" << std::endl;
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(copy_time - start_time).count();
+	std::cout << "Conversion and decoding took " << duration << " microseconds." << std::endl;
+
     return result;
 }
 

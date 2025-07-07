@@ -1,4 +1,4 @@
-#include "hadamard.cuh"
+#include "hadamard_kernels.cuh"
 
 
 #include "hadamard_decoder.h"

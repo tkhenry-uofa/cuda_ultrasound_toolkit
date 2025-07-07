@@ -38,7 +38,7 @@ namespace decoding::kernels
 
 		float result_real = 0.0f;
 
-		#pragma unroll
+		//#pragma unroll
 		for (uint i = 0; i < 4; ++i)
 		{
 			uint word = *(((uint*)&hadamard_row) + i);
@@ -51,11 +51,12 @@ namespace decoding::kernels
 				float current_value = transmit_array[current_tx];
 
 				// If the bit is set, the hadamard value is +1, otherwise -1
-				result_real += __int_as_float( __float_as_int(current_value) ^ (word & (1u << j) ? 0 : 0x80000000) );
+				float result_value = __int_as_float( __float_as_int(current_value) ^ ((word >> (31 - j)) << 31) ); // XOR sign bit with hadamard bit
+				result_real += result_value;
 			}
 		}
 
-
+		result_real /= output_dims.z; // Hadamard decoding scales by the matrix size, undoing that
 		output[sample_idx + output_channel_idx * output_dims.x + transmit_idx * output_dims.x * output_dims.y] = make_cuFloatComplex(result_real, 0.0f);
 	};
 
