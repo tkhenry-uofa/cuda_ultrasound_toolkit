@@ -106,12 +106,12 @@ decoding::HadamardDecoder::set_hadamard(uint row_count, ReadiOrdering readi_orde
 
 	size_t hadamard_mem_size = (size_t)row_count * row_count * sizeof(float);
 	CUDA_RETURN_IF_ERROR(cudaMalloc(&_d_hadamard, hadamard_mem_size));
-	CUDA_RETURN_IF_ERROR(cudaMalloc(&_compact_hadamard_test, 128 * sizeof(uint4)));
+	CUDA_RETURN_IF_ERROR(cudaMalloc(&_compact_hadamard_test, row_count * row_count / 8));
 	return generate_hadamard(_d_hadamard, row_count, readi_ordering, _compact_hadamard_test);
 }
 
 bool 
-decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering, uint4* d_test)
+decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering, u8* d_test)
 {
 
     // Create a requested_length x requested_length array on the CPU
@@ -185,23 +185,23 @@ decoding::HadamardDecoder::generate_hadamard(float* d_hadamard, uint row_count, 
 		_sort_walsh(cpu_hadamard, row_count);
 	}
 
-	size_t compact_word_count = element_count / (sizeof(uint) * 8);
+	size_t compact_byte_count = element_count / BYTE_SIZE;
 
-	uint* cpu_compact_hadamard = (uint*)std::calloc(compact_word_count, sizeof(uint));
+	u8* cpu_compact_hadamard = (u8*)std::calloc(compact_byte_count, sizeof(u8));
 
-	for( uint i=0; i < compact_word_count; i++)
+	for( uint i=0; i < compact_byte_count; i++)
 	{
-		uint word = 0;
-		for( uint j=0; j < 32; j++)
+		u8 byte = 0;
+		for( uint j=0; j < BYTE_SIZE; j++)
 		{
-			float value = cpu_hadamard[i * 32 + j];
-			word |= (value > 0 ? 0u : 1u) << (31 - j); // Set bit if value is negative
+			float value = cpu_hadamard[i * BYTE_SIZE + j];
+			byte |= (value > 0 ? 0u : 1u) << (BYTE_SIZE - 1 - j); // Set bit if value is negative
 		}
 
-		cpu_compact_hadamard[i] = word;
+		cpu_compact_hadamard[i] = byte;
 	}
 
-	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_test, cpu_compact_hadamard, compact_word_count * sizeof(uint), cudaMemcpyHostToDevice));
+	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_test, cpu_compact_hadamard, compact_byte_count * sizeof(u8), cudaMemcpyHostToDevice));
 
 	CUDA_RETURN_IF_ERROR(cudaMemcpy(d_hadamard, cpu_hadamard, element_count * sizeof(float), cudaMemcpyHostToDevice));
 	free(cpu_hadamard);

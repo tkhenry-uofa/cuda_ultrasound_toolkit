@@ -34,7 +34,9 @@ constexpr int MAX_2D_BLOCK_DIM = 32;
 constexpr int WARP_SIZE = 32;
 constexpr int TOTAL_TOBE_CHANNELS = 256;
 
-constexpr int HADAMARD_MAX_SIZE = 256;
+constexpr uint BYTE_SIZE = CHAR_BIT; // 8 bits in a byte
+constexpr uint HADAMARD_MAX_SIZE = 256;
+constexpr uint HADAMARD_MAX_ROW_BYTES = HADAMARD_MAX_SIZE / BYTE_SIZE;
 
 
 typedef unsigned int uint;

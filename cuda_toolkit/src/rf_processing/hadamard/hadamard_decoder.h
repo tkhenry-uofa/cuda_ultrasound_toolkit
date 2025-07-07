@@ -29,7 +29,7 @@ namespace decoding
 
 		bool test_convert_and_decode(void* d_input, cuComplex* d_output, InputDataTypes input_type, uint2 input_dims, uint3 output_dims, short* d_channel_mapping);
 
-        static bool generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD, uint4* d_test = nullptr);
+        static bool generate_hadamard(float* d_hadamard, uint row_count, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD, u8* d_test = nullptr);
 
         bool set_hadamard(uint row_count, ReadiOrdering readi_ordering = ReadiOrdering::HADAMARD);
 
@@ -63,7 +63,7 @@ namespace decoding
         float* _d_hadamard;
         uint _hadamard_size = 0;
 
-		uint4* _compact_hadamard_test = nullptr;
+		u8* _compact_hadamard_test = nullptr;
 
         cublasHandle_t _cublas_handle = nullptr;
     };
